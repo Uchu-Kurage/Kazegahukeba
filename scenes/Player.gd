@@ -15,7 +15,13 @@ var bounds := Rect2(24, 80, 1104, 520)
 
 
 func _ready() -> void:
-	_build_placeholder()
+	# アタリ判定（見た目は _draw で描く）。
+	var shape := RectangleShape2D.new()
+	shape.size = Vector2(22, 22)
+	var col := CollisionShape2D.new()
+	col.shape = shape
+	add_child(col)
+	queue_redraw()
 
 
 func _physics_process(_delta: float) -> void:
@@ -30,17 +36,10 @@ func _physics_process(_delta: float) -> void:
 	position.y = clampf(position.y, bounds.position.y, bounds.end.y)
 
 
-## アタリ判定と見た目をコードで作る（.tscn を単純に保つため。後で差し替え前提）。
-func _build_placeholder() -> void:
-	var shape := RectangleShape2D.new()
-	shape.size = Vector2(22, 22)
-	var col := CollisionShape2D.new()
-	col.shape = shape
-	add_child(col)
-
-	var body := Polygon2D.new()
-	body.polygon = PackedVector2Array([
-		Vector2(-11, -11), Vector2(11, -11), Vector2(11, 11), Vector2(-11, 11)
-	])
-	body.color = Color(0.96, 0.86, 0.42)
-	add_child(body)
+## 見た目：NPC(LocationSpot)と同じドット絵風の人物。色だけ主人公用。
+func _draw() -> void:
+	var c := Color(0.95, 0.80, 0.35)
+	draw_circle(Vector2(0, 24), 15.0, Color(0, 0, 0, 0.25))      # 影
+	draw_rect(Rect2(-12, -6, 24, 30), c)                         # 体
+	draw_circle(Vector2(0, -16), 11.0, Color(0.98, 0.90, 0.80))  # 頭
+	draw_rect(Rect2(-11, -27, 22, 9), c.darkened(0.35))          # 髪

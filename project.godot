@@ -22,6 +22,8 @@ Nav="*res://autoload/Nav.gd"
 ; カレンダー等の常時UI。シーンをまたいで表示し続けるため Autoload（シーン）にする。
 ; GameState のシグナルを購読するので、GameState より後に登録する。
 HUD="*res://scenes/HUD.tscn"
+; 会話ウィンドウ。全シーンから Dialogue.start([...]) で呼べる。
+Dialogue="*res://autoload/Dialogue.gd"
 
 [display]
 

@@ -32,25 +32,41 @@ func _player_start() -> Vector2:
 
 
 func _on_interact(spot) -> void:
+	if Dialogue.is_active():
+		return  # 会話中は E を会話送りに使う（Place 側は反応しない）
 	if spot == null:
 		return
 	if spot.location_id == EXIT_ID:
 		Nav.go_to_town()  # 過ごさずに戻る
 		return
-	# 中の人 or 過ごす対象 → その枠を消費して街へ戻る。
-	GameState.choose_location(_place_id)
+	_talk()  # 中の人と会話 → 終わったら枠を消費して街へ
+
+
+## 会話を始める。専用の立ち絵は使わず、マップ上のキャラのまま会話ボックスで進める。
+func _talk() -> void:
+	set_player_can_move(false)  # 会話中は歩けない
+	Dialogue.finished.connect(_on_talk_finished, CONNECT_ONE_SHOT)
+	Dialogue.start(Dialogues.for_location(_place_id))
+
+
+func _on_talk_finished() -> void:
+	GameState.choose_location(_place_id)  # この枠を消費
 	Nav.go_to_town()
 
 
 func _on_skip() -> void:
+	if Dialogue.is_active():
+		return
 	# 場所の中では Q も「戻る」に割り当てる（過ごさずに街へ）。
 	Nav.go_to_town()
 
 
 func _refresh_prompt() -> void:
 	if _current_spot == null:
-		HUD.set_prompt("%s。WASD／矢印で歩く。中の人に近づいて［E］で過ごす" % _place_name)
+		HUD.set_prompt("%s。WASD／矢印で歩く。人に近づいて［E］ ／［Q］で戻る" % _place_name)
 	elif _current_spot.location_id == EXIT_ID:
 		HUD.set_prompt("［E］で町へ戻る（まだ過ごしていない）")
+	elif _current_spot.character_id != "":
+		HUD.set_prompt("「%s」に話しかける：［E］（この枠を使う）" % _current_spot.display_name)
 	else:
 		HUD.set_prompt("「%s」で過ごす：［E］（この枠を使う）" % _current_spot.display_name)
