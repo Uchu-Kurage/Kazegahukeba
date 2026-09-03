@@ -17,6 +17,8 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 GameState="*res://autoload/GameState.gd"
 ; 操作キーの登録（起動時に一度だけ）。
 Controls="*res://autoload/Controls.gd"
+; 周回をまたいで残るセーブ記録（到達エンド・周回数）。
+SaveData="*res://autoload/SaveData.gd"
 ; シーン遷移（街 ⇄ 場所）の入口。
 Nav="*res://autoload/Nav.gd"
 ; カレンダー等の常時UI。シーンをまたいで表示し続けるため Autoload（シーン）にする。

@@ -26,3 +26,10 @@ func _on_changed() -> void:
 
 func set_prompt(text: String) -> void:
 	prompt_label.text = text
+
+
+## HUD 全体（カレンダー＋プロンプト）の表示・非表示。エンディング中などに隠す。
+func set_shown(v: bool) -> void:
+	for c in get_children():
+		if c is Control:
+			c.visible = v

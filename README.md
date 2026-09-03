@@ -55,17 +55,20 @@ project.godot              プロジェクト設定（Autoload登録・メイン
 autoload/
   GameState.gd             ★状態の中心。日付・時間帯・好感度・フラグ＋一日を進める状態機械
   Controls.gd              操作キーの登録（起動時に一度）
-  Nav.gd                   シーン遷移（街 ⇄ 場所）の入口
-  Dialogue.gd              会話ウィンドウ（画面下テキストボックス。立ち絵なし）
+  SaveData.gd              周回をまたぐセーブ記録（到達エンド・周回数。user:// に保存）
+  Nav.gd                   シーン遷移（街 ⇄ 場所 ⇄ エンディング）の入口
+  Dialogue.gd              会話ウィンドウ（画面下テキストボックス。立ち絵なし・選択肢対応）
 data/
   Locations.gd             町の「場所」定義（id/名前/キャラ/街マップ上の座標/アイコン）
-  Dialogues.gd             会話データ（location_id ごとのセリフ。当面は直書き）
+  Dialogues.gd             会話データ（location_id ごとのセリフ・選択肢。当面は直書き）
+  Endings.gd               エンディングの判定（好感度・フラグ）と結末台本
 scenes/
   ExploreMap.gd            歩き回れるマップの共通土台（Place の親クラス）
   TownBackground.gd        街の地図背景を _draw() で描画（草地・川・田んぼ・道）
   PlaceIcon.gd             街の地図の場所看板（丸看板＋アイコン＋名前、選択で脈動）
   Town.tscn / Town.gd      街全体マップ（メインシーン）。地図で行き先を選ぶ層（歩かない）
   Place.tscn / Place.gd    各場所の中のマップ。歩いて中の人と過ごす層（1つで全場所を兼ねる）
+  Ending.tscn / Ending.gd  エンディング画面。結末を流し、到達を記録し、周回へ
   Player.tscn / Player.gd  2D操作キャラ（CharacterBody2D）。場所の中で使う
   LocationSpot.tscn / .gd  マーカー（Area2D）。街の場所アイコン／中のNPC・出口を兼ねる
   HUD.tscn / HUD.gd         常時UI（カレンダー＋操作プロンプト）。Autoload で全シーンに表示
@@ -93,9 +96,14 @@ UIをボタン→1画面探索→2階層マップと変えても、**日付や�
 
 - [ ] ドット絵：人物プレースホルダ（頭＋体）を `AnimatedSprite2D` に、地面を `TileMapLayer` に
 - [x] 会話中の選択肢（返答で好感度／フラグが動く。`then` で会話が枝分かれ）
+- [x] フラグ／好感度によるエンディング分岐（`Endings.pick`）＋周回セーブ（全到達で裏エンド）
 - [ ] 会話の分岐：日付・好感度・フラグでセリフ自体を変える（`Dialogues.for_location` に条件を追加）
-- [ ] フラグ／好感度によるエンディング分岐（`GameState.affinity` / `flags` を読む）
+- [ ] 中盤の A/B/C（一緒にあがく／寄り添う／諫める）選択を入れ、着地条件に反映
 - [ ] カメラ追従（`Camera2D`）と各場所マップの作り込み（今は1画面・仮配置）
+
+> **エンディングを手早く試すには**：`autoload/GameState.gd` の `TOTAL_DAYS` を一時的に
+> 小さく（例：2）すると、数日で 8/31 に到達してエンディングを確認できます。
+> 到達エンドは `user://save.cfg` に残るので、全ノーマル到達で裏エンドが流れます。
 - [ ] 特別な夜イベント（`夜` フェーズで場所へ入れるように分岐）
 - [ ] フラグ／関係値によるエンディング分岐
 - [ ] 周回をまたぐセーブ記録（到達エンド一覧 → 全到達で裏エンド解放）

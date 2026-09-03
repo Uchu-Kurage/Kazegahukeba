@@ -16,3 +16,7 @@ func go_to_place(id: String) -> void:
 func go_to_town() -> void:
 	current_location_id = ""
 	get_tree().change_scene_to_file("res://scenes/Town.tscn")
+
+
+func go_to_ending() -> void:
+	get_tree().change_scene_to_file("res://scenes/Ending.tscn")
