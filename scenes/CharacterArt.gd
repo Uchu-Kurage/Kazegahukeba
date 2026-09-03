@@ -34,7 +34,7 @@ static func _pal(skin: Color, hair: Color, shirt: Color, pants: Color) -> Dictio
 ## 待機／歩き × 下・上・横 のアニメを持つ SpriteFrames を作る。
 static func build_frames(pal: Dictionary) -> SpriteFrames:
 	var sf := SpriteFrames.new()
-	for dir in ["down", "up", "side"]:
+	for dir: String in ["down", "up", "side"]:
 		var idle := "idle_" + dir
 		sf.add_animation(idle)
 		sf.set_animation_speed(idle, 2.0)
