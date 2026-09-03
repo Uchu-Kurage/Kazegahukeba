@@ -15,6 +15,8 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 
 ; ゲーム全体の状態を持つシングルトン。全シーンから GameState.xxx で参照できる。
 GameState="*res://autoload/GameState.gd"
+; 操作キーの登録（起動時に一度だけ）。
+Controls="*res://autoload/Controls.gd"
 ; シーン遷移（街 ⇄ 場所）の入口。
 Nav="*res://autoload/Nav.gd"
 ; カレンダー等の常時UI。シーンをまたいで表示し続けるため Autoload（シーン）にする。
