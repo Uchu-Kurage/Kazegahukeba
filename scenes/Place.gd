@@ -17,7 +17,9 @@ func _build_map() -> void:
 	_place_name = Locations.name_of(_place_id)
 	_character = Locations.character_of(_place_id)
 
-	add_ground(Color(0.18, 0.16, 0.20))
+	var bg := PlaceBackground.new()  # 場所ごとの内装（河川敷・境内・通り・座敷）
+	bg.place_id = _place_id
+	add_child(bg)
 
 	# 過ごす対象（中の人。いなければ「ここで過ごす」）。id は場所ID にしておく。
 	var spend_name := _place_name if _character != "" else "%s（ここで過ごす）" % _place_name

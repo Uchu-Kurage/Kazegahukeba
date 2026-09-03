@@ -13,33 +13,37 @@ var can_move := true
 ## マップ内に収める範囲（左上座標と大きさ）。画面外へ出ないようにする。
 var bounds := Rect2(24, 80, 1104, 520)
 
+var _sprite: PixelCharacter
+
 
 func _ready() -> void:
-	# アタリ判定（見た目は _draw で描く）。
+	# アタリ判定。
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(22, 22)
 	var col := CollisionShape2D.new()
 	col.shape = shape
 	add_child(col)
-	queue_redraw()
+
+	# 見た目：コード生成のドット絵キャラ（歩き／待機アニメ入り）。
+	_sprite = PixelCharacter.new()
+	_sprite.setup(CharacterArt.palette_for("player"))
+	add_child(_sprite)
 
 
 func _physics_process(_delta: float) -> void:
-	if not can_move:
+	if can_move:
+		var dir := Input.get_vector("walk_left", "walk_right", "walk_up", "walk_down")
+		velocity = dir * speed
+		move_and_slide()
+		# 画面外へ出ないように位置をクランプ。
+		position.x = clampf(position.x, bounds.position.x, bounds.end.x)
+		position.y = clampf(position.y, bounds.position.y, bounds.end.y)
+	else:
 		velocity = Vector2.ZERO
-		return
-	var dir := Input.get_vector("walk_left", "walk_right", "walk_up", "walk_down")
-	velocity = dir * speed
-	move_and_slide()
-	# 画面外へ出ないように位置をクランプ。
-	position.x = clampf(position.x, bounds.position.x, bounds.end.x)
-	position.y = clampf(position.y, bounds.position.y, bounds.end.y)
+	if _sprite:
+		_sprite.set_moving(velocity)
 
 
-## 見た目：NPC(LocationSpot)と同じドット絵風の人物。色だけ主人公用。
+## 足元の影（スプライトの後ろに描かれる）。
 func _draw() -> void:
-	var c := Color(0.95, 0.80, 0.35)
-	draw_circle(Vector2(0, 24), 15.0, Color(0, 0, 0, 0.25))      # 影
-	draw_rect(Rect2(-12, -6, 24, 30), c)                         # 体
-	draw_circle(Vector2(0, -16), 11.0, Color(0.98, 0.90, 0.80))  # 頭
-	draw_rect(Rect2(-11, -27, 22, 9), c.darkened(0.35))          # 髪
+	draw_circle(Vector2(0, 26), 13.0, Color(0, 0, 0, 0.22))

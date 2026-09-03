@@ -36,11 +36,17 @@ func _ready() -> void:
 	col.shape = shape
 	add_child(col)
 
+	# 中の人がいれば、ドット絵キャラ（待機アニメ）を置く。
+	if character_id != "":
+		var sprite := PixelCharacter.new()
+		sprite.setup(CharacterArt.palette_for(character_id))
+		add_child(sprite)
+
 	_label = Label.new()
 	_label.text = display_name
 	_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_label.custom_minimum_size = Vector2(160, 0)
-	_label.position = Vector2(-80, 34)
+	_label.position = Vector2(-80, 40)
 	add_child(_label)
 
 	queue_redraw()
@@ -55,37 +61,17 @@ func set_highlight(on: bool) -> void:
 
 
 func _draw() -> void:
-	draw_circle(Vector2(0, 24), 15.0, Color(0, 0, 0, 0.25))  # 影
-	if character_id != "":
-		_draw_person(_char_color())
-	else:
-		_draw_marker()
+	draw_circle(Vector2(0, 26), 15.0, Color(0, 0, 0, 0.25))  # 影（スプライトの後ろ）
+	if character_id == "":
+		_draw_marker()  # 中の人がいない場所は看板マーカー
 	if _selected:
 		draw_arc(Vector2.ZERO, 40.0, 0.0, TAU, 40, Color(1.0, 0.82, 0.25), 3.0, true)
-
-
-## ドット絵風の人物（頭＋体）。色はキャラごと。
-func _draw_person(c: Color) -> void:
-	draw_rect(Rect2(-12, -6, 24, 30), c)                        # 体
-	draw_circle(Vector2(0, -16), 11.0, Color(0.98, 0.90, 0.80)) # 頭
-	draw_rect(Rect2(-11, -27, 22, 9), c.darkened(0.35))         # 髪
 
 
 ## 出口／無人の場所は看板風のマーカー。
 func _draw_marker() -> void:
 	draw_rect(Rect2(-16, -18, 32, 38), Color(0.55, 0.50, 0.42))
 	draw_rect(Rect2(-16, -18, 32, 38), Color(0.30, 0.26, 0.20), false, 2.0)
-
-
-func _char_color() -> Color:
-	match character_id:
-		"kuma":
-			return Color(0.90, 0.55, 0.25)
-		"yuu":
-			return Color(0.35, 0.55, 0.80)
-		"natsu":
-			return Color(0.85, 0.40, 0.55)
-	return Color(0.60, 0.60, 0.65)
 
 
 func _on_body_entered(body: Node) -> void:

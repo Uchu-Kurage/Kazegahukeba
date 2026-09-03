@@ -70,7 +70,10 @@ scenes/
   Place.tscn / Place.gd    各場所の中のマップ。歩いて中の人と過ごす層（1つで全場所を兼ねる）
   Ending.tscn / Ending.gd  エンディング画面。結末を流し、到達を記録し、周回へ
   Player.tscn / Player.gd  2D操作キャラ（CharacterBody2D）。場所の中で使う
-  LocationSpot.tscn / .gd  マーカー（Area2D）。街の場所アイコン／中のNPC・出口を兼ねる
+  LocationSpot.tscn / .gd  対象（Area2D）。中のNPC（ドット絵キャラ）・出口を兼ねる
+  CharacterArt.gd          ドット絵スプライトをコード生成（配色から SpriteFrames を作る）
+  PixelCharacter.gd        AnimatedSprite2D。待機／歩き × 下上横。Player と NPC が共用
+  PlaceBackground.gd       各場所の内装を _draw()（河川敷・境内・通り・座敷）
   HUD.tscn / HUD.gd         常時UI（カレンダー＋操作プロンプト）。Autoload で全シーンに表示
 assets/fonts/
   NotoSansJP-Regular.ttf    日本語フォント（OFL 1.1）
@@ -94,7 +97,8 @@ UIをボタン→1画面探索→2階層マップと変えても、**日付や�
 
 ## これから足していく（設計に沿った次の一手）
 
-- [ ] ドット絵：人物プレースホルダ（頭＋体）を `AnimatedSprite2D` に、地面を `TileMapLayer` に
+- [x] ドット絵：人物を `AnimatedSprite2D`（コード生成・歩き/待機アニメ）に、各場所に内装を追加
+- [ ] 本物のアート：`CharacterArt` の生成を PNG スプライトシートに、`PlaceBackground` を `TileMapLayer` に差し替え
 - [x] 会話中の選択肢（返答で好感度／フラグが動く。`then` で会話が枝分かれ）
 - [x] フラグ／好感度によるエンディング分岐（`Endings.pick`）＋周回セーブ（全到達で裏エンド）
 - [ ] 会話の分岐：日付・好感度・フラグでセリフ自体を変える（`Dialogues.for_location` に条件を追加）
