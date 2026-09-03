@@ -11,12 +11,13 @@ extends RefCounted
 ##   id        … 内部ID
 ##   name      … 表示名
 ##   character … そこで会えるキャラ(character_id、空文字なら誰もいない)
-##   pos       … 町マップ上の座標（当面はここに直書き。後でマップ上に配置し直せる）
+##   pos       … 街マップ上の座標（地図の見た目・カーソル移動に使う）
+##   icon      … 地図アイコンの種類（house / torii / shop / river）
 const ALL := [
-	{ "id": "riverside", "name": "川原",       "character": "kuma",  "pos": Vector2(240, 200) },
-	{ "id": "shrine",    "name": "神社",       "character": "yuu",   "pos": Vector2(912, 200) },
-	{ "id": "shop",      "name": "商店街",     "character": "natsu", "pos": Vector2(240, 470) },
-	{ "id": "home",      "name": "家",         "character": "",      "pos": Vector2(912, 470) },
+	{ "id": "riverside", "name": "川原",   "character": "kuma",  "pos": Vector2(170, 330), "icon": "river" },
+	{ "id": "shop",      "name": "商店街", "character": "natsu", "pos": Vector2(560, 200), "icon": "shop" },
+	{ "id": "shrine",    "name": "神社",   "character": "yuu",   "pos": Vector2(940, 200), "icon": "torii" },
+	{ "id": "home",      "name": "家",     "character": "",      "pos": Vector2(860, 470), "icon": "house" },
 ]
 
 
@@ -32,3 +33,10 @@ static func name_of(location_id: String) -> String:
 		if loc["id"] == location_id:
 			return loc["name"]
 	return ""
+
+
+static func pos_of(location_id: String) -> Vector2:
+	for loc in ALL:
+		if loc["id"] == location_id:
+			return loc["pos"]
+	return Vector2.ZERO

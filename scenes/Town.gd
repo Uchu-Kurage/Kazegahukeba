@@ -3,11 +3,9 @@ extends Node2D
 ##
 ## ここは歩かない。地図上に並んだ場所アイコンを、矢印/WASD でカーソル選択し、
 ## ［E］で選んだ場所の中（Place シーン）へ入る。夜は選択せず、振り返って翌日へ。
-## 場所アイコンには表示用に LocationSpot を流用している（当たり判定は使わない）。
+## 地図の見た目は TownBackground（草地・川・田んぼ・道）と PlaceIcon（場所看板）で作る。
 
-const LocationSpotScene := preload("res://scenes/LocationSpot.tscn")
-
-var _markers: Array = []  ## 場所アイコン（LocationSpot）の並び。Locations.ALL と同じ順。
+var _markers: Array = []  ## 場所アイコン（PlaceIcon）の並び。Locations.ALL と同じ順。
 var _selected := 0
 var _ended := false
 
@@ -21,19 +19,13 @@ func _ready() -> void:
 
 
 func _build() -> void:
-	var ground := Polygon2D.new()
-	ground.polygon = PackedVector2Array([
-		Vector2(0, 0), Vector2(1152, 0), Vector2(1152, 648), Vector2(0, 648)
-	])
-	ground.color = Color(0.15, 0.18, 0.16)
-	ground.z_index = -10
-	add_child(ground)
+	add_child(TownBackground.new())  # 草地・川・田んぼ・道
 
 	for loc in Locations.ALL:
-		var m = LocationSpotScene.instantiate()
-		m.setup(loc["id"], loc["name"], loc["character"], loc["pos"])
-		add_child(m)
-		_markers.append(m)
+		var icon := PlaceIcon.new()
+		icon.setup(loc["id"], loc["name"], loc["icon"], loc["pos"])
+		add_child(icon)
+		_markers.append(icon)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -97,7 +89,7 @@ func _move(dir: Vector2) -> void:
 func _select(i: int) -> void:
 	_selected = i
 	for idx in _markers.size():
-		_markers[idx].set_highlight(idx == _selected)
+		_markers[idx].set_selected(idx == _selected)
 	_refresh_prompt()
 
 
@@ -109,14 +101,14 @@ func _apply_phase() -> void:
 	# 昼は選択中のアイコンを光らせ、夜は消す。
 	var is_day := GameState.phase != GameState.Phase.NIGHT
 	for idx in _markers.size():
-		_markers[idx].set_highlight(is_day and idx == _selected)
+		_markers[idx].set_selected(is_day and idx == _selected)
 	_refresh_prompt()
 
 
 func _on_game_ended() -> void:
 	_ended = true
 	for m in _markers:
-		m.set_highlight(false)
+		m.set_selected(false)
 	HUD.set_prompt("――― 40日が過ぎた。世界の終わり。［E］でもう一度、夏を始める ―――")
 
 

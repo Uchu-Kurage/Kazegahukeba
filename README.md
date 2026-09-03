@@ -59,6 +59,8 @@ data/
   Locations.gd             町の「場所」定義（id/名前/キャラ/街マップ上の座標）
 scenes/
   ExploreMap.gd            歩き回れるマップの共通土台（Place の親クラス）
+  TownBackground.gd        街の地図背景を _draw() で描画（草地・川・田んぼ・道）
+  PlaceIcon.gd             街の地図の場所看板（丸看板＋アイコン＋名前、選択で脈動）
   Town.tscn / Town.gd      街全体マップ（メインシーン）。地図で行き先を選ぶ層（歩かない）
   Place.tscn / Place.gd    各場所の中のマップ。歩いて中の人と過ごす層（1つで全場所を兼ねる）
   Player.tscn / Player.gd  2D操作キャラ（CharacterBody2D）。場所の中で使う
