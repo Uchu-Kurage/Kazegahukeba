@@ -1,0 +1,35 @@
+; Engine configuration file.
+; Godot 4.6 プロジェクト設定。エディタの「プロジェクト設定」を保存するとここが書き換わる。
+; 手で書いた項目もエディタで確認・変更できる。
+
+config_version=5
+
+[application]
+
+config/name="Kazegahukeba"
+config/description="終わりゆく世界の最後の夏を過ごすADV（骨組み版）"
+run/main_scene="res://scenes/Main.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
+
+[autoload]
+
+; ゲーム全体の状態を持つシングルトン。全シーンから GameState.xxx で参照できる。
+GameState="*res://autoload/GameState.gd"
+
+[display]
+
+window/size/viewport_width=1152
+window/size/viewport_height=648
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[gui]
+
+; 日本語表示のためのフォント。assets/fonts に .ttf を置いて有効化する（README 参照）。
+; フォント未設置でも起動はするが、日本語が □（豆腐）になる。
+theme/custom_font="res://assets/fonts/NotoSansJP-Regular.ttf"
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
