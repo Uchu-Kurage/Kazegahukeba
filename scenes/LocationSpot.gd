@@ -16,10 +16,10 @@ var _marker: Polygon2D
 var _label: Label
 
 
-## Town から生成時に呼ばれ、この場所の中身を設定する。
-func setup(id: String, name: String, who: String, pos: Vector2) -> void:
+## マップ生成時に呼ばれ、この対象の中身を設定する。
+func setup(id: String, disp_name: String, who: String, pos: Vector2) -> void:
 	location_id = id
-	display_name = name
+	display_name = disp_name
 	character_id = who
 	position = pos
 

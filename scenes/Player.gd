@@ -59,8 +59,11 @@ func _register_inputs() -> void:
 
 
 func _bind(action: String, keys: Array) -> void:
-	if not InputMap.has_action(action):
-		InputMap.add_action(action)
+	# 既に登録済み（前のシーンで登録した／エディタで設定済み）なら触らない。
+	# これでシーン遷移のたびにキーが二重登録されるのを防ぐ。
+	if InputMap.has_action(action):
+		return
+	InputMap.add_action(action)
 	for k in keys:
 		var ev := InputEventKey.new()
 		ev.physical_keycode = k
