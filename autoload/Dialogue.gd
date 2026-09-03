@@ -1,26 +1,38 @@
 extends CanvasLayer
 ## 会話ウィンドウ（Autoload）。専用の立ち絵は使わず、マップ上のドット絵キャラのまま、
-## 画面下のテキストボックスで会話を進める。E で送り、最後の行まで行くと finished を出す。
+## 画面下のテキストボックスで会話を進める。
 ##
-## 使い方:
-##   Dialogue.finished.connect(_on_done, CONNECT_ONE_SHOT)
-##   Dialogue.start([{ "speaker": "球磨", "text": "よう。" }, ...])
+## 会話は「ノード」の配列で渡す。ノードは2種類:
+##   セリフ   : { "speaker": "球磨", "text": "よう。" }（speaker "" は地の文）
+##   選択肢   : { "text": 質問文(省略可), "choices": [ 選択肢, ... ] }
+##     選択肢 : { "text": "ああ", "affinity": {"kuma": 2}, "set": {"flag": true},
+##              "then": [ さらに続くノード ... ] }
+##
+## E で送り／決定。選択肢を選ぶと option_selected(option) を出し（効果の反映は呼び出し側が担当）、
+## その "then" があれば続けて再生する。最後まで行くと finished を出す。
 
 signal finished
+signal option_selected(option: Dictionary)
 
 const CHAR_TIME := 0.025  # 1文字あたりの表示秒（タイプライター演出）
 
-var _lines: Array = []
-var _index := 0
+var _nodes: Array = []
+var _index := -1
 var _active := false
 var _revealing := false
 var _accum := 0.0
+
+var _choosing := false
+var _choices: Array = []
+var _choice_index := 0
+var _choice_labels: Array = []
 
 var _root: Control
 var _box: Panel
 var _name: Label
 var _text: Label
 var _hint: Label
+var _choice_box: VBoxContainer
 
 
 func _ready() -> void:
@@ -32,24 +44,35 @@ func is_active() -> bool:
 	return _active
 
 
-## 会話を開始する。lines は { "speaker", "text" } の配列。speaker が "" なら地の文。
-func start(lines: Array) -> void:
-	if lines.is_empty():
+## 会話を開始する。nodes はセリフ／選択肢ノードの配列。
+func start(nodes: Array) -> void:
+	if nodes.is_empty():
 		finished.emit()
 		return
-	_lines = lines
-	_index = 0
+	_nodes = nodes.duplicate()  # then の差し込みで書き換えるので複製しておく
+	_index = -1
 	_active = true
 	_root.visible = true
-	_show_line()
+	_next_node()
 
 
 func _input(event: InputEvent) -> void:
 	if not _active:
 		return
+	if _choosing:
+		if event.is_action_pressed("walk_up"):
+			get_viewport().set_input_as_handled()
+			_move_choice(-1)
+		elif event.is_action_pressed("walk_down"):
+			get_viewport().set_input_as_handled()
+			_move_choice(1)
+		elif event.is_action_pressed("interact"):
+			get_viewport().set_input_as_handled()
+			_confirm_choice()
+		return
 	if event.is_action_pressed("interact"):
 		get_viewport().set_input_as_handled()  # 背後のシーンに E を渡さない
-		_advance()
+		_advance_line()
 
 
 func _process(delta: float) -> void:
@@ -65,41 +88,111 @@ func _process(delta: float) -> void:
 		_text.visible_characters = shown
 
 
-func _advance() -> void:
+# --- ノード送り ------------------------------------------------------
+
+func _next_node() -> void:
+	_index += 1
+	if _index >= _nodes.size():
+		_end()
+		return
+	var node: Dictionary = _nodes[_index]
+	if node.has("choices"):
+		_show_choices(node)
+	else:
+		_show_line(node)
+
+
+func _advance_line() -> void:
 	if _revealing:
 		_text.visible_characters = -1  # 表示途中なら、まず全文を出す
 		_revealing = false
 		return
-	_index += 1
-	if _index >= _lines.size():
-		_end()
-	else:
-		_show_line()
+	_next_node()
 
 
-func _show_line() -> void:
-	var line: Dictionary = _lines[_index]
-	var speaker := String(line.get("speaker", ""))
+func _show_line(node: Dictionary) -> void:
+	_choosing = false
+	_choice_box.visible = false
+	_hint.text = "［E］▶"
+	var speaker := String(node.get("speaker", ""))
 	_name.text = speaker
 	_name.visible = speaker != ""
-	_text.text = String(line.get("text", ""))
+	_text.text = String(node.get("text", ""))
 	_text.visible_characters = 0
 	_accum = 0.0
 	_revealing = true
 
 
+# --- 選択肢 ----------------------------------------------------------
+
+func _show_choices(node: Dictionary) -> void:
+	_revealing = false
+	# 質問文があれば出す。無ければ直前のセリフをそのまま残す。
+	if node.has("text"):
+		_name.text = String(node.get("speaker", ""))
+		_name.visible = _name.text != ""
+		_text.text = String(node["text"])
+		_text.visible_characters = -1
+	_choices = node["choices"]
+	_choice_index = 0
+	_choosing = true
+	_hint.text = "↑↓ 選ぶ ／ ［E］決定"
+	_build_choice_labels()
+	_choice_box.visible = true
+
+
+func _build_choice_labels() -> void:
+	for l in _choice_labels:
+		l.free()
+	_choice_labels.clear()
+	for i in _choices.size():
+		var lbl := Label.new()
+		lbl.add_theme_font_size_override("font_size", 22)
+		_choice_box.add_child(lbl)
+		_choice_labels.append(lbl)
+	_update_choice_highlight()
+
+
+func _update_choice_highlight() -> void:
+	for i in _choice_labels.size():
+		var lbl: Label = _choice_labels[i]
+		var opt: Dictionary = _choices[i]
+		var mark := "▶ " if i == _choice_index else "　 "
+		lbl.text = mark + String(opt.get("text", ""))
+		lbl.modulate = Color(1.0, 0.90, 0.50) if i == _choice_index else Color(1, 1, 1, 0.8)
+
+
+func _move_choice(delta: int) -> void:
+	_choice_index = clampi(_choice_index + delta, 0, _choices.size() - 1)
+	_update_choice_highlight()
+
+
+func _confirm_choice() -> void:
+	var opt: Dictionary = _choices[_choice_index]
+	_choosing = false
+	_choice_box.visible = false
+	option_selected.emit(opt)  # 効果（好感度・フラグ）の反映は呼び出し側にまかせる
+	# 選んだ枝(then)を、いまの位置の直後に差し込む。
+	var branch: Array = opt.get("then", [])
+	for i in branch.size():
+		_nodes.insert(_index + 1 + i, branch[i])
+	_next_node()
+
+
 func _end() -> void:
 	_active = false
 	_revealing = false
+	_choosing = false
 	_root.visible = false
 	finished.emit()
 
 
 func _current_len() -> int:
-	return String(_lines[_index].get("text", "")).length()
+	return String(_nodes[_index].get("text", "")).length()
 
 
-## UI をコードで組み立てる（.tscn を使わずに完結させる）。
+# --- UI 構築 ---------------------------------------------------------
+
 func _build_ui() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -108,8 +201,8 @@ func _build_ui() -> void:
 	add_child(_root)
 
 	_box = Panel.new()
-	_box.position = Vector2(48, 430)
-	_box.size = Vector2(1056, 180)
+	_box.position = Vector2(48, 412)
+	_box.size = Vector2(1056, 196)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.06, 0.07, 0.10, 0.93)
 	sb.border_color = Color(0.90, 0.85, 0.60, 0.9)
@@ -119,21 +212,27 @@ func _build_ui() -> void:
 	_root.add_child(_box)
 
 	_name = Label.new()
-	_name.position = Vector2(24, 16)
+	_name.position = Vector2(24, 12)
 	_name.add_theme_font_size_override("font_size", 24)
 	_name.add_theme_color_override("font_color", Color(1.0, 0.88, 0.50))
 	_box.add_child(_name)
 
 	_text = Label.new()
-	_text.position = Vector2(24, 58)
-	_text.size = Vector2(1008, 100)
+	_text.position = Vector2(24, 52)
+	_text.size = Vector2(1008, 60)
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_text.add_theme_font_size_override("font_size", 22)
 	_box.add_child(_text)
 
+	_choice_box = VBoxContainer.new()
+	_choice_box.position = Vector2(44, 112)
+	_choice_box.add_theme_constant_override("separation", 6)
+	_choice_box.visible = false
+	_box.add_child(_choice_box)
+
 	_hint = Label.new()
 	_hint.text = "［E］▶"
-	_hint.position = Vector2(972, 148)
+	_hint.position = Vector2(936, 166)
 	_hint.add_theme_font_size_override("font_size", 16)
 	_hint.modulate = Color(1, 1, 1, 0.6)
 	_box.add_child(_hint)

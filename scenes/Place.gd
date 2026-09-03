@@ -45,11 +45,24 @@ func _on_interact(spot) -> void:
 ## 会話を始める。専用の立ち絵は使わず、マップ上のキャラのまま会話ボックスで進める。
 func _talk() -> void:
 	set_player_can_move(false)  # 会話中は歩けない
+	# 選択肢が選ばれるたびに効果（好感度・フラグ）を GameState に反映する。
+	Dialogue.option_selected.connect(_on_option_selected)
 	Dialogue.finished.connect(_on_talk_finished, CONNECT_ONE_SHOT)
 	Dialogue.start(Dialogues.for_location(_place_id))
 
 
+## 選んだ選択肢の効果を状態に反映する。Dialogue は「何が選ばれたか」を伝えるだけで、
+## それが何を意味するか（好感度・フラグ）はここ（ゲーム側）が決める。
+func _on_option_selected(option: Dictionary) -> void:
+	for who in option.get("affinity", {}):
+		GameState.add_affinity(who, int(option["affinity"][who]))
+	for flag_name in option.get("set", {}):
+		GameState.set_flag(flag_name, option["set"][flag_name])
+
+
 func _on_talk_finished() -> void:
+	if Dialogue.option_selected.is_connected(_on_option_selected):
+		Dialogue.option_selected.disconnect(_on_option_selected)
 	GameState.choose_location(_place_id)  # この枠を消費
 	Nav.go_to_town()
 

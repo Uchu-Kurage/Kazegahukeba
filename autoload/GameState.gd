@@ -77,6 +77,20 @@ func _record_choice(location_id: String) -> void:
 			affinity[who] = int(affinity.get(who, 0)) + 1
 
 
+## 関係値を増減する（会話の選択肢などから呼ぶ）。
+func add_affinity(who: String, delta: int) -> void:
+	if who == "":
+		return
+	affinity[who] = int(affinity.get(who, 0)) + delta
+	print("[affinity] %s = %d" % [who, affinity[who]])  # 確認用（エンディング実装時に削除可）
+
+
+## フラグを立てる／下ろす（会話の選択肢などから呼ぶ）。
+func set_flag(flag_name: String, value: bool) -> void:
+	flags[flag_name] = value
+	print("[flag] %s = %s" % [flag_name, str(value)])  # 確認用（エンディング実装時に削除可）
+
+
 ## 時間帯を一つ進める。夜の次は翌日の朝。
 func _advance_phase() -> void:
 	match phase:

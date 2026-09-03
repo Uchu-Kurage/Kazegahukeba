@@ -1,9 +1,15 @@
 class_name Dialogues
 extends RefCounted
-## 会話データ（当面はここに直書き）。location_id ごとにセリフ行の配列を返す。
+## 会話データ（当面はここに直書き）。location_id ごとに会話ノードの配列を返す。
 ##
-## 各行: { "speaker": 表示名（"" なら地の文）, "text": セリフ }
-## 物語を作り込む段階で、日付や好感度・フラグで分岐させていく想定（引数を足せばよい）。
+## ノードは2種類:
+##   セリフ : { "speaker": 表示名（""なら地の文）, "text": セリフ }
+##   選択肢 : { "text": 質問文(省略可), "choices": [ 選択肢, ... ] }
+##     選択肢: { "text": 表示, "affinity": {who: delta}, "set": {flag: true},
+##             "then": [ 選んだときに続くノード... ] }
+##
+## 物語を作り込む段階では、日付や好感度・フラグで台本を分岐させていく想定
+## （for_location に引数を足し、GameState を見て返す配列を変えればよい）。
 
 const PLAYER := "ぼく"  # 主人公の仮の呼び名
 
@@ -16,6 +22,30 @@ static func for_location(location_id: String) -> Array:
 				{ "speaker": "球磨", "text": "よう。今年もこの夏が来たな。" },
 				{ "speaker": PLAYER, "text": "……ああ。" },
 				{ "speaker": "球磨", "text": "なあ、来年も、再来年も、こうやってここに来ようぜ。" },
+				{
+					"choices": [
+						{
+							"text": "ああ、来よう",
+							"affinity": { "kuma": 2 },
+							"set": { "promised_kuma": true },
+							"then": [ { "speaker": "球磨", "text": "だろ？　約束な。" } ],
+						},
+						{
+							"text": "……（だまってうなずく）",
+							"affinity": { "kuma": 1 },
+							"then": [ { "speaker": "", "text": "球磨は少し笑って、それ以上は聞かなかった。" } ],
+						},
+						{
+							"text": "来年なんて、来ないよ",
+							"affinity": { "kuma": -1 },
+							"set": { "told_truth_kuma": true },
+							"then": [
+								{ "speaker": "球磨", "text": "……なんだよ、辛気くさいな。" },
+								{ "speaker": "", "text": "その横顔が、一瞬だけこわばった気がした。" },
+							],
+						},
+					],
+				},
 				{ "speaker": "", "text": "その“来年”が来ないことを、ぼくだけが知っている。" },
 			]
 		"shop":
@@ -29,7 +59,21 @@ static func for_location(location_id: String) -> Array:
 			return [
 				{ "speaker": "", "text": "石段をのぼると、蝉の声が近い。" },
 				{ "speaker": "由布", "text": "お参り？　それとも、涼みに来ただけ？" },
-				{ "speaker": PLAYER, "text": "……どっちも、かな。" },
+				{
+					"choices": [
+						{
+							"text": "お参りに",
+							"affinity": { "yuu": 1 },
+							"then": [ { "speaker": "由布", "text": "ふうん。殊勝だね。" } ],
+						},
+						{
+							"text": "きみに会いに",
+							"affinity": { "yuu": 2 },
+							"set": { "flirt_yuu": true },
+							"then": [ { "speaker": "由布", "text": "……ばか。" } ],
+						},
+					],
+				},
 				{ "speaker": "由布", "text": "じゃあ、隣、座ってけば。" },
 			]
 		_:
