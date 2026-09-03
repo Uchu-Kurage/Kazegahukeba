@@ -7,8 +7,8 @@ config_version=5
 [application]
 
 config/name="Kazegahukeba"
-config/description="終わりゆく世界の最後の夏を過ごすADV（骨組み版）"
-run/main_scene="res://scenes/Main.tscn"
+config/description="終わりゆく世界の最後の夏を過ごす2DドットADV/RPG（骨組み版）"
+run/main_scene="res://scenes/Town.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
 [autoload]

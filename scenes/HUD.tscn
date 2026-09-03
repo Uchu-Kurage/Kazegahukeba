@@ -1,0 +1,46 @@
+[gd_scene load_steps=2 format=3 uid="uid://b8kazeghud1"]
+
+[ext_resource type="Script" path="res://scenes/HUD.gd" id="1_hud"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("1_hud")
+
+[node name="TopBar" type="PanelContainer" parent="."]
+offset_right = 1152.0
+offset_bottom = 60.0
+
+[node name="Margin" type="MarginContainer" parent="TopBar"]
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 8
+
+[node name="Row" type="HBoxContainer" parent="TopBar/Margin"]
+theme_override_constants/separation = 28
+
+[node name="DateLabel" type="Label" parent="TopBar/Margin/Row"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 26
+text = "8月1日"
+
+[node name="PhaseLabel" type="Label" parent="TopBar/Margin/Row"]
+unique_name_in_owner = true
+theme_override_colors/font_color = Color(0.68, 0.78, 0.95, 1)
+theme_override_font_sizes/font_size = 26
+text = "午前"
+
+[node name="PromptBar" type="PanelContainer" parent="."]
+offset_top = 596.0
+offset_right = 1152.0
+offset_bottom = 648.0
+
+[node name="Margin2" type="MarginContainer" parent="PromptBar"]
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 8
+
+[node name="PromptLabel" type="Label" parent="PromptBar/Margin2"]
+unique_name_in_owner = true
+theme_override_font_sizes/font_size = 20
+text = ""
