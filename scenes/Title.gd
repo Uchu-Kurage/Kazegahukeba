@@ -49,7 +49,11 @@ func _activate() -> void:
 	AudioManager.play_sfx("cancel" if id in ["back", "clear_no"] else "confirm")
 	match id:
 		"start":
+			SaveData.clear_run()  # 新規開始：以前の途中セーブを破棄
 			GameState.start_new_run()
+			Nav.go_to_town()
+		"resume":
+			GameState.restore(SaveData.load_run())  # 途中から再開
 			Nav.go_to_town()
 		"records":
 			_go(Screen.RECORDS)
@@ -72,12 +76,13 @@ func _go(screen: Screen) -> void:
 	_index = 0
 	match screen:
 		Screen.MAIN:
-			_items = [
-				{ "id": "start", "label": "はじめる" },
-				{ "id": "records", "label": "エンディング記録" },
-				{ "id": "clear", "label": "記録を消す" },
-				{ "id": "quit", "label": "おわる" },
-			]
+			_items = []
+			if SaveData.has_run():
+				_items.append({ "id": "resume", "label": "つづきから" })
+			_items.append({ "id": "start", "label": "はじめる" })
+			_items.append({ "id": "records", "label": "エンディング記録" })
+			_items.append({ "id": "clear", "label": "記録を消す" })
+			_items.append({ "id": "quit", "label": "おわる" })
 		Screen.RECORDS:
 			_items = [{ "id": "back", "label": "戻る" }]
 		Screen.CONFIRM:

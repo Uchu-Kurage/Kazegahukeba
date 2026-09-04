@@ -59,7 +59,7 @@ project.godot              プロジェクト設定（Autoload登録・メイン
 autoload/
   GameState.gd             ★状態の中心。日付・時間帯・好感度・フラグ＋一日を進める状態機械
   Controls.gd              操作キーの登録（起動時に一度）
-  SaveData.gd              周回をまたぐセーブ記録（到達エンド・周回数。user:// に保存）
+  SaveData.gd              セーブ（周回記録＝到達エンド・周回数／進行中の1周＝中断・再開）
   AudioManager.gd          BGM／効果音（音源が無ければコード合成で鳴らす）
   Nav.gd                   シーン遷移（街 ⇄ 場所 ⇄ エンディング）の入口
   Dialogue.gd              会話ウィンドウ（画面下テキストボックス。立ち絵なし・選択肢対応）

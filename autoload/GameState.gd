@@ -44,6 +44,7 @@ func _ready() -> void:
 
 
 ## 周回の最初に呼ぶ。状態をリセットして 1 日目の朝から始める。
+## （ディスクの進行データ [run] はここでは触らない。新規開始の上書きは Title 側で行う）
 func start_new_run() -> void:
 	day_index = 0
 	phase = Phase.MORNING
@@ -54,6 +55,36 @@ func start_new_run() -> void:
 	kuma_stance = ""
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
+
+
+## 現在の進行状況をまとめて返す（セーブ用）。
+func snapshot() -> Dictionary:
+	return {
+		"day": day_index,
+		"phase": int(phase),
+		"schedule": schedule.duplicate(true),
+		"affinity": affinity.duplicate(),
+		"flags": flags.duplicate(),
+		"visits": visits.duplicate(),
+		"stance": kuma_stance,
+	}
+
+
+## セーブした進行状況を復元する（つづきから）。
+func restore(data: Dictionary) -> void:
+	day_index = int(data.get("day", 0))
+	phase = int(data.get("phase", Phase.MORNING))
+	schedule = (data.get("schedule", {}) as Dictionary).duplicate(true)
+	affinity = (data.get("affinity", {}) as Dictionary).duplicate()
+	flags = (data.get("flags", {}) as Dictionary).duplicate()
+	visits = (data.get("visits", {}) as Dictionary).duplicate()
+	kuma_stance = String(data.get("stance", ""))
+	day_changed.emit(day_index)
+	phase_changed.emit(phase)
+
+
+func _autosave() -> void:
+	SaveData.save_run(snapshot())
 
 
 ## 行動枠（午前・午後）で場所を選んだときに呼ぶ。枠を消費して次の時間帯へ。
@@ -112,9 +143,11 @@ func _advance_phase() -> void:
 		Phase.MORNING:
 			phase = Phase.AFTERNOON
 			phase_changed.emit(phase)
+			_autosave()
 		Phase.AFTERNOON:
 			phase = Phase.NIGHT
 			phase_changed.emit(phase)
+			_autosave()
 		Phase.NIGHT:
 			_advance_day()
 
@@ -122,11 +155,13 @@ func _advance_phase() -> void:
 func _advance_day() -> void:
 	day_index += 1
 	if day_index >= TOTAL_DAYS:
+		SaveData.clear_run()  # クリアしたので「つづきから」は消す
 		game_ended.emit()
 		return
 	phase = Phase.MORNING
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
+	_autosave()
 
 
 # --- 表示用ヘルパー -------------------------------------------------
