@@ -145,7 +145,7 @@ func _speaker_color(speaker: String) -> Color:
 	match speaker:
 		"球磨": return Color(0.80, 0.36, 0.20)
 		"由布": return Color(0.28, 0.42, 0.68)
-		"夏": return Color(0.80, 0.36, 0.52)
+		"葵": return Color(0.80, 0.36, 0.52)
 		"ぼく": return Color(0.55, 0.50, 0.20)
 	return Color(0.30, 0.30, 0.36)
 

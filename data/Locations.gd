@@ -14,10 +14,11 @@ extends RefCounted
 ##   pos       … 街マップ上の座標（地図の見た目・カーソル移動に使う）
 ##   icon      … 地図アイコンの種類（house / torii / shop / river）
 const ALL := [
-	{ "id": "riverside", "name": "川原",   "character": "kuma",  "pos": Vector2(170, 330), "icon": "river" },
-	{ "id": "shop",      "name": "商店街", "character": "natsu", "pos": Vector2(560, 200), "icon": "shop" },
-	{ "id": "shrine",    "name": "神社",   "character": "yuu",   "pos": Vector2(940, 200), "icon": "torii" },
-	{ "id": "home",      "name": "家",     "character": "",      "pos": Vector2(860, 470), "icon": "house" },
+	# character は route_id と一致させる（kuma / yufu / aoi）。関係値 affinity{} のキーも兼ねる。
+	{ "id": "riverside", "name": "川原",   "character": "kuma", "pos": Vector2(170, 330), "icon": "river" },
+	{ "id": "shop",      "name": "商店街", "character": "aoi",  "pos": Vector2(560, 200), "icon": "shop" },
+	{ "id": "shrine",    "name": "神社",   "character": "yufu", "pos": Vector2(940, 200), "icon": "torii" },
+	{ "id": "home",      "name": "家",     "character": "",     "pos": Vector2(860, 470), "icon": "house" },
 ]
 
 
