@@ -8,6 +8,9 @@ extends Node
 ## 一日の時間帯。午前・午後が「行動枠」、夜は基本は振り返り。
 enum Phase { MORNING, AFTERNOON, NIGHT }
 
+## 球磨のあがきへの態度（中盤の選択ポイント A/B/C）。指示書§1-2の enum 的な値。
+enum KumaAttitude { NONE, STRUGGLE_TOGETHER, STAY_BESIDE, DISSUADE }
+
 ## --- カレンダー設定 ---
 const START_MONTH := 8
 const START_DAY := 1
@@ -36,7 +39,11 @@ var flags := {}
 var visits := {}
 
 ## 球磨のあがきへの立場（中盤の A/B/C）。"a"=一緒にあがく / "b"=寄り添う / "c"=諫める。
+## （後方互換のため文字列も保持。正式な値は下の kuma_attitude）
 var kuma_stance := ""
+
+## 球磨への態度（enum）。エンディング判定の主軸。kuma_stance と同期して持つ。
+var kuma_attitude: KumaAttitude = KumaAttitude.NONE
 
 
 func _ready() -> void:
@@ -53,6 +60,7 @@ func start_new_run() -> void:
 	flags.clear()
 	visits.clear()
 	kuma_stance = ""
+	kuma_attitude = KumaAttitude.NONE
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
 
@@ -67,6 +75,7 @@ func snapshot() -> Dictionary:
 		"flags": flags.duplicate(),
 		"visits": visits.duplicate(),
 		"stance": kuma_stance,
+		"attitude": int(kuma_attitude),
 	}
 
 
@@ -79,6 +88,7 @@ func restore(data: Dictionary) -> void:
 	flags = (data.get("flags", {}) as Dictionary).duplicate()
 	visits = (data.get("visits", {}) as Dictionary).duplicate()
 	kuma_stance = String(data.get("stance", ""))
+	kuma_attitude = int(data.get("attitude", KumaAttitude.NONE))
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
 
@@ -131,10 +141,15 @@ func set_flag(flag_name: String, value: bool) -> void:
 	print("[flag] %s = %s" % [flag_name, str(value)])  # 確認用（エンディング実装時に削除可）
 
 
-## 球磨への立場を決める（中盤の A/B/C 選択から呼ぶ）。
+## 球磨への立場を決める（中盤の A/B/C 選択から呼ぶ）。enum も同期する。
 func set_kuma_stance(stance: String) -> void:
 	kuma_stance = stance
-	print("[stance] kuma = %s" % stance)  # 確認用
+	match stance:
+		"a": kuma_attitude = KumaAttitude.STRUGGLE_TOGETHER
+		"b": kuma_attitude = KumaAttitude.STAY_BESIDE
+		"c": kuma_attitude = KumaAttitude.DISSUADE
+		_: kuma_attitude = KumaAttitude.NONE
+	print("[stance] kuma = %s (attitude=%d)" % [stance, kuma_attitude])  # 確認用
 
 
 ## 時間帯を一つ進める。夜の次は翌日の朝。

@@ -103,7 +103,11 @@ func _next_node() -> void:
 		_end()
 		return
 	var node: Dictionary = _nodes[_index]
-	if node.has("choices"):
+	if node.has("effect"):
+		# 表示しない効果ノード：フラグ/好感度などを反映して、そのまま次へ。
+		option_selected.emit(node["effect"])
+		_next_node()
+	elif node.has("choices"):
 		_show_choices(node)
 	else:
 		_show_line(node)
