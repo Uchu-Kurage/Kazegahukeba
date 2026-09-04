@@ -32,6 +32,12 @@ var affinity := {}
 ## 選択で立つフラグ。 flag_name(String) -> bool
 var flags := {}
 
+## 場所ごとの訪問回数。 location_id -> int（中盤イベントの出しどころ判定などに使う）
+var visits := {}
+
+## 球磨のあがきへの立場（中盤の A/B/C）。"a"=一緒にあがく / "b"=寄り添う / "c"=諫める。
+var kuma_stance := ""
+
 
 func _ready() -> void:
 	start_new_run()
@@ -44,6 +50,8 @@ func start_new_run() -> void:
 	schedule.clear()
 	affinity.clear()
 	flags.clear()
+	visits.clear()
+	kuma_stance = ""
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
 
@@ -72,6 +80,7 @@ func _record_choice(location_id: String) -> void:
 	schedule[day_index][phase] = location_id
 	# 場所にキャラが紐づいていれば関係値を +1（当面の仮ロジック）。
 	if location_id != "":
+		visits[location_id] = int(visits.get(location_id, 0)) + 1
 		var who := Locations.character_of(location_id)
 		if who != "":
 			affinity[who] = int(affinity.get(who, 0)) + 1
@@ -89,6 +98,12 @@ func add_affinity(who: String, delta: int) -> void:
 func set_flag(flag_name: String, value: bool) -> void:
 	flags[flag_name] = value
 	print("[flag] %s = %s" % [flag_name, str(value)])  # 確認用（エンディング実装時に削除可）
+
+
+## 球磨への立場を決める（中盤の A/B/C 選択から呼ぶ）。
+func set_kuma_stance(stance: String) -> void:
+	kuma_stance = stance
+	print("[stance] kuma = %s" % stance)  # 確認用
 
 
 ## 時間帯を一つ進める。夜の次は翌日の朝。

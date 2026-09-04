@@ -20,7 +20,7 @@ func _ready() -> void:
 
 ## 結末の再生 → 記録 → （裏エンド）→ 成績表示、を順に待ち合わせる。
 func _run() -> void:
-	var id := Endings.pick(GameState.affinity, GameState.flags)
+	var id := Endings.pick(GameState.affinity, GameState.flags, GameState.kuma_stance)
 	Dialogue.start(Endings.script_of(id))
 	await Dialogue.finished
 

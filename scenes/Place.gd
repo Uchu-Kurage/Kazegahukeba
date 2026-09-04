@@ -60,6 +60,8 @@ func _on_option_selected(option: Dictionary) -> void:
 		GameState.add_affinity(who, int(option["affinity"][who]))
 	for flag_name in option.get("set", {}):
 		GameState.set_flag(flag_name, option["set"][flag_name])
+	if option.has("stance"):
+		GameState.set_kuma_stance(String(option["stance"]))
 
 
 func _on_talk_finished() -> void:

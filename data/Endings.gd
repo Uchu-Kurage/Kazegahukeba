@@ -9,16 +9,29 @@ const SECRET := "secret"
 const NORMAL_IDS := ["kuma_friendship", "kuma_struggle", "kuma_bitter", "quiet_summer"]
 
 
-## この周回の結末を1つ選ぶ。上から順に判定（先に当たったもの勝ち）。
-static func pick(affinity: Dictionary, flags: Dictionary) -> String:
+## この周回の結末を1つ選ぶ。中盤の立場(A/B/C)を主軸に、好感度・フラグで補正する。
+static func pick(affinity: Dictionary, flags: Dictionary, stance: String) -> String:
 	var kuma := int(affinity.get("kuma", 0))
-	if kuma <= 1:
-		return "quiet_summer"  # 球磨とほとんど過ごさなかった
+
+	# 球磨とほとんど関わらず、立場も選ばなかった → 静かな夏。
+	if kuma <= 1 and stance == "":
+		return "quiet_summer"
+
+	# 中盤の立場が主軸（プロットの着地1〜3に対応）。
+	match stance:
+		"a":
+			return "kuma_struggle"                                   # 一緒にあがいた
+		"b":
+			return "kuma_friendship" if kuma >= 5 else "kuma_struggle"  # 寄り添い、深く見届けた
+		"c":
+			return "kuma_bitter"                                     # 諫めた／すれ違い
+
+	# 立場イベントに至らなかった場合は、序盤の選択で寄せる。
 	if flags.get("told_truth_kuma", false) and not flags.get("promised_kuma", false):
-		return "kuma_bitter"   # 突き放した／すれ違い
+		return "kuma_bitter"
 	if kuma >= 6 and flags.get("promised_kuma", false):
-		return "kuma_friendship"  # 深く並走し、約束を交わした
-	return "kuma_struggle"     # それなりに寄り添い、あがきを共にした
+		return "kuma_friendship"
+	return "kuma_struggle"
 
 
 static func title_of(id: String) -> String:
