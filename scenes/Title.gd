@@ -12,6 +12,8 @@ var _index := 0
 
 var _center: CenterContainer
 var _vbox: VBoxContainer
+var _sel_sb: StyleBoxFlat
+var _unsel_sb: StyleBoxFlat
 
 
 func _ready() -> void:
@@ -100,7 +102,8 @@ func _render() -> void:
 		var selected := i == _index
 		var mark := "▶ " if selected else "　 "
 		var lbl := _make_label(mark + String(it["label"]), 26,
-			Color(1.0, 0.90, 0.5) if selected else Color(1, 1, 1, 0.85))
+			Color(1.0, 0.92, 0.6) if selected else Color(1, 1, 1, 0.85))
+		lbl.add_theme_stylebox_override("normal", _sel_sb if selected else _unsel_sb)
 		_vbox.add_child(lbl)
 
 	_vbox.add_child(_spacer(24))
@@ -138,10 +141,21 @@ func _footer_text() -> String:
 # --- UI 部品 ---------------------------------------------------------
 
 func _build_ui() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.10, 0.11, 0.18)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	add_child(TitleBackground.new())  # 夕暮れの空・山・田んぼ
+	add_child(Fireflies.new())        # 漂う蛍
+
+	# 選択中の項目に敷くハイライト帯（未選択は同サイズの透明で見た目のガタつきを防ぐ）。
+	_sel_sb = StyleBoxFlat.new()
+	_sel_sb.bg_color = Color(1.0, 0.85, 0.45, 0.22)
+	_sel_sb.set_corner_radius_all(6)
+	_sel_sb.set_content_margin_all(8)
+	_sel_sb.content_margin_left = 24
+	_sel_sb.content_margin_right = 24
+	_unsel_sb = StyleBoxFlat.new()
+	_unsel_sb.bg_color = Color(0, 0, 0, 0)
+	_unsel_sb.set_content_margin_all(8)
+	_unsel_sb.content_margin_left = 24
+	_unsel_sb.content_margin_right = 24
 
 	_center = CenterContainer.new()
 	_center.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -159,6 +173,9 @@ func _make_label(text: String, size: int, color: Color) -> Label:
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
+	# 明るい空でも読めるよう、濃い縁取りをつける。
+	l.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.10, 0.9))
+	l.add_theme_constant_override("outline_size", 6)
 	return l
 
 

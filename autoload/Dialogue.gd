@@ -33,6 +33,9 @@ var _name: Label
 var _text: Label
 var _hint: Label
 var _choice_box: VBoxContainer
+var _name_sb: StyleBoxFlat
+var _choice_sel_sb: StyleBoxFlat
+var _choice_unsel_sb: StyleBoxFlat
 
 
 func _ready() -> void:
@@ -76,16 +79,20 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
-	if not _active or not _revealing:
+	if not _active:
 		return
-	_accum += delta
-	var total := _current_len()
-	var shown := int(_accum / CHAR_TIME)
-	if shown >= total:
-		_text.visible_characters = -1
-		_revealing = false
-	else:
-		_text.visible_characters = shown
+	if _revealing:
+		_accum += delta
+		var total := _current_len()
+		var shown := int(_accum / CHAR_TIME)
+		if shown >= total:
+			_text.visible_characters = -1
+			_revealing = false
+		else:
+			_text.visible_characters = shown
+	elif not _choosing:
+		# 送り待ちのあいだ、続行マークを点滅させる。
+		_hint.modulate.a = 0.35 + 0.35 * absf(sin(Time.get_ticks_msec() * 0.006))
 
 
 # --- ノード送り ------------------------------------------------------
@@ -114,13 +121,28 @@ func _show_line(node: Dictionary) -> void:
 	_choosing = false
 	_choice_box.visible = false
 	_hint.text = "［E］▶"
-	var speaker := String(node.get("speaker", ""))
-	_name.text = speaker
-	_name.visible = speaker != ""
+	_hint.modulate.a = 0.7
+	_set_speaker(String(node.get("speaker", "")))
 	_text.text = String(node.get("text", ""))
 	_text.visible_characters = 0
 	_accum = 0.0
 	_revealing = true
+
+
+## 話者名プレートを設定（名前ごとに色を変える。地の文は隠す）。
+func _set_speaker(speaker: String) -> void:
+	_name.text = " " + speaker + " "
+	_name.visible = speaker != ""
+	_name_sb.bg_color = _speaker_color(speaker)
+
+
+func _speaker_color(speaker: String) -> Color:
+	match speaker:
+		"球磨": return Color(0.80, 0.36, 0.20)
+		"由布": return Color(0.28, 0.42, 0.68)
+		"夏": return Color(0.80, 0.36, 0.52)
+		"ぼく": return Color(0.55, 0.50, 0.20)
+	return Color(0.30, 0.30, 0.36)
 
 
 # --- 選択肢 ----------------------------------------------------------
@@ -129,14 +151,14 @@ func _show_choices(node: Dictionary) -> void:
 	_revealing = false
 	# 質問文があれば出す。無ければ直前のセリフをそのまま残す。
 	if node.has("text"):
-		_name.text = String(node.get("speaker", ""))
-		_name.visible = _name.text != ""
+		_set_speaker(String(node.get("speaker", "")))
 		_text.text = String(node["text"])
 		_text.visible_characters = -1
 	_choices = node["choices"]
 	_choice_index = 0
 	_choosing = true
 	_hint.text = "↑↓ 選ぶ ／ ［E］決定"
+	_hint.modulate.a = 0.7
 	_build_choice_labels()
 	_choice_box.visible = true
 
@@ -157,9 +179,11 @@ func _update_choice_highlight() -> void:
 	for i in _choice_labels.size():
 		var lbl: Label = _choice_labels[i]
 		var opt: Dictionary = _choices[i]
-		var mark := "▶ " if i == _choice_index else "　 "
+		var selected := i == _choice_index
+		var mark := "▶ " if selected else "　 "
 		lbl.text = mark + String(opt.get("text", ""))
-		lbl.modulate = Color(1.0, 0.90, 0.50) if i == _choice_index else Color(1, 1, 1, 0.8)
+		lbl.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55) if selected else Color(1, 1, 1, 0.82))
+		lbl.add_theme_stylebox_override("normal", _choice_sel_sb if selected else _choice_unsel_sb)
 
 
 func _move_choice(delta: int) -> void:
@@ -212,9 +236,17 @@ func _build_ui() -> void:
 	_root.add_child(_box)
 
 	_name = Label.new()
-	_name.position = Vector2(24, 12)
-	_name.add_theme_font_size_override("font_size", 24)
-	_name.add_theme_color_override("font_color", Color(1.0, 0.88, 0.50))
+	_name.position = Vector2(24, 8)
+	_name.add_theme_font_size_override("font_size", 22)
+	_name.add_theme_color_override("font_color", Color(1, 1, 1))
+	_name_sb = StyleBoxFlat.new()
+	_name_sb.bg_color = Color(0.30, 0.30, 0.36)
+	_name_sb.set_corner_radius_all(6)
+	_name_sb.content_margin_left = 12
+	_name_sb.content_margin_right = 12
+	_name_sb.content_margin_top = 3
+	_name_sb.content_margin_bottom = 3
+	_name.add_theme_stylebox_override("normal", _name_sb)
 	_box.add_child(_name)
 
 	_text = Label.new()
@@ -225,10 +257,25 @@ func _build_ui() -> void:
 	_box.add_child(_text)
 
 	_choice_box = VBoxContainer.new()
-	_choice_box.position = Vector2(44, 112)
-	_choice_box.add_theme_constant_override("separation", 6)
+	_choice_box.position = Vector2(40, 108)
+	_choice_box.add_theme_constant_override("separation", 4)
 	_choice_box.visible = false
 	_box.add_child(_choice_box)
+
+	# 選択肢のハイライト帯（選択中）と、同サイズの透明版（未選択）。
+	_choice_sel_sb = StyleBoxFlat.new()
+	_choice_sel_sb.bg_color = Color(1.0, 0.85, 0.45, 0.20)
+	_choice_sel_sb.set_corner_radius_all(6)
+	_choice_sel_sb.content_margin_left = 12
+	_choice_sel_sb.content_margin_right = 12
+	_choice_sel_sb.content_margin_top = 2
+	_choice_sel_sb.content_margin_bottom = 2
+	_choice_unsel_sb = StyleBoxFlat.new()
+	_choice_unsel_sb.bg_color = Color(0, 0, 0, 0)
+	_choice_unsel_sb.content_margin_left = 12
+	_choice_unsel_sb.content_margin_right = 12
+	_choice_unsel_sb.content_margin_top = 2
+	_choice_unsel_sb.content_margin_bottom = 2
 
 	_hint = Label.new()
 	_hint.text = "［E］▶"
