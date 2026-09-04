@@ -12,6 +12,11 @@ var _phase: Label
 var _prompt: Label
 var _flip: Tween
 
+# --- 動作確認用（デバッグ）オーバーレイ ---
+var _debug_on := false
+var _debug_panel: Panel
+var _debug_text: Label
+
 
 func _ready() -> void:
 	_build_ui()
@@ -26,6 +31,29 @@ func set_shown(v: bool) -> void:
 	for c in get_children():
 		if c is Control:
 			c.visible = v
+	# デバッグオーバーレイは、表示中でも「デバッグONのとき」だけ出す。
+	_debug_panel.visible = v and _debug_on
+
+
+## デバッグキー（F3=表示切替／F4=いまの状態で即エンディング）。通常入力は消費しない。
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("debug_toggle"):
+		_debug_on = not _debug_on
+		_debug_panel.visible = _debug_on
+		if _debug_on:
+			_refresh_debug()
+	elif event.is_action_pressed("debug_end"):
+		SaveData.clear_run()   # デバッグ終了なので途中セーブは破棄
+		Nav.go_to_ending()     # いまの affinity / flags / stance でエンディング判定
+
+
+func _process(_delta: float) -> void:
+	if _debug_on and _debug_panel.visible:
+		_refresh_debug()
+
+
+func _refresh_debug() -> void:
+	_debug_text.text = "\n".join(Story.debug_lines(GameState))
 
 
 func set_prompt(text: String) -> void:
@@ -134,6 +162,28 @@ func _build_ui() -> void:
 	_prompt.position = Vector2(24, 608)
 	_prompt.size = Vector2(1104, 30)
 	add_child(_prompt)
+
+	_build_debug_panel()
+
+
+## 到達状況オーバーレイ（右側）。既定は非表示、F3 で切替。
+func _build_debug_panel() -> void:
+	_debug_panel = Panel.new()
+	_debug_panel.position = Vector2(772, 78)
+	_debug_panel.size = Vector2(372, 468)
+	_debug_panel.add_theme_stylebox_override("panel", _flat(Color(0.03, 0.04, 0.07, 0.82), 8))
+	_debug_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_debug_panel.visible = false
+	add_child(_debug_panel)
+
+	_debug_text = Label.new()
+	_debug_text.position = Vector2(14, 12)
+	_debug_text.size = Vector2(344, 444)
+	_debug_text.add_theme_font_size_override("font_size", 16)
+	_debug_text.add_theme_color_override("font_color", Color(0.86, 0.95, 0.80))
+	_debug_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_debug_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_debug_panel.add_child(_debug_text)
 
 
 func _label(size: int, align: int) -> Label:

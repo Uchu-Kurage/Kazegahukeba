@@ -109,6 +109,60 @@ static func _branch(node: Dictionary, take: bool) -> Array:
 	return node.get("else", [])
 
 
+# --- 動作確認用（デバッグ）------------------------------------------
+## いまの到達状況を1行ずつのテキストにして返す（HUD のオーバーレイが表示する）。
+## 各ルートの「到達済み節目」「次の節目と解放条件」「関係値」「立場」が一目で分かる。
+static func debug_lines(state) -> PackedStringArray:
+	var out := PackedStringArray()
+	var d := state.day_index
+	var drift := "on" if state.flags.get(Timeline.F_KUMA_DRIFTING, false) else "off"
+	out.append("=== DEBUG (F3で消す) ===")
+	out.append("%d日目 %s / phase=%s  背景:球磨離脱=%s" % [
+		d + 1, GameState.date_text(d), _phase_name(state.phase), drift,
+	])
+	out.append("葵の今日の居場所: %s" % Locations.name_of(Timeline.aoi_spot(d)))
+	out.append("")
+	for r in Routes.all():
+		var rid := String(r["id"])
+		var reached: Array = []
+		var next_key := ""
+		var next_cond := ""
+		for m in r["milestones"]:
+			var mk := String(m["key"])
+			if state.flags.get(Routes.flag_of(rid, mk), false):
+				reached.append(mk)
+			elif next_key == "":
+				next_key = mk
+				next_cond = "d%d-%d,aff≥%d" % [int(m["since"]), int(m["until"]), int(m["aff_min"])]
+		var total: int = (r["milestones"] as Array).size()
+		var stance_txt := _stance_name(int(state.stance.get(rid, GameState.Stance.NONE)))
+		out.append("[%s] aff=%d stance=%s  %d/%d" % [
+			rid, int(state.affinity.get(rid, 0)), stance_txt, reached.size(), total,
+		])
+		out.append("   済: %s" % (" > ".join(reached) if not reached.is_empty() else "(なし)"))
+		if next_key != "":
+			out.append("   次: %s (%s)" % [next_key, next_cond])
+		else:
+			out.append("   次: (全節目 到達)")
+	return out
+
+
+static func _phase_name(phase: int) -> String:
+	match phase:
+		GameState.Phase.MORNING: return "午前"
+		GameState.Phase.AFTERNOON: return "午後"
+		GameState.Phase.NIGHT: return "夜"
+	return "?"
+
+
+static func _stance_name(st: int) -> String:
+	match st:
+		GameState.Stance.A: return "A"
+		GameState.Stance.B: return "B"
+		GameState.Stance.C: return "C"
+	return "-"
+
+
 # --- 日常会話のレベル分け（関係値でセリフを段階変化させる下地）--------
 static func _affinity_level(aff: int) -> int:
 	if aff >= 5:
