@@ -16,9 +16,9 @@ static func palette_for(id: String) -> Dictionary:
 	match id:
 		"kuma":
 			return _pal(Color(0.98, 0.82, 0.68), Color(0.35, 0.22, 0.14), Color(0.86, 0.36, 0.22), Color(0.22, 0.25, 0.34))
-		"yuu":
+		"yufu":
 			return _pal(Color(0.96, 0.84, 0.74), Color(0.12, 0.12, 0.16), Color(0.30, 0.45, 0.72), Color(0.30, 0.32, 0.36))
-		"natsu":
+		"aoi":
 			return _pal(Color(0.99, 0.85, 0.76), Color(0.42, 0.28, 0.20), Color(0.88, 0.45, 0.60), Color(0.90, 0.90, 0.92))
 	# player / default
 	return _pal(Color(0.98, 0.83, 0.70), Color(0.15, 0.13, 0.12), Color(0.92, 0.80, 0.32), Color(0.40, 0.30, 0.22))

@@ -55,7 +55,8 @@ func _talk() -> void:
 	# 選択肢が選ばれるたびに効果（好感度・フラグ）を GameState に反映する。
 	Dialogue.option_selected.connect(_on_option_selected)
 	Dialogue.finished.connect(_on_talk_finished, CONNECT_ONE_SHOT)
-	Dialogue.start(Dialogues.for_location(_place_id))
+	# 三ルート共通の解決器が「その日・その枠で何を流すか」を決める（§4 の優先順位）。
+	Dialogue.start(Story.script_for_location(_place_id, GameState))
 
 
 ## 選んだ選択肢の効果を状態に反映する。Dialogue は「何が選ばれたか」を伝えるだけで、
@@ -65,8 +66,9 @@ func _on_option_selected(option: Dictionary) -> void:
 		GameState.add_affinity(who, int(option["affinity"][who]))
 	for flag_name in option.get("set", {}):
 		GameState.set_flag(flag_name, option["set"][flag_name])
-	if option.has("stance"):
-		GameState.set_kuma_stance(option["stance"])  # KumaStance の enum 値
+	# 立場（中盤の A/B/C）は route_id 別の辞書で受け取り、そのルートに立てる。
+	for route_id in option.get("stance", {}):
+		GameState.set_stance(route_id, option["stance"][route_id])
 
 
 func _on_talk_finished() -> void:

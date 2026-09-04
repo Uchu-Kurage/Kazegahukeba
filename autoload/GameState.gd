@@ -8,9 +8,12 @@ extends Node
 ## 一日の時間帯。午前・午後が「行動枠」、夜は基本は振り返り。
 enum Phase { MORNING, AFTERNOON, NIGHT }
 
-## 球磨のあがきへの立場（中盤の選択ポイント A/B/C）。生文字列をやめ、この enum を正とする。
-##   NONE=未選択 / STRUGGLE=一緒にあがく / STAY_BESIDE=寄り添う / DISSUADE=諫める
-enum KumaStance { NONE, STRUGGLE, STAY_BESIDE, DISSUADE }
+## 中盤の選択ポイント（各ルート共通の A/B/C）。意味はルートごとに異なる（Routes 参照）：
+##   球磨 A=一緒にあがく / B=寄り添う / C=諫める
+##   由布 A=一線を越える / B=幼なじみのまま守る / C=喪失に寄り添う
+##   葵   A=一緒に今を生きる / B=未来を求める / C=知ろうとする
+## 生文字列をやめ、この enum を正とする（route_id 別に stance{} へ持つ）。
+enum Stance { NONE, A, B, C }
 
 ## --- カレンダー設定 ---
 const START_MONTH := 8
@@ -39,8 +42,9 @@ var flags := {}
 ## 場所ごとの訪問回数。 location_id -> int（中盤イベントの出しどころ判定などに使う）
 var visits := {}
 
-## 球磨への立場（中盤の A/B/C）。エンディング判定の主軸。enum KumaStance を使う。
-var kuma_stance: KumaStance = KumaStance.NONE
+## 各ルートの中盤の立場（A/B/C）。 route_id(String) -> Stance(int)。エンディング判定の主軸。
+## ルートごとに個別の器を持つので、掛け持ちしても立場が混ざらない。
+var stance := {}
 
 
 func _ready() -> void:
@@ -56,7 +60,8 @@ func start_new_run() -> void:
 	affinity.clear()
 	flags.clear()
 	visits.clear()
-	kuma_stance = KumaStance.NONE
+	stance.clear()
+	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
 
@@ -70,7 +75,7 @@ func snapshot() -> Dictionary:
 		"affinity": affinity.duplicate(),
 		"flags": flags.duplicate(),
 		"visits": visits.duplicate(),
-		"stance": int(kuma_stance),
+		"stance": stance.duplicate(),
 	}
 
 
@@ -82,7 +87,8 @@ func restore(data: Dictionary) -> void:
 	affinity = (data.get("affinity", {}) as Dictionary).duplicate()
 	flags = (data.get("flags", {}) as Dictionary).duplicate()
 	visits = (data.get("visits", {}) as Dictionary).duplicate()
-	kuma_stance = int(data.get("stance", KumaStance.NONE))
+	stance = (data.get("stance", {}) as Dictionary).duplicate()
+	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
 
@@ -135,10 +141,12 @@ func set_flag(flag_name: String, value: bool) -> void:
 	print("[flag] %s = %s" % [flag_name, str(value)])  # 確認用（エンディング実装時に削除可）
 
 
-## 球磨への立場を決める（中盤の A/B/C 選択から呼ぶ）。値は KumaStance の enum。
-func set_kuma_stance(stance: KumaStance) -> void:
-	kuma_stance = stance
-	print("[stance] kuma = %d" % stance)  # 確認用
+## あるルートの立場を決める（中盤の A/B/C 選択から呼ぶ）。値は Stance の enum。
+func set_stance(route_id: String, value: Stance) -> void:
+	if route_id == "":
+		return
+	stance[route_id] = value
+	print("[stance] %s = %d" % [route_id, value])  # 確認用
 
 
 ## 時間帯を一つ進める。夜の次は翌日の朝。
@@ -163,6 +171,7 @@ func _advance_day() -> void:
 		game_ended.emit()
 		return
 	phase = Phase.MORNING
+	Timeline.apply_background(self)  # 新しい日の共通背景を反映（中盤で球磨離脱フラグ等）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
 	_autosave()
