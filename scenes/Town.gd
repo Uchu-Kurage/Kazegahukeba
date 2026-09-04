@@ -49,14 +49,17 @@ func _unhandled_input(event: InputEvent) -> void:
 func _confirm() -> void:
 	match GameState.phase:
 		GameState.Phase.MORNING, GameState.Phase.AFTERNOON:
+			AudioManager.play_sfx("confirm")
 			Nav.go_to_place(_markers[_selected].location_id)  # 選んだ場所の中へ
 		GameState.Phase.NIGHT:
+			AudioManager.play_sfx("page")  # カレンダーをめくる音
 			GameState.flip_calendar()
 
 
 func _skip() -> void:
 	match GameState.phase:
 		GameState.Phase.MORNING, GameState.Phase.AFTERNOON:
+			AudioManager.play_sfx("cancel")
 			GameState.skip_slot()
 
 
@@ -78,6 +81,7 @@ func _move(dir: Vector2) -> void:
 			best_score = score
 			best = i
 	if best != -1:
+		AudioManager.play_sfx("blip")
 		_select(best)
 
 

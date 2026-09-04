@@ -18,6 +18,7 @@ var _unsel_sb: StyleBoxFlat
 
 func _ready() -> void:
 	HUD.set_shown(false)  # タイトルではカレンダーを出さない
+	AudioManager.start_bgm()  # エンディングで止めた BGM をここで戻す
 	_build_ui()
 	_go(Screen.MAIN)
 
@@ -38,11 +39,13 @@ func _move(d: int) -> void:
 	if _items.is_empty():
 		return
 	_index = wrapi(_index + d, 0, _items.size())
+	AudioManager.play_sfx("blip")
 	_render()
 
 
 func _activate() -> void:
 	var id := String(_items[_index]["id"])
+	AudioManager.play_sfx("cancel" if id in ["back", "clear_no"] else "confirm")
 	match id:
 		"start":
 			GameState.start_new_run()

@@ -39,8 +39,10 @@ func _on_interact(spot) -> void:
 	if spot == null:
 		return
 	if spot.location_id == EXIT_ID:
+		AudioManager.play_sfx("cancel")
 		Nav.go_to_town()  # 過ごさずに戻る
 		return
+	AudioManager.play_sfx("confirm")
 	_talk()  # 中の人と会話 → 終わったら枠を消費して街へ
 
 

@@ -114,6 +114,7 @@ func _advance_line() -> void:
 		_text.visible_characters = -1  # 表示途中なら、まず全文を出す
 		_revealing = false
 		return
+	AudioManager.play_sfx("talk")
 	_next_node()
 
 
@@ -187,12 +188,16 @@ func _update_choice_highlight() -> void:
 
 
 func _move_choice(delta: int) -> void:
+	var prev := _choice_index
 	_choice_index = clampi(_choice_index + delta, 0, _choices.size() - 1)
+	if _choice_index != prev:
+		AudioManager.play_sfx("blip")
 	_update_choice_highlight()
 
 
 func _confirm_choice() -> void:
 	var opt: Dictionary = _choices[_choice_index]
+	AudioManager.play_sfx("confirm")
 	_choosing = false
 	_choice_box.visible = false
 	option_selected.emit(opt)  # 効果（好感度・フラグ）の反映は呼び出し側にまかせる

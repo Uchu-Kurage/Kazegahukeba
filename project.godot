@@ -19,6 +19,8 @@ GameState="*res://autoload/GameState.gd"
 Controls="*res://autoload/Controls.gd"
 ; 周回をまたいで残るセーブ記録（到達エンド・周回数）。
 SaveData="*res://autoload/SaveData.gd"
+; BGM／効果音（音源が無ければコード合成で鳴らす）。
+AudioManager="*res://autoload/AudioManager.gd"
 ; シーン遷移（街 ⇄ 場所）の入口。
 Nav="*res://autoload/Nav.gd"
 ; カレンダー等の常時UI。シーンをまたいで表示し続けるため Autoload（シーン）にする。

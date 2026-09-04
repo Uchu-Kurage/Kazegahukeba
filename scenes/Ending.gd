@@ -15,6 +15,7 @@ var _hint: Label
 func _ready() -> void:
 	_build_ui()
 	HUD.set_shown(false)  # 終幕中はカレンダーを隠す
+	AudioManager.stop_bgm()  # 終幕は静けさで（タイトルに戻ると再開）
 	_run()
 
 
@@ -40,6 +41,7 @@ func _run() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _summary_shown and event.is_action_pressed("interact"):
+		AudioManager.play_sfx("confirm")
 		Nav.go_to_title()  # タイトルへ（記録が更新された状態で戻る）
 
 
