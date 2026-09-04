@@ -21,8 +21,10 @@ Controls="*res://autoload/Controls.gd"
 SaveData="*res://autoload/SaveData.gd"
 ; BGM／効果音（音源が無ければコード合成で鳴らす）。
 AudioManager="*res://autoload/AudioManager.gd"
-; シーン遷移（街 ⇄ 場所）の入口。
+; シーン遷移（街 ⇄ 場所 ⇄ 終幕 ⇄ タイトル）の入口。
 Nav="*res://autoload/Nav.gd"
+; 画面遷移のフェード（黒幕の暗転／明転）。
+Fader="*res://autoload/Fader.gd"
 ; カレンダー等の常時UI。シーンをまたいで表示し続けるため Autoload（シーン）にする。
 ; GameState のシグナルを購読するので、GameState より後に登録する。
 HUD="*res://scenes/HUD.tscn"
