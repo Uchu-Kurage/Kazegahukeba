@@ -40,8 +40,7 @@ func _run() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _summary_shown and event.is_action_pressed("interact"):
-		GameState.start_new_run()
-		Nav.go_to_town()
+		Nav.go_to_title()  # タイトルへ（記録が更新された状態で戻る）
 
 
 func _show_summary(id: String) -> void:
@@ -51,7 +50,7 @@ func _show_summary(id: String) -> void:
 	_progress.text = "見たエンディング：%d / %d　　裏エンド：%s（周回 %d 回目）" % [
 		seen, Endings.NORMAL_IDS.size(), secret_txt, SaveData.runs,
 	]
-	_hint.text = "［E］で、もう一度 夏を始める"
+	_hint.text = "［E］でタイトルへ"
 	_center.visible = true
 	_summary_shown = true
 

@@ -46,6 +46,13 @@ func record_run() -> void:
 	_save()
 
 
+## すべての記録を消す（タイトルの「記録を消す」から）。
+func clear() -> void:
+	seen_endings.clear()
+	runs = 0
+	_save()
+
+
 func _load() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) != OK:
