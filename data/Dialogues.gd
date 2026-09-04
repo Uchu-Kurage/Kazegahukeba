@@ -6,7 +6,7 @@ extends RefCounted
 ##   セリフ : { "speaker": 表示名（""なら地の文）, "text": セリフ }
 ##   選択肢 : { "text": 質問文(省略可), "choices": [ 選択肢, ... ] }
 ##     選択肢: { "text": 表示, "affinity": {who: delta}, "set": {flag: true},
-##             "stance": "a"/"b"/"c", "then": [ 選んだときに続くノード... ] }
+##             "stance": GameState.KumaStance の値, "then": [ 選んだときに続くノード... ] }
 ##   効果   : { "effect": { "set": {...}, "affinity": {...} } }（表示せず状態だけ反映）
 ##
 ## 球磨（川原）はイベント表 KumaStory に載せ替えた。日付・前提フラグで“次の1件”が進む。
@@ -54,3 +54,29 @@ static func for_location(location_id: String) -> Array:
 				{ "speaker": PLAYER, "text": "……少し、休もう。" },
 				{ "speaker": "", "text": "何もしない時間も、この夏の一部だ。" },
 			]
+
+
+## 球磨ルートの節目イベントの台本。KumaStory がイベント id をキーに引く。
+## （イベントの「条件」は KumaStory 側のデータ、「台本」はここ、と分離している）
+static func kuma_script(key: String) -> Array:
+	match key:
+		"kuma_dream":  # 出会い直し＋夢を語る
+			return [
+				{ "speaker": "", "text": "いつもの川原。球磨が石に腰かけて、川下のほうを見ている。" },
+				{ "speaker": "球磨", "text": "よう。今年もこの夏が来たな。" },
+				{ "speaker": PLAYER, "text": "……ああ。" },
+				{ "speaker": "球磨", "text": "俺さ、いつか外で、でっかいことをやるんだ。未来なんて、まだいくらでもあるだろ。" },
+				{ "speaker": "", "text": "その未来が来ないことを、ぼくだけが知っている。" },
+			]
+		"kuma_promise":  # 子供時代の河口の約束（伏線）
+			return [
+				{ "speaker": "球磨", "text": "覚えてるか？　ガキの頃、この川の先の海まで行こうって約束したよな。" },
+				{ "speaker": "球磨", "text": "あんときは途中で引き返した。……大人になったら、あの先まで行こうな。" },
+				{ "speaker": "", "text": "川は、河口で海へ出る。球磨の名前と、同じように。" },
+			]
+		"kuma_filler":  # 節目が無い日の、球磨との何気ない時間
+			return [
+				{ "speaker": "球磨", "text": "……今日は、ただ川を見てるだけでいいや。" },
+				{ "speaker": "", "text": "となりで、同じ流れをぼんやり見ていた。" },
+			]
+	return []
