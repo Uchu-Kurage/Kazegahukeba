@@ -8,8 +8,9 @@ extends Node
 ## 一日の時間帯。午前・午後が「行動枠」、夜は基本は振り返り。
 enum Phase { MORNING, AFTERNOON, NIGHT }
 
-## 球磨のあがきへの態度（中盤の選択ポイント A/B/C）。指示書§1-2の enum 的な値。
-enum KumaAttitude { NONE, STRUGGLE_TOGETHER, STAY_BESIDE, DISSUADE }
+## 球磨のあがきへの立場（中盤の選択ポイント A/B/C）。生文字列をやめ、この enum を正とする。
+##   NONE=未選択 / STRUGGLE=一緒にあがく / STAY_BESIDE=寄り添う / DISSUADE=諫める
+enum KumaStance { NONE, STRUGGLE, STAY_BESIDE, DISSUADE }
 
 ## --- カレンダー設定 ---
 const START_MONTH := 8
@@ -38,12 +39,8 @@ var flags := {}
 ## 場所ごとの訪問回数。 location_id -> int（中盤イベントの出しどころ判定などに使う）
 var visits := {}
 
-## 球磨のあがきへの立場（中盤の A/B/C）。"a"=一緒にあがく / "b"=寄り添う / "c"=諫める。
-## （後方互換のため文字列も保持。正式な値は下の kuma_attitude）
-var kuma_stance := ""
-
-## 球磨への態度（enum）。エンディング判定の主軸。kuma_stance と同期して持つ。
-var kuma_attitude: KumaAttitude = KumaAttitude.NONE
+## 球磨への立場（中盤の A/B/C）。エンディング判定の主軸。enum KumaStance を使う。
+var kuma_stance: KumaStance = KumaStance.NONE
 
 
 func _ready() -> void:
@@ -59,8 +56,7 @@ func start_new_run() -> void:
 	affinity.clear()
 	flags.clear()
 	visits.clear()
-	kuma_stance = ""
-	kuma_attitude = KumaAttitude.NONE
+	kuma_stance = KumaStance.NONE
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
 
@@ -74,8 +70,7 @@ func snapshot() -> Dictionary:
 		"affinity": affinity.duplicate(),
 		"flags": flags.duplicate(),
 		"visits": visits.duplicate(),
-		"stance": kuma_stance,
-		"attitude": int(kuma_attitude),
+		"stance": int(kuma_stance),
 	}
 
 
@@ -87,8 +82,7 @@ func restore(data: Dictionary) -> void:
 	affinity = (data.get("affinity", {}) as Dictionary).duplicate()
 	flags = (data.get("flags", {}) as Dictionary).duplicate()
 	visits = (data.get("visits", {}) as Dictionary).duplicate()
-	kuma_stance = String(data.get("stance", ""))
-	kuma_attitude = int(data.get("attitude", KumaAttitude.NONE))
+	kuma_stance = int(data.get("stance", KumaStance.NONE))
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
 
@@ -141,15 +135,10 @@ func set_flag(flag_name: String, value: bool) -> void:
 	print("[flag] %s = %s" % [flag_name, str(value)])  # 確認用（エンディング実装時に削除可）
 
 
-## 球磨への立場を決める（中盤の A/B/C 選択から呼ぶ）。enum も同期する。
-func set_kuma_stance(stance: String) -> void:
+## 球磨への立場を決める（中盤の A/B/C 選択から呼ぶ）。値は KumaStance の enum。
+func set_kuma_stance(stance: KumaStance) -> void:
 	kuma_stance = stance
-	match stance:
-		"a": kuma_attitude = KumaAttitude.STRUGGLE_TOGETHER
-		"b": kuma_attitude = KumaAttitude.STAY_BESIDE
-		"c": kuma_attitude = KumaAttitude.DISSUADE
-		_: kuma_attitude = KumaAttitude.NONE
-	print("[stance] kuma = %s (attitude=%d)" % [stance, kuma_attitude])  # 確認用
+	print("[stance] kuma = %d" % stance)  # 確認用
 
 
 ## 時間帯を一つ進める。夜の次は翌日の朝。

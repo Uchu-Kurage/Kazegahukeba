@@ -9,28 +9,27 @@ const SECRET := "secret"
 const NORMAL_IDS := ["kuma_friendship", "kuma_struggle", "kuma_bitter", "quiet_summer"]
 
 
-## この周回の結末を1つ選ぶ。中盤の立場(A/B/C)を主軸に、好感度・フラグで補正する。
-static func pick(affinity: Dictionary, flags: Dictionary, stance: String) -> String:
+## この周回の結末を1つ選ぶ。中盤の立場(A/B/C)を主軸に、好感度で補正する。
+## しきい値のリテラル直書きはステップ3で定数化予定（今はまだ直書き）。
+static func pick(affinity: Dictionary, flags: Dictionary, stance: int) -> String:
 	var kuma := int(affinity.get("kuma", 0))
 
 	# 球磨とほとんど関わらず、立場も選ばなかった → 静かな夏。
-	if kuma <= 1 and stance == "":
+	if kuma <= 1 and stance == GameState.KumaStance.NONE:
 		return "quiet_summer"
 
 	# 中盤の立場が主軸（プロットの着地1〜3に対応）。
 	match stance:
-		"a":
-			return "kuma_struggle"                                   # 一緒にあがいた
-		"b":
-			return "kuma_friendship" if kuma >= 5 else "kuma_struggle"  # 寄り添い、深く見届けた
-		"c":
-			return "kuma_bitter"                                     # 諫めた／すれ違い
+		GameState.KumaStance.STRUGGLE:
+			return "kuma_struggle"                                       # 一緒にあがいた
+		GameState.KumaStance.STAY_BESIDE:
+			return "kuma_friendship" if kuma >= 5 else "kuma_struggle"   # 寄り添い、深く見届けた
+		GameState.KumaStance.DISSUADE:
+			return "kuma_bitter"                                         # 諫めた／すれ違い
 
-	# 立場イベントに至らなかった場合は、序盤の選択で寄せる。
-	if flags.get("told_truth_kuma", false) and not flags.get("promised_kuma", false):
-		return "kuma_bitter"
-	if kuma >= 6 and flags.get("promised_kuma", false):
-		return "kuma_friendship"
+	# 立場未選択（中盤に至らず）は、好感度で寄せる。
+	if kuma <= 1:
+		return "quiet_summer"
 	return "kuma_struggle"
 
 
