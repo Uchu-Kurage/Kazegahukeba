@@ -18,7 +18,8 @@ var _unsel_sb: StyleBoxFlat
 
 func _ready() -> void:
 	HUD.set_shown(false)  # タイトルではカレンダーを出さない
-	AudioManager.start_bgm()  # エンディングで止めた BGM をここで戻す
+	AudioManager.play_bgm("title")
+	AudioManager.stop_ambient()
 	_build_ui()
 	_go(Screen.MAIN)
 

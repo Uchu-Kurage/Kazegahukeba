@@ -12,6 +12,8 @@ var _selected := 0
 
 func _ready() -> void:
 	HUD.set_shown(true)  # エンディングから戻ってきたときのため、必ず表示に戻す
+	AudioManager.play_bgm("day")   # 本編BGM（同じなら継続、切り替え時だけ変わる）
+	AudioManager.stop_ambient()    # 街の俯瞰は環境音なし
 	_build()
 	# 夜になった／翌朝になったを受けて、選択の見た目とプロンプトを更新する。
 	GameState.phase_changed.connect(_on_phase_changed.unbind(1))

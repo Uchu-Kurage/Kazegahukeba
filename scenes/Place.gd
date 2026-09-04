@@ -21,6 +21,9 @@ func _build_map() -> void:
 	bg.place_id = _place_id
 	add_child(bg)
 
+	# 場所ごとの環境音（BGMは街から継続させる）。
+	AudioManager.play_ambient(AudioManager.ambient_for_place(_place_id))
+
 	# 過ごす対象（中の人。いなければ「ここで過ごす」）。id は場所ID にしておく。
 	var spend_name := _place_name if _character != "" else "%s（ここで過ごす）" % _place_name
 	add_spot(_place_id, spend_name, _character, Vector2(576, 280))

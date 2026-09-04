@@ -15,7 +15,8 @@ var _hint: Label
 func _ready() -> void:
 	_build_ui()
 	HUD.set_shown(false)  # 終幕中はカレンダーを隠す
-	AudioManager.stop_bgm()  # 終幕は静けさで（タイトルに戻ると再開）
+	AudioManager.stop_bgm()      # 終幕は静けさで（タイトルに戻ると再開）
+	AudioManager.stop_ambient()
 	_run()
 
 
