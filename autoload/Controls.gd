@@ -16,6 +16,7 @@ func _ready() -> void:
 	_bind("debug_toggle", [KEY_F3])  # ルート到達状況オーバーレイの表示切替
 	_bind("debug_end",    [KEY_F4])  # いまの状態で即エンディング判定へ（分岐確認用）
 	_bind("debug_ura",    [KEY_F5])  # 裏エンド（9月1日）を強制再生（解放条件を無視・検証用）
+	_bind("debug_field",  [KEY_F6])  # 散策画面（河原と土手）へ（第6弾 §1 の動作確認用）
 
 
 func _bind(action: String, keys: Array) -> void:

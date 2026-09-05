@@ -47,6 +47,8 @@ func _input(event: InputEvent) -> void:
 		Nav.go_to_ending()     # いまの affinity / flags / stance でエンディング判定
 	elif event.is_action_pressed("debug_ura"):
 		Nav.go_to_ura_ending() # 裏エンド（9月1日）を強制再生（解放条件を無視・検証用）
+	elif event.is_action_pressed("debug_field"):
+		Nav.go_to_field("riverbank", "")  # 散策画面（第6弾 §1 の動作確認用）
 
 
 func _process(_delta: float) -> void:
