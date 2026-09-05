@@ -20,7 +20,9 @@ func _ready() -> void:
 	_run()
 
 
-## 結末の再生 → 記録 → （裏エンド）→ 成績表示、を順に待ち合わせる。
+## 結末の再生 → 記録 → 成績表示、を順に待ち合わせる。
+## 裏エンド（9月1日）は、この場では再生しない。全エンド到達で解放され、タイトルの導線から
+## 独立した一本道シーン（UraEnding）として入る（実装指示 第5弾）。
 func _run() -> void:
 	var id := Endings.pick(GameState.affinity, GameState.flags, GameState.stance, GameState.visits, GameState.counters)
 	# Story.flatten を通すことで、結末台本でも if_flag が使える（特別な夜のフラグ等で分岐可能）。
@@ -30,15 +32,7 @@ func _run() -> void:
 	SaveData.mark_ending(id)
 	SaveData.record_run()
 
-	var final_id := id
-	# 全ノーマル到達済みで、まだ裏を見ていなければ、続けて裏エンドを解放。
-	if not SaveData.has_seen(Endings.SECRET) and SaveData.all_seen(Endings.NORMAL_IDS):
-		Dialogue.start(Story.flatten(Endings.script_of(Endings.SECRET), GameState.flags))
-		await Dialogue.finished
-		SaveData.mark_ending(Endings.SECRET)
-		final_id = Endings.SECRET
-
-	_show_summary(final_id)
+	_show_summary(id)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -50,9 +44,10 @@ func _unhandled_input(event: InputEvent) -> void:
 func _show_summary(id: String) -> void:
 	_title.text = "『%s』" % Endings.title_of(id)
 	var seen := SaveData.seen_count(Endings.NORMAL_IDS)
-	var secret_txt := "解放済み" if SaveData.has_seen(Endings.SECRET) else "未解放"
+	# 裏エンド：到達済み／解放（未プレイ）／未解放 の三段で表示。
+	var ura_txt := "到達済み" if Endings.ura_seen() else ("解放（タイトルへ）" if Endings.ura_unlocked() else "未解放")
 	_progress.text = "見たエンディング：%d / %d　　裏エンド：%s（周回 %d 回目）" % [
-		seen, Endings.NORMAL_IDS.size(), secret_txt, SaveData.runs,
+		seen, Endings.NORMAL_IDS.size(), ura_txt, SaveData.runs,
 	]
 	_hint.text = "［E］でタイトルへ"
 	_center.visible = true

@@ -48,6 +48,33 @@ const SCORE_PER_NIGHT := 4          # 特別な夜への参加1回につき
 const WITNESS_MIN := 40
 
 
+## 記録者エンド（フォールバック）の id 群。裏エンド解放条件の判定に使う。
+const RECORDER_IDS := [WITNESS, SOLO]
+
+
+## 裏エンド（9月1日）の解放条件（実装指示 第5弾 §1）。
+## 全エンディング到達＝三ルートそれぞれ“いずれかの着地”＋記録者エンド二種、が周回記録に揃うこと。
+## （着地違いを個別カウントしているので、ルートは「いずれか1つでも見た」で満たすと解釈する）
+static func ura_unlocked() -> bool:
+	for route_id in Routes.ids():
+		var seen_any := false
+		for eid in NORMAL_IDS:
+			if String(eid).begins_with(route_id + "_") and SaveData.has_seen(eid):
+				seen_any = true
+				break
+		if not seen_any:
+			return false
+	for eid in RECORDER_IDS:
+		if not SaveData.has_seen(eid):
+			return false
+	return true
+
+
+## 裏エンドを再生済みか（周回記録の SECRET を「見た」印として流用）。
+static func ura_seen() -> bool:
+	return SaveData.has_seen(SECRET)
+
+
 ## この周回の結末を1つ選ぶ。
 ## 深く完結したルートがあればそのエンディング、無ければ「関わりの総量」で記録者エンド二種に分岐。
 static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, visits: Dictionary, counters: Dictionary) -> String:

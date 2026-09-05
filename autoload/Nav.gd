@@ -22,5 +22,10 @@ func go_to_ending() -> void:
 	Fader.change_scene("res://scenes/Ending.tscn")
 
 
+## 裏エンド（9月1日）＝独立した一本道シーンへ。タイトルの導線（解放済み）やデバッグから呼ぶ。
+func go_to_ura_ending() -> void:
+	Fader.change_scene("res://scenes/UraEnding.tscn")
+
+
 func go_to_title() -> void:
 	Fader.change_scene("res://scenes/Title.tscn")
