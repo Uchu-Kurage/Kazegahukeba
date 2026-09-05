@@ -46,7 +46,21 @@ static func _screens_def() -> Array:
 		{ "id": "sunflower", "name": "ひまわり畑",   "exits": [["fields", "right"]] },
 		{ "id": "shrine",    "name": "神社",         "exits": [["fields", "down"], ["hill", "up"]] },
 		{ "id": "hill",      "name": "丘",           "exits": [["shrine", "down"]] },
-		{ "id": "riverbank", "name": "河原と土手",   "exits": [["shops", "left"], ["estuary", "right"], ["fields", "up"]] },
+		# 河原と土手：仮背景 riverbank.png（土手の畦道は左〜中央の陸地、右は川）に合わせ、
+		# 歩ける帯と出口位置を実際の道に沿って上書きする（他画面は side からの自動生成のまま）。
+		{ "id": "riverbank", "name": "河原と土手", "exits": [["shops", "left"], ["estuary", "right"], ["fields", "up"]],
+			"roads_override": [
+				Rect2(80, 320, 470, 190),    # 左の田んぼ道＋土手のふもと
+				Rect2(150, 296, 430, 130),   # 土手の上の畦道（中央へ延びる）
+				Rect2(430, 452, 165, 180),   # 手前の舗装路
+			],
+			"start_override": Vector2(400, 400),
+			"pos_override": {
+				"fields": Vector2(160, 330),   # 左奥＝田んぼ方面
+				"shops": Vector2(175, 485),    # 左手前＝町へ戻る
+				"estuary": Vector2(548, 332),  # 土手の先＝下流（河口）へ
+			},
+		},
 		{ "id": "estuary",   "name": "河口",         "exits": [["riverbank", "left"]] },
 	]
 
@@ -63,6 +77,7 @@ static func _build(s: Dictionary) -> Dictionary:
 	var uses_h := false
 	var uses_v := false
 	var exits: Array = []
+	var pos_override: Dictionary = s.get("pos_override", {})
 	for e in s["exits"]:
 		var to := String(e[0])
 		var side := String(e[1])
@@ -70,17 +85,22 @@ static func _build(s: Dictionary) -> Dictionary:
 			uses_h = true
 		else:
 			uses_v = true
+		# 出口位置：背景に合わせた個別指定があればそれを、無ければ辺（side）から自動配置。
+		var pos: Vector2 = pos_override[to] if pos_override.has(to) else _pos_of(side)
 		exits.append({
 			"id": "to_%s" % to, "label": "%s %s" % [_arrow(side), _name_of_id(to)],
-			"pos": _pos_of(side), "to": to,
+			"pos": pos, "to": to,
 		})
-	var roads: Array = []
-	if uses_h:
-		roads.append(ROAD_H)
-	if uses_v:
-		roads.append(ROAD_V)
+	# 歩ける帯：背景に合わせた個別指定があればそれを、無ければ side から自動生成（H/V帯）。
+	var roads: Array = s.get("roads_override", [])
+	if roads.is_empty():
+		if uses_h:
+			roads.append(ROAD_H)
+		if uses_v:
+			roads.append(ROAD_V)
+	var start: Vector2 = s.get("start_override", CENTER)
 	return { "id": s["id"], "name": s["name"], "bg": "res://assets/field/%s.png" % s["id"],
-		"roads": roads, "start": CENTER, "exits": exits }
+		"roads": roads, "start": start, "exits": exits }
 
 
 static func _arrow(side: String) -> String:
