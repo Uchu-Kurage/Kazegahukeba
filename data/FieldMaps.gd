@@ -135,6 +135,33 @@ static func by_id(field_id: String) -> Dictionary:
 	return {}
 
 
+## その画面で「過ごせる相手／一人で過ごす場所」（実装指示 第6弾 §4：枠システム接続）。
+## spend＝既存の location_id（枠・関係値・エンディングは従来のまま／FieldScene は配置だけ担当）。
+##   spend … choose_location に渡す location_id（riverside=球磨 / shrine=由布 / shop=葵 / 家など一人）
+##   name  … 表示名 / who … character_id（"" なら一人で過ごす場所）/ pos … 道の上の立ち位置
+## 接続設計に合わせた再マップ：球磨=河原と土手、由布=神社、葵=ひまわり畑（＋遍在）、
+## 商店街=ハブ、家/学校/丘/田んぼ=一人で過ごす、河口=球磨終盤の含み（今は無人）。
+static func npcs_of(field_id: String) -> Array:
+	match field_id:
+		"riverbank": return [_npc("riverside", "球磨", "kuma", Vector2(300, 365))]
+		"shrine":    return [_npc("shrine", "由布", "yufu", Vector2(576, 300))]
+		"sunflower": return [_npc("shop", "葵", "aoi", Vector2(760, 365))]
+		"home":      return [_solo("home", "家で過ごす", Vector2(760, 365))]
+		"fields":    return [_solo("meadow", "畦道で過ごす", Vector2(760, 365))]
+		"shops":     return [_solo("stroll", "商店街をぶらつく", Vector2(760, 365))]
+		"hill":      return [_solo("hill", "丘で過ごす", Vector2(576, 300))]
+		"school":    return [_solo("school", "無人の校舎で過ごす", Vector2(760, 365))]
+	return []
+
+
+static func _npc(spend: String, name: String, who: String, pos: Vector2) -> Dictionary:
+	return { "spend": spend, "name": name, "who": who, "pos": pos }
+
+
+static func _solo(spend: String, name: String, pos: Vector2) -> Dictionary:
+	return { "spend": spend, "name": name, "who": "", "pos": pos }
+
+
 ## 遷移先の画面で、来た画面(from_id)へ戻る出口の位置にプレイヤーを立たせる。
 ## 双方向接続なので必ず対応する出口が在る。無ければ（新規入場・from空）start へ。
 static func entry_position(field: Dictionary, from_id: String) -> Vector2:

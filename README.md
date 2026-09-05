@@ -91,7 +91,7 @@ scenes/
   Ending.tscn / Ending.gd  エンディング画面。結末を流し、到達を記録し、周回へ
   UraEnding.tscn / .gd     裏エンド（9月1日）＝独立した一本道シーン。全エンド到達で解放
   UraBackground.gd         裏エンドの背景（秋の高い空。トーンを場面ごとに切替）
-  FieldScene.tscn / .gd    散策画面（第6弾『ぼくのなつやすみ』方式）。全9画面を道の出口でつなぎ、町を一周歩ける（移動は枠を使わない・奥行きスケール付き）
+  FieldScene.tscn / .gd    散策画面（第6弾『ぼくのなつやすみ』方式）。全9画面を歩き、人と過ごすと枠消費→既存の会話/イベントへ。2枠で夜→就寝で翌朝（家スタート）。移動は無料
   FieldBackground.gd       散策画面の背景（背景PNGをパスで貼る／無ければ画面ごとのプレースホルダ描画。差し替え可）
   Player.tscn / Player.gd  2D操作キャラ（CharacterBody2D）。場所の中で使う
   LocationSpot.tscn / .gd  対象（Area2D）。中のNPC（ドット絵キャラ）・出口を兼ねる
