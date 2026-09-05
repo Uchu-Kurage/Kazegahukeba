@@ -113,6 +113,10 @@ static func script_of(id: String) -> Array:
 			return [
 				{ "speaker": "", "text": "八月の終わり。空はほとんど白く褪せている。" },
 				{ "speaker": "球磨", "text": "……お前がいてくれて、よかったよ。" },
+				# 特別な夜（最後の花火を球磨と過ごした）を見ていれば、結末に一言そえる（§4）。
+				{ "if_flag": "kuma_last_fireworks", "then": [
+					{ "speaker": "球磨", "text": "最後の花火、お前と見れてよかった。……あれで、十分だ。" },
+				]},
 				{ "speaker": "", "text": "叶わなかった夢も、覚えている限り、消えはしない。" },
 			]
 		"kuma_struggle":

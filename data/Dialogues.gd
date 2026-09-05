@@ -252,3 +252,45 @@ static func aoi_ambient() -> Array:
 		{ "speaker": "葵", "text": "あ、また会ったね！　ほんと、どこにでもいるでしょ、わたし。" },
 		{ "speaker": "", "text": "葵は手を振って、また人混みのほうへ駆けていった。" },
 	]
+
+
+## 特別な夜（fixed型）の台本。Nights.script_for が Story.flatten を通すので if_flag が使える。
+## 序盤の花火＝三人で。進行中ルートの節目フラグを参照して「漏れる台詞」を出し分ける（§3）。
+static func night_script(key: String) -> Array:
+	match key:
+		"early_fireworks":
+			return [
+				{ "speaker": "", "text": "河原に三人。手持ち花火の火が、順ぐりに顔を照らす。" },
+				# 進行中ルートに応じて、その相手の“らしさ”がこぼれる（背景の出し分け機構を流用）。
+				{ "if_flag": "kuma_dream", "then": [
+					{ "speaker": "球磨", "text": "来年も、再来年も、こうやってやろうぜ。" },
+				]},
+				{ "if_flag": "yufu_likes", "then": [
+					{ "speaker": "由布", "text": "……こういう夜が、ずっと続けばいいのにね。" },
+				]},
+				{ "if_flag": "aoi_meet", "then": [
+					{ "speaker": "葵", "text": "線香花火、最後の一瞬まで見てたい。……終わっちゃうね。" },
+				]},
+				{ "speaker": "", "text": "同じ夜の火を、それぞれの気持ちで見ていた。" },
+			]
+	return []
+
+
+## 特別な夜（shared型）で相手を選んだあとの台本。event_id × 相手（route_id または "trio"）。
+## テキストは仮置き。序盤の花火との対比（「来年も」→「これで最後」）を終盤に効かせる。
+## ⚠️ 葵の夜も正体を匂わせない（明るいまま通す）。
+static func night_partner_script(event_id: String, who: String) -> Array:
+	match event_id:
+		"festival":
+			match who:
+				Routes.KUMA: return [ { "speaker": "球磨", "text": "祭りも、来年はもう無いんだよな。……今のうちに全部見とくか。" } ]
+				Routes.YUFU: return [ { "speaker": "由布", "text": "……こういうお祭り、あなたと来られてよかった。" } ]
+				Routes.AOI:  return [ { "speaker": "葵", "text": "見て、りんご飴！　射的も！　ぜんぶやろ、ぜんぶ！" } ]
+				"trio":      return [ { "speaker": "", "text": "三人で屋台を巡った。こういう夜が、まだ続くような気がした。" } ]
+		"last_fireworks":
+			match who:
+				Routes.KUMA: return [ { "speaker": "球磨", "text": "あんときは『来年も』って言ったな。……これで、最後か。" } ]
+				Routes.YUFU: return [ { "speaker": "由布", "text": "ずっと続けばいいって言った夜を、覚えてる。……続かなかったね。" } ]
+				Routes.AOI:  return [ { "speaker": "葵", "text": "きれいだねえ。……ん、なんでもない。ほら、今日を楽しも！" } ]
+				"trio":      return [ { "speaker": "", "text": "最後の花火が開く。三人とも、しばらく黙って見上げていた。" } ]
+	return [ { "speaker": "", "text": "夜がふけていく。" } ]
