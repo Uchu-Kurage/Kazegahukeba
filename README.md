@@ -80,6 +80,7 @@ data/
   Endings.gd               三ルート対応のエンディング判定（立場×関係値×到達節目数）と結末台本＋裏エンド解放判定
   UraStory.gd              裏エンド（9月1日）の場面データ（一本道。枠・関係値・ルート判定を使わない）
   FieldMaps.gd             散策画面の定義とマップ接続表（9画面・双方向接続。画面ID/背景/道/出口→接続先。データ駆動。第6弾）
+  UITheme.gd               UIの見た目テーマ（和紙・すりガラス／丸ゴシック／ダークグレー文字／夏空の青）。色・不透明度・角丸・フォントを一括管理。第7弾
 scenes/
   ExploreMap.gd            歩き回れるマップの共通土台（Place の親クラス）
   TownBackground.gd        街の地図背景を _draw() で描画（草地・川・田んぼ・道）
@@ -97,7 +98,7 @@ scenes/
   CharacterArt.gd          ドット絵スプライトをコード生成（配色から SpriteFrames を作る）
   PixelCharacter.gd        AnimatedSprite2D。待機／歩き × 下上横。Player と NPC が共用
   PlaceBackground.gd       各場所の内装を _draw()（河川敷・境内・通り・座敷）
-  HUD.tscn / HUD.gd         常時UI（カレンダー＋操作プロンプト）。Autoload で全シーンに表示
+  HUD.tscn / HUD.gd         常時UI（右上の日めくり和紙ピル＝DAY N/漢数字の月日 曜日 ・ 時間帯／操作プロンプト）。Autoload で全シーンに表示
 assets/fonts/
   NotoSansJP-Regular.ttf    日本語フォント（OFL 1.1）
 ```
