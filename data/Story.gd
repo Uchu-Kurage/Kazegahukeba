@@ -144,6 +144,26 @@ static func debug_lines(state) -> PackedStringArray:
 			out.append("   次: %s (%s)" % [next_key, next_cond])
 		else:
 			out.append("   次: (全節目 到達)")
+	# 特別な夜の状況（今日は特別な夜か／これまでに立った夜フラグ）。
+	out.append("")
+	out.append("今日の特別な夜: %s" % (Nights.name_of(d) if Nights.is_special(d) else "-"))
+	var night_flags: Array = []
+	for k in state.flags:
+		var ks := String(k)
+		if not state.flags[k]:
+			continue
+		if ks == Nights.F_EARLY_FIREWORKS or ks.ends_with(Nights.SUF_FESTIVAL) or ks.ends_with(Nights.SUF_LAST_FIREWORKS):
+			night_flags.append(ks)
+	out.append("夜フラグ: %s" % (", ".join(night_flags) if not night_flags.is_empty() else "(なし)"))
+	# 記録者エンドの分岐（どのルートも深く完結していない場合の行き先）。
+	var score := Endings.engagement_score(state.affinity, state.flags, state.visits, state.counters)
+	var solo_visits := 0
+	for loc in Locations.ALL:
+		if String(loc["character"]) == "" and state.visits.has(loc["id"]):
+			solo_visits += int(state.visits.get(loc["id"], 0))
+	out.append("")
+	out.append("関わりの総量: %d / %d（閾値以上=見届けた／未満=ひとり）" % [score, Endings.WITNESS_MIN])
+	out.append("葵の遍在遭遇: %d回  一人で過ごした回数: %d回" % [int(state.counters.get("aoi_ambient", 0)), solo_visits])
 	return out
 
 

@@ -96,5 +96,10 @@ func _draw_icon() -> void:
 					var x := -18.0 + float(k) * 4.5
 					pts.append(Vector2(x, y + sin(float(k) * 0.9) * 3.0))
 				draw_polyline(pts, blue, 3.0, true)
+		"path":  # 一人で過ごす場所（畦道・ぶらつき）＝草の間の小径
+			draw_rect(Rect2(-20, -16, 40, 32), Color(0.42, 0.52, 0.30))       # 草地
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(-6, -16), Vector2(6, -16), Vector2(12, 16), Vector2(-12, 16)
+			]), Color(0.78, 0.70, 0.52))                                       # 奥へ延びる小径
 		_:
 			draw_circle(Vector2.ZERO, 10.0, Color(0.5, 0.5, 0.55))

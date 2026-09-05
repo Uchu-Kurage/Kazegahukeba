@@ -86,6 +86,8 @@ func ambient_for_place(place_id: String) -> String:
 		"shrine": return "cicada"
 		"shop": return "murmur"
 		"home": return "fan"
+		"stroll": return "cicada"
+		"meadow": return "cicada"
 	return ""
 
 

@@ -32,6 +32,8 @@ func _build() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if Dialogue.is_active():
+		return  # 特別な夜の会話中は、送り／選択を Dialogue にまかせる
 	if event.is_action_pressed("interact"):
 		_confirm()
 	elif event.is_action_pressed("skip"):
@@ -54,8 +56,36 @@ func _confirm() -> void:
 			AudioManager.play_sfx("confirm")
 			Nav.go_to_place(_markers[_selected].location_id)  # 選んだ場所の中へ
 		GameState.Phase.NIGHT:
-			AudioManager.play_sfx("page")  # カレンダーをめくる音
-			GameState.flip_calendar()
+			var night := Nights.for_day(GameState.day_index)
+			if night.is_empty():
+				AudioManager.play_sfx("page")  # 通常の夜：カレンダーをめくって翌日へ
+				GameState.flip_calendar()
+			else:
+				_start_special_night(night)    # 特別な夜：行動を発生させる
+
+
+## 特別な夜を再生する。昼の会話と同じく、選んだ選択肢の効果を GameState に反映し、
+## 会話が終わったらカレンダーをめくって翌日へ（＝夜の枠を消費）。
+func _start_special_night(night: Dictionary) -> void:
+	AudioManager.play_sfx("confirm")
+	Dialogue.option_selected.connect(_on_night_option)
+	Dialogue.finished.connect(_on_night_finished, CONNECT_ONE_SHOT)
+	Dialogue.start(Nights.script_for(night, GameState))
+
+
+## 選んだ相手（or 三人で）の効果＝関係値ボーナスと夜フラグを反映する。
+func _on_night_option(option: Dictionary) -> void:
+	for who in option.get("affinity", {}):
+		GameState.add_affinity(who, int(option["affinity"][who]))
+	for flag_name in option.get("set", {}):
+		GameState.set_flag(flag_name, option["set"][flag_name])
+
+
+func _on_night_finished() -> void:
+	if Dialogue.option_selected.is_connected(_on_night_option):
+		Dialogue.option_selected.disconnect(_on_night_option)
+	AudioManager.play_sfx("page")
+	GameState.flip_calendar()
 
 
 func _skip() -> void:
@@ -116,4 +146,8 @@ func _refresh_prompt() -> void:
 			var m = _markers[_selected]
 			HUD.set_prompt("行き先を選ぶ：矢印/WASD で移動、［E］で「%s」へ ／ 予定なしは［Q］" % m.display_name)
 		GameState.Phase.NIGHT:
-			HUD.set_prompt("夜。今日を振り返る。［E］でカレンダーをめくって翌日へ")
+			var night := Nights.for_day(GameState.day_index)
+			if night.is_empty():
+				HUD.set_prompt("夜。今日を振り返る。［E］でカレンダーをめくって翌日へ")
+			else:
+				HUD.set_prompt("特別な夜――「%s」。［E］で始める" % String(night["name"]))

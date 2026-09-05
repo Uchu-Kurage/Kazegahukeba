@@ -16,9 +16,13 @@ extends RefCounted
 const ALL := [
 	# character は route_id と一致させる（kuma / yufu / aoi）。関係値 affinity{} のキーも兼ねる。
 	{ "id": "riverside", "name": "川原",   "character": "kuma", "pos": Vector2(170, 330), "icon": "river" },
-	{ "id": "shop",      "name": "商店街", "character": "aoi",  "pos": Vector2(560, 200), "icon": "shop" },
+	{ "id": "shop",      "name": "商店街", "character": "aoi",  "pos": Vector2(560, 190), "icon": "shop" },
 	{ "id": "shrine",    "name": "神社",   "character": "yufu", "pos": Vector2(940, 200), "icon": "torii" },
-	{ "id": "home",      "name": "家",     "character": "",     "pos": Vector2(860, 470), "icon": "house" },
+	# character が空＝一人で過ごす場所（相手なし・関係値は上がらない・枠は消費する）。
+	# 「一人で過ごす」ことも夏の正当な過ごし方（記録者エンドへ自然に向かう）。
+	{ "id": "home",      "name": "家",     "character": "",     "pos": Vector2(940, 460), "icon": "house" },
+	{ "id": "stroll",    "name": "町をぶらつく", "character": "", "pos": Vector2(430, 430), "icon": "path" },
+	{ "id": "meadow",    "name": "畦道を歩く",   "character": "", "pos": Vector2(180, 540), "icon": "path" },
 ]
 
 

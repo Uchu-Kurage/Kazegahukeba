@@ -22,8 +22,9 @@ func _ready() -> void:
 
 ## 結末の再生 → 記録 → （裏エンド）→ 成績表示、を順に待ち合わせる。
 func _run() -> void:
-	var id := Endings.pick(GameState.affinity, GameState.flags, GameState.stance)
-	Dialogue.start(Endings.script_of(id))
+	var id := Endings.pick(GameState.affinity, GameState.flags, GameState.stance, GameState.visits, GameState.counters)
+	# Story.flatten を通すことで、結末台本でも if_flag が使える（特別な夜のフラグ等で分岐可能）。
+	Dialogue.start(Story.flatten(Endings.script_of(id), GameState.flags))
 	await Dialogue.finished
 
 	SaveData.mark_ending(id)
@@ -32,7 +33,7 @@ func _run() -> void:
 	var final_id := id
 	# 全ノーマル到達済みで、まだ裏を見ていなければ、続けて裏エンドを解放。
 	if not SaveData.has_seen(Endings.SECRET) and SaveData.all_seen(Endings.NORMAL_IDS):
-		Dialogue.start(Endings.script_of(Endings.SECRET))
+		Dialogue.start(Story.flatten(Endings.script_of(Endings.SECRET), GameState.flags))
 		await Dialogue.finished
 		SaveData.mark_ending(Endings.SECRET)
 		final_id = Endings.SECRET
