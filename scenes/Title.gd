@@ -51,10 +51,10 @@ func _activate() -> void:
 		"start":
 			SaveData.clear_run()  # 新規開始：以前の途中セーブを破棄
 			GameState.start_new_run()
-			Nav.go_to_town()
+			Nav.go_to_field("home", "")  # 散策（『ぼくのなつやすみ』方式）を本編の入口に。家から朝スタート
 		"resume":
 			GameState.restore(SaveData.load_run())  # 途中から再開
-			Nav.go_to_town()
+			Nav.go_to_field("home", "")  # 再開も家から（保存した日付・時間帯のまま散策へ）
 		"ura":
 			Nav.go_to_ura_ending()  # 裏エンド（9月1日）へ
 
