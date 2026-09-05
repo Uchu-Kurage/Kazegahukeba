@@ -55,6 +55,9 @@ func _activate() -> void:
 		"resume":
 			GameState.restore(SaveData.load_run())  # 途中から再開
 			Nav.go_to_town()
+		"ura":
+			Nav.go_to_ura_ending()  # 裏エンド（9月1日）へ
+
 		"records":
 			_go(Screen.RECORDS)
 		"clear":
@@ -80,6 +83,9 @@ func _go(screen: Screen) -> void:
 			if SaveData.has_run():
 				_items.append({ "id": "resume", "label": "つづきから" })
 			_items.append({ "id": "start", "label": "はじめる" })
+			# 全エンド到達で解放される裏エンドへの導線（控えめに一項目だけ増える）。
+			if Endings.ura_unlocked():
+				_items.append({ "id": "ura", "label": "９月１日" })
 			_items.append({ "id": "records", "label": "エンディング記録" })
 			_items.append({ "id": "clear", "label": "記録を消す" })
 			_items.append({ "id": "quit", "label": "おわる" })
@@ -136,7 +142,13 @@ func _records_lines() -> Array:
 			lines.append("　✓ " + Endings.title_of(id))
 		else:
 			lines.append("　― ？？？")
-	var secret := "解放済み：" + Endings.title_of(Endings.SECRET) if SaveData.has_seen(Endings.SECRET) else "未解放（全エンド到達で開く）"
+	var secret := ""
+	if Endings.ura_seen():
+		secret = "到達済み：" + Endings.title_of(Endings.SECRET)
+	elif Endings.ura_unlocked():
+		secret = "解放（「９月１日」から）"
+	else:
+		secret = "未解放（全エンド到達で開く）"
 	lines.append("　裏エンド：" + secret)
 	return lines
 

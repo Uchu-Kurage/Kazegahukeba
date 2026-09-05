@@ -45,6 +45,8 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("debug_end"):
 		SaveData.clear_run()   # デバッグ終了なので途中セーブは破棄
 		Nav.go_to_ending()     # いまの affinity / flags / stance でエンディング判定
+	elif event.is_action_pressed("debug_ura"):
+		Nav.go_to_ura_ending() # 裏エンド（9月1日）を強制再生（解放条件を無視・検証用）
 
 
 func _process(_delta: float) -> void:
