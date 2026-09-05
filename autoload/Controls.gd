@@ -12,6 +12,9 @@ func _ready() -> void:
 	_bind("walk_down",  [KEY_S, KEY_DOWN])
 	_bind("interact",   [KEY_E, KEY_SPACE, KEY_ENTER])
 	_bind("skip",       [KEY_Q])
+	# --- 動作確認用（デバッグ）---
+	_bind("debug_toggle", [KEY_F3])  # ルート到達状況オーバーレイの表示切替
+	_bind("debug_end",    [KEY_F4])  # いまの状態で即エンディング判定へ（分岐確認用）
 
 
 func _bind(action: String, keys: Array) -> void:
