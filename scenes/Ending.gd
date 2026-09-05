@@ -22,7 +22,7 @@ func _ready() -> void:
 
 ## 結末の再生 → 記録 → （裏エンド）→ 成績表示、を順に待ち合わせる。
 func _run() -> void:
-	var id := Endings.pick(GameState.affinity, GameState.flags, GameState.stance)
+	var id := Endings.pick(GameState.affinity, GameState.flags, GameState.stance, GameState.visits, GameState.counters)
 	# Story.flatten を通すことで、結末台本でも if_flag が使える（特別な夜のフラグ等で分岐可能）。
 	Dialogue.start(Story.flatten(Endings.script_of(id), GameState.flags))
 	await Dialogue.finished

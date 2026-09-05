@@ -20,14 +20,28 @@ extends RefCounted
 const PLAYER := "ぼく"  # 主人公の仮の呼び名
 
 
-## ルートの無い場所（家など）の固定台本。route 付きの場所は Story が route_script を引く。
+## 相手のいない場所（＝一人で過ごす）の固定台本。route 付きの場所は Story が route_script を引く。
+## 一人で過ごすのも夏の正当な過ごし方。静かな主人公の内面を置く（裁かない・空虚にしない）。
+## テキストは仮置き。
 static func for_location(location_id: String) -> Array:
 	match location_id:
-		_:
+		"stroll":  # 町をぶらつく
+			return [
+				{ "speaker": "", "text": "あてもなく、町を歩く。褪せかけた空の下、人影はまばらだ。" },
+				{ "speaker": PLAYER, "text": "……この道も、いつか消えるんだろうか。" },
+				{ "speaker": "", "text": "誰と話すでもなく、ただ夏の匂いの中を歩いた。" },
+			]
+		"meadow":  # 畦道を歩く
+			return [
+				{ "speaker": "", "text": "畦道に立つと、田んぼの上を風が渡っていく。" },
+				{ "speaker": "", "text": "遠くで蝉が鳴いて、やがて止んだ。世界は、静かに終わりへ向かっている。" },
+				{ "speaker": PLAYER, "text": "……こういう時間も、悪くない。" },
+			]
+		_:  # 家で過ごす
 			return [
 				{ "speaker": "", "text": "家に戻ると、扇風機の音だけが回っている。" },
 				{ "speaker": PLAYER, "text": "……少し、休もう。" },
-				{ "speaker": "", "text": "何もしない時間も、この夏の一部だ。" },
+				{ "speaker": "", "text": "何もしない時間も、この夏の一部だ。ひとりで過ごす夏も、たしかにここにある。" },
 			]
 
 
@@ -251,6 +265,8 @@ static func aoi_ambient() -> Array:
 	return [
 		{ "speaker": "葵", "text": "あ、また会ったね！　ほんと、どこにでもいるでしょ、わたし。" },
 		{ "speaker": "", "text": "葵は手を振って、また人混みのほうへ駆けていった。" },
+		# 遍在遭遇の回数を数える（記録者エンドの「関わりの総量」判定に使う。関係値は上げない）。
+		{ "effect": { "count": { "aoi_ambient": 1 } } },
 	]
 
 

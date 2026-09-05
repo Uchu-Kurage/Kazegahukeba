@@ -46,6 +46,10 @@ var visits := {}
 ## ルートごとに個別の器を持つので、掛け持ちしても立場が混ざらない。
 var stance := {}
 
+## 汎用カウンタ。 name(String) -> int（例："aoi_ambient"＝葵の遍在遭遇の回数）。
+## 記録者エンドの「関わりの総量」判定などに使う。会話の効果ノード count:{} から増える。
+var counters := {}
+
 
 func _ready() -> void:
 	start_new_run()
@@ -61,6 +65,7 @@ func start_new_run() -> void:
 	flags.clear()
 	visits.clear()
 	stance.clear()
+	counters.clear()
 	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -76,6 +81,7 @@ func snapshot() -> Dictionary:
 		"flags": flags.duplicate(),
 		"visits": visits.duplicate(),
 		"stance": stance.duplicate(),
+		"counters": counters.duplicate(),
 	}
 
 
@@ -88,6 +94,7 @@ func restore(data: Dictionary) -> void:
 	flags = (data.get("flags", {}) as Dictionary).duplicate()
 	visits = (data.get("visits", {}) as Dictionary).duplicate()
 	stance = (data.get("stance", {}) as Dictionary).duplicate()
+	counters = (data.get("counters", {}) as Dictionary).duplicate()
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -133,6 +140,13 @@ func add_affinity(who: String, delta: int) -> void:
 		return
 	affinity[who] = int(affinity.get(who, 0)) + delta
 	print("[affinity] %s = %d" % [who, affinity[who]])  # 確認用（エンディング実装時に削除可）
+
+
+## 汎用カウンタを増やす（会話の効果ノード count:{} などから呼ぶ）。
+func bump(counter_name: String, delta: int) -> void:
+	if counter_name == "":
+		return
+	counters[counter_name] = int(counters.get(counter_name, 0)) + delta
 
 
 ## フラグを立てる／下ろす（会話の選択肢などから呼ぶ）。

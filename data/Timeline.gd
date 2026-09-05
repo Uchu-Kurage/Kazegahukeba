@@ -50,12 +50,14 @@ static func phase_of(day: int) -> String:
 const AOI_ROUTE := "aoi"
 
 ## 今日、葵がふらっと現れている場所 id を返す。日替わりで巡回する（決定的）。
+## 巡回先は「他の相手がいる場所」だけ（葵自身の場所と、一人で過ごす場所・家は除く）。
+## ＝一人で過ごす選択のときに葵と遭遇しない（記録者エンドの意図を守る）。
 static func aoi_spot(day: int) -> String:
 	var spots := []
 	for loc in Locations.ALL:
-		# 葵の“深く過ごす”場所は除く（遍在は他の場所での不意の遭遇）。
-		if Locations.character_of(loc["id"]) == AOI_ROUTE:
-			continue
+		var who := Locations.character_of(loc["id"])
+		if who == "" or who == AOI_ROUTE:
+			continue  # 一人で過ごす場所・家（相手なし）と、葵自身の場所は除く
 		spots.append(loc["id"])
 	if spots.is_empty():
 		return ""

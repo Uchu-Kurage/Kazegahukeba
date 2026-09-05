@@ -66,6 +66,9 @@ func _on_option_selected(option: Dictionary) -> void:
 		GameState.add_affinity(who, int(option["affinity"][who]))
 	for flag_name in option.get("set", {}):
 		GameState.set_flag(flag_name, option["set"][flag_name])
+	# 汎用カウンタ（例：葵の遍在遭遇の回数）。
+	for cname in option.get("count", {}):
+		GameState.bump(cname, int(option["count"][cname]))
 	# 立場（中盤の A/B/C）は route_id 別の辞書で受け取り、そのルートに立てる。
 	for route_id in option.get("stance", {}):
 		GameState.set_stance(route_id, option["stance"][route_id])

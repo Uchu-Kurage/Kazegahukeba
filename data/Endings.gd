@@ -5,19 +5,28 @@ extends RefCounted
 ## 8/31 到達時、各ルートが「どこまで到達したか」を見て結末を1つ選ぶ：
 ##   - 中盤の立場(stance A/B/C) を選んだルート＝そのルートを主軸に進んだ、とみなす。
 ##   - 複数が深まっていれば、最も深く進んだ（到達節目数が最大、同数なら関係値最大）ルートを採用。
-##   - どのルートも深まっていなければ、記録者エンド系のフォールバック（quiet_summer）。
+##   - どのルートも深まっていなければ、記録者エンド（見届けた／ひとり）へ。
 ##
-## しきい値・優先順位はすべて名前付き定数（ハードコード禁止）。判定は Routes（データ）を回す。
+## ★設計思想（最重要）：どのエンドも「正解／失敗」ではない。記録者エンドは、特定の誰かと
+##   深く結ばれた夏と“対等な”一つの過ごし方。実装・変数名・テキストで失敗として扱わない。
+##
+## しきい値・配分はすべて名前付き定数（ハードコード禁止）。判定は Routes（データ）を回す。
 ## 裏エンド(SECRET)は全ノーマル到達で解放（周回記録は SaveData が持つ）。
 
 const SECRET := "secret"
 
-## 全ノーマル・エンディング（三ルート×3着地＋記録者フォールバック）。全到達で裏エンド解放。
+## 記録者エンド（フォールバック）二種。
+##   witness_summer … 特定の誰かとは深く結ばれなかったが、広く関わり夏の全体を見てきた記録者。
+##   solo_summer    … 多くを一人で過ごし、終わりと一人で向き合った夏。どちらも対等な過ごし方。
+const WITNESS := "witness_summer"
+const SOLO := "solo_summer"
+
+## 全ノーマル・エンディング（三ルート×3着地＋記録者エンド二種）。全到達で裏エンド解放。
 const NORMAL_IDS := [
 	"kuma_friendship", "kuma_struggle", "kuma_bitter",
 	"yufu_cross", "yufu_childhood", "yufu_beside",
 	"aoi_now", "aoi_future", "aoi_unknown",
-	"quiet_summer",
+	WITNESS, SOLO,
 ]
 
 # --- 判定のしきい値（値は暫定。ここを変えれば着地の出やすさを調整できる）------
@@ -28,9 +37,20 @@ const AFF_DEEP := 34
 ## 「そのルートを主軸に進んだ」とみなすのに必要な到達節目数の下限（立場に加えての目安）。
 const DEEP_MILESTONES := 4
 
+# --- 記録者エンドの分岐：「関わりの総量スコア」の配分としきい値（すべて仮＝調整可能）------
+## スコアは「他者とどれだけ関わったか」を測る。低い＝劣る ではなく「一人で過ごすことを選んだ」。
+## ⚠️ 一人で過ごす活動は総量に加えない（solo_summer へ自然に向かうべき、という設計意図）。
+const SCORE_PER_AFFINITY := 1       # 関係値1につき（＝相手と過ごした枠の量）
+const SCORE_PER_ROUTE_VISITED := 3  # 関わった相手（＝ルートの場所）の種類ごと
+const SCORE_PER_AMBIENT := 1        # 葵の遍在遭遇1回につき
+const SCORE_PER_NIGHT := 4          # 特別な夜への参加1回につき
+## この値以上なら witness_summer（広く見届けた）、未満なら solo_summer（一人で過ごした）。
+const WITNESS_MIN := 40
 
-## この周回の結末を1つ選ぶ。affinity・flags・stance（route_id→Stance の辞書）から判定。
-static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary) -> String:
+
+## この周回の結末を1つ選ぶ。
+## 深く完結したルートがあればそのエンディング、無ければ「関わりの総量」で記録者エンド二種に分岐。
+static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, visits: Dictionary, counters: Dictionary) -> String:
 	var best_route := ""
 	var best_depth := -1
 	var best_aff := -1
@@ -49,12 +69,38 @@ static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary) ->
 			best_depth = depth
 			best_aff = aff
 
-	# どのルートも中盤に至らなかった → 記録者エンド系のフォールバック。
+	# どのルートも深く完結していない → 記録者エンド。関わりの総量で二種に分岐（優劣ではない）。
 	if best_route == "":
-		return "quiet_summer"
+		var score := engagement_score(affinity, flags, visits, counters)
+		return WITNESS if score >= WITNESS_MIN else SOLO
 
 	var st_best := int(stance.get(best_route, GameState.Stance.NONE))
 	return _route_ending(best_route, st_best, int(affinity.get(best_route, 0)))
+
+
+## 「関わりの総量スコア」＝他者とどれだけ関わったか。一人で過ごす活動は加えない（設計意図）。
+static func engagement_score(affinity: Dictionary, flags: Dictionary, visits: Dictionary, counters: Dictionary) -> int:
+	var s := 0
+	for route_id in Routes.ids():
+		s += SCORE_PER_AFFINITY * int(affinity.get(route_id, 0))
+		# 関わった相手の“種類数”＝そのルートの場所を訪れたか（一人で過ごす場所は含めない）。
+		if visits.has(Routes.by_id(route_id)["location"]):
+			s += SCORE_PER_ROUTE_VISITED
+	s += SCORE_PER_AMBIENT * int(counters.get("aoi_ambient", 0))
+	s += SCORE_PER_NIGHT * _night_participation(flags)
+	return s
+
+
+## 特別な夜に参加した回数（三人で／誰かと／序盤の花火）。夜フラグから数える。
+static func _night_participation(flags: Dictionary) -> int:
+	var n := 0
+	for k in flags:
+		if not flags[k]:
+			continue
+		var ks := String(k)
+		if ks == Nights.F_EARLY_FIREWORKS or ks.ends_with(Nights.SUF_FESTIVAL) or ks.ends_with(Nights.SUF_LAST_FIREWORKS):
+			n += 1
+	return n
 
 
 ## そのルートで到達済みの節目数（＝どこまで深く進んだか）。
@@ -87,7 +133,7 @@ static func _route_ending(route_id: String, st: int, aff: int) -> String:
 				GameState.Stance.A: return "aoi_now"                                         # 今を生き切る
 				GameState.Stance.B: return "aoi_future"                                      # 続きを願う
 				GameState.Stance.C: return "aoi_unknown"                                     # 知ろうとして届かない
-	return "quiet_summer"
+	return SOLO  # 安全弁（通常ここには来ない）。記録者エンド側へ寄せる
 
 
 static func title_of(id: String) -> String:
@@ -101,7 +147,8 @@ static func title_of(id: String) -> String:
 		"aoi_now": return "今を、生き切る"
 		"aoi_future": return "続きは、なくて"
 		"aoi_unknown": return "知らないまま、好きだった"
-		"quiet_summer": return "静かな夏"
+		WITNESS: return "夏を、見届けた"
+		SOLO: return "ひとりの夏"
 		SECRET: return "そして、覚えている"
 	return "夏の終わり"
 
@@ -159,10 +206,19 @@ static func script_of(id: String) -> Array:
 				{ "speaker": "", "text": "これほど好きだったのに、何も分からなかった。" },
 				{ "speaker": "", "text": "彼女の核心には、ついに手が届かないまま夏が終わる。〔仮テキスト〕" },
 			]
-		"quiet_summer":
+		WITNESS:  # 見届けたエンド：広く関わり、夏の全体を記憶した記録者。裏エンドへの静かな種。
 			return [
-				{ "speaker": "", "text": "誰と深く過ごすでもなく、八月は静かに過ぎた。" },
-				{ "speaker": "", "text": "世界は終わる。ただ、それだけが起きた。" },
+				{ "speaker": "", "text": "特定の誰かと、深く結ばれることはなかった。" },
+				{ "speaker": "", "text": "けれど、この町のいろんな人と、いろんな場所と、ひと夏を分け合った。" },
+				{ "speaker": PLAYER, "text": "……ぼくは、この夏の全部を覚えている。たぶん、誰よりも。" },
+				{ "speaker": "", "text": "その感覚が何を意味するのかは、まだ分からない。ただ静かに、胸の奥に残った。" },
+			]
+		SOLO:  # ひとりのエンド：多くを一人で過ごし、終わりと一人で向き合った夏。裁かない。
+			return [
+				{ "speaker": "", "text": "この夏、ぼくは多くの時間を、一人で過ごした。" },
+				{ "speaker": "", "text": "褪せていく空を、消えていく町を、ただ一人で見ていた。" },
+				{ "speaker": PLAYER, "text": "……寂しくなかった、と言えば嘘になる。でも、これはこれで、ぼくの夏だ。" },
+				{ "speaker": "", "text": "誰にも言えない、自分だけの夏があった。それだけのことだ。" },
 			]
 		SECRET:
 			return [
