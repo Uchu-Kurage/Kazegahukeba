@@ -125,7 +125,8 @@ func _advance_line() -> void:
 func _show_line(node: Dictionary) -> void:
 	_choosing = false
 	_choice_box.visible = false
-	_hint.text = "［E］▶"
+	_hint.text = "▼"
+	_hint.visible = true
 	_hint.modulate.a = 0.7
 	_set_speaker(String(node.get("speaker", "")))
 	_text.text = String(node.get("text", ""))
@@ -134,20 +135,10 @@ func _show_line(node: Dictionary) -> void:
 	_revealing = true
 
 
-## 話者名プレートを設定（名前ごとに色を変える。地の文は隠す）。
+## 話者名タグを設定（和紙質感で統一。地の文は隠す）。
 func _set_speaker(speaker: String) -> void:
 	_name.text = " " + speaker + " "
 	_name.visible = speaker != ""
-	_name_sb.bg_color = _speaker_color(speaker)
-
-
-func _speaker_color(speaker: String) -> Color:
-	match speaker:
-		"球磨": return Color(0.80, 0.36, 0.20)
-		"由布": return Color(0.28, 0.42, 0.68)
-		"葵": return Color(0.80, 0.36, 0.52)
-		"ぼく": return Color(0.55, 0.50, 0.20)
-	return Color(0.30, 0.30, 0.36)
 
 
 # --- 選択肢 ----------------------------------------------------------
@@ -162,8 +153,7 @@ func _show_choices(node: Dictionary) -> void:
 	_choices = node["choices"]
 	_choice_index = 0
 	_choosing = true
-	_hint.text = "↑↓ 選ぶ ／ ［E］決定"
-	_hint.modulate.a = 0.7
+	_hint.visible = false  # 選択中は文字送り▼を隠す
 	_build_choice_labels()
 	_choice_box.visible = true
 
@@ -174,7 +164,8 @@ func _build_choice_labels() -> void:
 	_choice_labels.clear()
 	for i in _choices.size():
 		var lbl := Label.new()
-		lbl.add_theme_font_size_override("font_size", 22)
+		UITheme.style_label(lbl, UITheme.SIZE_CHOICE)  # 丸ゴシック・ダークグレー・薄い縁取り
+		lbl.custom_minimum_size = Vector2(236, 0)  # 右側に縦積みする和紙ピルの幅をそろえる
 		_choice_box.add_child(lbl)
 		_choice_labels.append(lbl)
 	_update_choice_highlight()
@@ -185,9 +176,10 @@ func _update_choice_highlight() -> void:
 		var lbl: Label = _choice_labels[i]
 		var opt: Dictionary = _choices[i]
 		var selected := i == _choice_index
-		var mark := "▶ " if selected else "　 "
-		lbl.text = mark + String(opt.get("text", ""))
-		lbl.add_theme_color_override("font_color", Color(1.0, 0.92, 0.55) if selected else Color(1, 1, 1, 0.82))
+		# 番号付き（イメージボード準拠）。選択は矢印ではなく夏空の青の下地で示す。
+		lbl.text = "%d. %s" % [i + 1, String(opt.get("text", ""))]
+		# 文字は常に暖かいダークグレー（白抜きにしない）。選択中だけ青の下地が乗る差で見せる。
+		lbl.add_theme_color_override("font_color", UITheme.TEXT)
 		lbl.add_theme_stylebox_override("normal", _choice_sel_sb if selected else _choice_unsel_sb)
 
 
@@ -233,62 +225,54 @@ func _build_ui() -> void:
 	_root.visible = false
 	add_child(_root)
 
+	# メッセージ枠：和紙・すりガラス（半透明・角丸・薄い縁・やわらかい影）。硬い黒箱にしない。
+	# イメージボードに合わせ、画面下の左〜中央（右側は選択肢の場所を空ける）。
 	_box = Panel.new()
-	_box.position = Vector2(48, 412)
-	_box.size = Vector2(1056, 196)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.06, 0.07, 0.10, 0.93)
-	sb.border_color = Color(0.90, 0.85, 0.60, 0.9)
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(12)
-	_box.add_theme_stylebox_override("panel", sb)
+	_box.position = Vector2(24, 418)
+	_box.size = Vector2(886, 200)
+	_box.add_theme_stylebox_override("panel", UITheme.washi(22))
 	_root.add_child(_box)
 
+	# 話者名タグ：枠と同じ和紙質感の独立したピルで、枠の左上に少し上へ浮かせて重ねる。
 	_name = Label.new()
-	_name.position = Vector2(24, 8)
-	_name.add_theme_font_size_override("font_size", 22)
-	_name.add_theme_color_override("font_color", Color(1, 1, 1))
-	_name_sb = StyleBoxFlat.new()
-	_name_sb.bg_color = Color(0.30, 0.30, 0.36)
-	_name_sb.set_corner_radius_all(6)
-	_name_sb.content_margin_left = 12
-	_name_sb.content_margin_right = 12
-	_name_sb.content_margin_top = 3
-	_name_sb.content_margin_bottom = 3
+	_name.position = Vector2(72, -24)
+	UITheme.style_label(_name, UITheme.SIZE_NAME)
+	_name_sb = UITheme.washi(14)
+	_name_sb.content_margin_left = 16
+	_name_sb.content_margin_right = 16
+	_name_sb.content_margin_top = 4
+	_name_sb.content_margin_bottom = 4
 	_name.add_theme_stylebox_override("normal", _name_sb)
 	_box.add_child(_name)
 
+	# 本文：暖かいダークグレー＋薄い縁取り（どんな背景でも読めるように）。
 	_text = Label.new()
-	_text.position = Vector2(24, 52)
-	_text.size = Vector2(1008, 60)
+	_text.position = Vector2(36, 40)
+	_text.size = Vector2(814, 140)
 	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_text.add_theme_font_size_override("font_size", 22)
+	UITheme.style_label(_text, UITheme.SIZE_BODY)
 	_box.add_child(_text)
 
-	_choice_box = VBoxContainer.new()
-	_choice_box.position = Vector2(40, 108)
-	_choice_box.add_theme_constant_override("separation", 4)
-	_choice_box.visible = false
-	_box.add_child(_choice_box)
-
-	# 選択肢のハイライト帯（選択中）と、同サイズの透明版（未選択）。
-	_choice_sel_sb = StyleBoxFlat.new()
-	_choice_sel_sb.bg_color = Color(1.0, 0.85, 0.45, 0.20)
-	_choice_sel_sb.set_corner_radius_all(6)
-	_choice_sel_sb.content_margin_left = 12
-	_choice_sel_sb.content_margin_right = 12
-	_choice_sel_sb.content_margin_top = 2
-	_choice_sel_sb.content_margin_bottom = 2
-	_choice_unsel_sb = StyleBoxFlat.new()
-	_choice_unsel_sb.bg_color = Color(0, 0, 0, 0)
-	_choice_unsel_sb.content_margin_left = 12
-	_choice_unsel_sb.content_margin_right = 12
-	_choice_unsel_sb.content_margin_top = 2
-	_choice_unsel_sb.content_margin_bottom = 2
-
+	# 文字送りの三角（▼）＋きらめき（✦）。枠の右下で「続きがある」ことを示す。
+	var spark := Label.new()
+	spark.text = "✦"
+	spark.position = Vector2(824, 128)
+	UITheme.style_label(spark, UITheme.SIZE_SMALL)
+	spark.modulate = Color(1, 1, 1, 0.6)
+	_box.add_child(spark)
 	_hint = Label.new()
-	_hint.text = "［E］▶"
-	_hint.position = Vector2(936, 166)
-	_hint.add_theme_font_size_override("font_size", 16)
-	_hint.modulate = Color(1, 1, 1, 0.6)
+	_hint.text = "▼"
+	_hint.position = Vector2(838, 158)
+	UITheme.style_label(_hint, UITheme.SIZE_HINT)
+	_hint.add_theme_color_override("font_color", UITheme.ACCENT)  # 夏空の青の▼
+	_hint.modulate = Color(1, 1, 1, 0.8)
 	_box.add_child(_hint)
+
+	# 選択肢：画面右側に縦積みの和紙ピル。選択中だけ夏空の青が乗る。
+	_choice_box = VBoxContainer.new()
+	_choice_box.position = Vector2(886, 200)
+	_choice_box.add_theme_constant_override("separation", 12)
+	_choice_box.visible = false
+	_root.add_child(_choice_box)
+	_choice_sel_sb = UITheme.accent(14)
+	_choice_unsel_sb = UITheme.chip(14)
