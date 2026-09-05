@@ -7,9 +7,11 @@ extends Node
 
 var current_location_id := ""  ## これから入る場所。Place シーンが読む。
 
-## 散策画面（FieldScene）用：これから開く画面IDと、どの向きから入ってきたか。
+## 散策画面（FieldScene）用：これから開く画面IDと、どの画面から来たか。
+## from_id が空なら新規入場（start 位置）。出口遷移では「今いる画面ID」を渡し、
+## 遷移先では「来た画面へ戻る出口」の位置に出現する（双方向接続なので必ず対応が在る）。
 var current_field_id := "riverbank"
-var field_enter_dir := ""       ## "" なら新規入場（start 位置）。出口遷移では entry を渡す。
+var field_from_id := ""
 
 
 func go_to_place(id: String) -> void:
@@ -31,11 +33,11 @@ func go_to_ura_ending() -> void:
 	Fader.change_scene("res://scenes/UraEnding.tscn")
 
 
-## 散策画面へ。field_id の画面を開き、enter_dir（来た向き）に対応する入口へ立たせる。
+## 散策画面へ。field_id の画面を開き、from_id（来た画面）に対応する入口へ立たせる。
 ## 移動・遷移では枠を消費しない（GameState を触らない）。
-func go_to_field(field_id: String, enter_dir: String = "") -> void:
+func go_to_field(field_id: String, from_id: String = "") -> void:
 	current_field_id = field_id
-	field_enter_dir = enter_dir
+	field_from_id = from_id
 	Fader.change_scene("res://scenes/FieldScene.tscn")
 
 

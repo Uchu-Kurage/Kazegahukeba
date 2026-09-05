@@ -10,13 +10,13 @@ extends ExploreMap
 ## ExploreMap を継承：プレイヤー生成・対象(出口)への出入り検知・E入力の土台をそのまま使う。
 
 var _field := {}
-var _enter_dir := ""    # どの向きから入ってきたか（入口位置の決定に使う）
+var _from_id := ""      # どの画面から来たか（入口位置の決定に使う）
 
 
 func _build_map() -> void:
 	var fid := Nav.current_field_id if Nav.current_field_id != "" else "riverbank"
 	_field = FieldMaps.by_id(fid)
-	_enter_dir = Nav.field_enter_dir
+	_from_id = Nav.field_from_id
 	if _field.is_empty():
 		_field = FieldMaps.by_id("riverbank")
 
@@ -38,7 +38,10 @@ func _ready_done() -> void:
 	for r in _field.get("roads", []):
 		roads.append(r)
 	_player.walkable_rects = roads
-	_player.position = FieldMaps.entry_position(_field, _enter_dir)
+	_player.position = FieldMaps.entry_position(_field, _from_id)
+	# 奥行きのスケール変化（§2-2）：手前ほど大きく、奥ほど小さく。全散策画面で共通。
+	_player.set_depth_scale(FieldMaps.DEPTH_Y_NEAR, FieldMaps.DEPTH_Y_FAR,
+		FieldMaps.DEPTH_SCALE_NEAR, FieldMaps.DEPTH_SCALE_FAR)
 	HUD.set_shown(true)
 	AudioManager.stop_ambient()
 
@@ -64,9 +67,9 @@ func _on_interact(spot) -> void:
 		HUD.set_prompt("「%s」――この先はまだ繋がっていない（§1: 出口の反応を確認）" % String(ex["label"]))
 		print("[field] exit reacted: %s (to=未接続)" % String(ex["id"]))
 		return
-	# 接続先あり：入ってきた向きを伝えて遷移（Fader が暗転→切替→明転。枠は消費しない）。
+	# 接続先あり：今いる画面IDを渡して遷移（遷移先は「戻る出口」の位置に出す。枠は消費しない）。
 	AudioManager.play_sfx("confirm")
-	Nav.go_to_field(dest, String(ex.get("entry", "")))
+	Nav.go_to_field(dest, String(_field["id"]))
 
 
 func _exit_by_id(exit_id: String) -> Dictionary:
