@@ -98,7 +98,7 @@ scenes/
   CharacterArt.gd          ドット絵スプライトをコード生成（配色から SpriteFrames を作る）
   PixelCharacter.gd        AnimatedSprite2D。待機／歩き × 下上横。Player と NPC が共用
   PlaceBackground.gd       各場所の内装を _draw()（河川敷・境内・通り・座敷）
-  HUD.tscn / HUD.gd         常時UI（カレンダー＋操作プロンプト）。Autoload で全シーンに表示
+  HUD.tscn / HUD.gd         常時UI（右上の日めくり和紙ピル＝DAY N/漢数字の月日 曜日 ・ 時間帯／操作プロンプト）。Autoload で全シーンに表示
 assets/fonts/
   NotoSansJP-Regular.ttf    日本語フォント（OFL 1.1）
 ```

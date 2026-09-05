@@ -25,10 +25,11 @@ const ACCENT := Color("5ba3d0")
 const ACCENT_ALPHA := 0.80
 
 # --- 文字サイズ（サイズで階層をつける。フォントは統一）---
-const SIZE_BODY := 24
-const SIZE_NAME := 22
-const SIZE_CHOICE := 22
+const SIZE_BODY := 28
+const SIZE_NAME := 24
+const SIZE_CHOICE := 24
 const SIZE_HINT := 22
+const SIZE_DAY := 24
 const SIZE_SMALL := 18
 
 ## 丸ゴシックのフォント。ここに TTF を置けば全体が丸ゴシックに切り替わる（未設置なら既定＝Noto）。
