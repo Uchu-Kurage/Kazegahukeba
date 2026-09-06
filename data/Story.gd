@@ -164,6 +164,15 @@ static func debug_lines(state) -> PackedStringArray:
 	out.append("")
 	out.append("関わりの総量: %d / %d（閾値以上=見届けた／未満=ひとり）" % [score, Endings.WITNESS_MIN])
 	out.append("葵の遍在遭遇: %d回  一人で過ごした回数: %d回" % [int(state.counters.get("aoi_ambient", 0)), solo_visits])
+	# 葵ルートの三分岐（8/31）＝量ではなく方向で決まる。今の傾きと、現時点での着地先。
+	var lean: Dictionary = state.aoi_lean
+	out.append("")
+	out.append("葵の傾き: 明%d 翳%d 近%d → 着地 %s" % [
+		int(lean.get(Endings.LEAN_WARMTH, 0)),
+		int(lean.get(Endings.LEAN_SHADOW, 0)),
+		int(lean.get(Endings.LEAN_CLOSENESS, 0)),
+		Endings.title_of(Endings._aoi_ending(lean)),
+	])
 	return out
 
 

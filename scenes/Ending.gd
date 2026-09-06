@@ -24,7 +24,7 @@ func _ready() -> void:
 ## 裏エンド（9月1日）は、この場では再生しない。全エンド到達で解放され、タイトルの導線から
 ## 独立した一本道シーン（UraEnding）として入る（実装指示 第5弾）。
 func _run() -> void:
-	var id := Endings.pick(GameState.affinity, GameState.flags, GameState.stance, GameState.visits, GameState.counters)
+	var id := Endings.pick(GameState.affinity, GameState.flags, GameState.stance, GameState.visits, GameState.counters, GameState.aoi_lean)
 	# Story.flatten を通すことで、結末台本でも if_flag が使える（特別な夜のフラグ等で分岐可能）。
 	Dialogue.start(Story.flatten(Endings.script_of(id), GameState.flags))
 	await Dialogue.finished

@@ -17,6 +17,10 @@ func _ready() -> void:
 	_bind("debug_end",    [KEY_F4])  # いまの状態で即エンディング判定へ（分岐確認用）
 	_bind("debug_ura",    [KEY_F5])  # 裏エンド（9月1日）を強制再生（解放条件を無視・検証用）
 	_bind("debug_field",  [KEY_F6])  # 散策画面（河原と土手）へ（第6弾 §1 の動作確認用）
+	# 葵ルート三分岐の出し分け確認（第8弾 §4-4）。葵を主軸に成立させ、傾きを一方向へ倒して即着地。
+	_bind("debug_aoi_warmth",    [KEY_F7])  # 明るさへ倒す → ひまわり畑エンド
+	_bind("debug_aoi_shadow",    [KEY_F8])  # 翳りへ倒す   → 丘エンド
+	_bind("debug_aoi_closeness", [KEY_F9])  # 親密さへ倒す → 家エンド
 
 
 func _bind(action: String, keys: Array) -> void:

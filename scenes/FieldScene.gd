@@ -116,6 +116,9 @@ func _on_option_selected(option: Dictionary) -> void:
 		GameState.bump(cname, int(option["count"][cname]))
 	for route_id in option.get("stance", {}):
 		GameState.set_stance(route_id, option["stance"][route_id])
+	# 葵ルートの「傾き」（三分岐の布石。方向のみ記録）。
+	if option.has("lean"):
+		GameState.bump_lean(String(option["lean"]))
 
 
 # --- 夜（§Q1：特別な夜があれば発生／無ければ就寝で翌朝）------------------

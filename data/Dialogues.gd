@@ -66,7 +66,7 @@ static func route_script(route_id: String, key: String) -> Array:
 		Routes.YUFU:
 			return _yufu_script(key)
 		Routes.AOI:
-			return _aoi_script(key)
+			return AoiScript.scene(key)  # 葵ルート本文は AoiScript に集約（第8弾 §1）
 	return []
 
 
@@ -193,65 +193,6 @@ static func _yufu_script(key: String) -> Array:
 	return []
 
 
-# --- 葵ルート（現在・今）※二層構造：正体を一切匂わせない ------------
-static func _aoi_script(key: String) -> Array:
-	match key:
-		"meet":
-			return [
-				{ "speaker": "", "text": "まぶしい光の中に、見慣れない女の子がいた。" },
-				{ "speaker": "葵", "text": "ねえ、あなた、面白い顔してる。" },
-				{ "speaker": PLAYER, "text": "……いきなりだな。" },
-				{ "speaker": "葵", "text": "あはは。わたし、葵。よろしくね。" },
-			]
-		"around":
-			return [
-				{ "speaker": "葵", "text": "これ何？　行ってみよう！　ねえ、早く早く。" },
-				{ "speaker": "", "text": "見慣れた町が、葵の目を通すと少し新しく見えた。〔仮テキスト〕" },
-			]
-		"dodge":
-			return [
-				{ "speaker": PLAYER, "text": "……葵は、どこから来たんだ？" },
-				{ "speaker": "葵", "text": "んー、遠く。秘密！　さ、次いこ。" },
-				{ "speaker": "", "text": "軽くかわされた。〔仮テキスト〕" },
-			]
-		"closer":  # 急速に近づく恋（中盤）。背景（球磨離脱）はほぼ触れない＝軽く。
-			return [
-				{ "speaker": "葵", "text": "もっと一緒にいたい。今、あなたといるのが楽しいんだもん。" },
-				{ "if_flag": Timeline.F_KUMA_DRIFTING, "then": [
-					{ "speaker": "葵", "text": "球磨くん、最近見ないね。……ま、いっか。今はわたしたちの番。" },
-				]},
-			]
-		"shadow":  # 翳り（中盤）※さらっと。意味深にしない。
-			return [
-				{ "speaker": "", "text": "全力で笑ったあと、葵がふと一瞬、遠い目をした。" },
-				{ "speaker": "葵", "text": "……ん？　なんでもないよ。さ、次いこ！" },
-			]
-		"stance":  # 中盤の選択 A/B/C（葵の「今」への向き合い方）
-			return [
-				{ "text": "葵の「今を生きる」姿勢に、どう応える？", "choices": [
-					{ "text": "一緒に今を生きる", "stance": { Routes.AOI: GameState.Stance.A },
-						"affinity": { Routes.AOI: 1 },
-						"then": [ { "speaker": "葵", "text": "うん！　それでこそ。今を楽しもう。" } ] },
-					{ "text": "未来を求める", "stance": { Routes.AOI: GameState.Stance.B },
-						"then": [ { "speaker": "葵", "text": "……夏が終わっても、か。ふふ、欲張りだね。" } ] },
-					{ "text": "彼女を知ろうとする", "stance": { Routes.AOI: GameState.Stance.C },
-						"then": [ { "speaker": "葵", "text": "そんなに知りたい？　変なの。" } ] },
-				]},
-			]
-		"turning":  # 転換点＝主人公の痛みのピーク（終盤頭）
-			return [
-				{ "speaker": PLAYER, "text": "君のこと、何も知らない。……夏が終わったら、君はどうなるんだ。" },
-				{ "speaker": "葵", "text": "過去も先も、あんまり意味ないと思ってる。今、ここにあなたといる。それが全部でしょ？" },
-				{ "speaker": "", "text": "理解はできない。でも、好きだ。〔仮テキスト〕" },
-			]
-		"lastday":  # 最後の今日（終盤）
-			return [
-				{ "speaker": "葵", "text": "この夏、すっごく楽しかった。あなたといられて。……これで、じゅうぶん。" },
-				{ "speaker": "", "text": "いつも通りの葵のまま。〔仮テキスト〕" },
-			]
-	return []
-
-
 ## 節目が無い日の、その相手との日常会話（関係値レベル 0/1/2 で段階変化の下地）。
 ## テキストは仮置き。ルートごとに1系統だけ用意（本文フェーズで増やす）。
 static func route_filler(route_id: String, level: int) -> Array:
@@ -313,7 +254,7 @@ static func night_partner_script(event_id: String, who: String) -> Array:
 			match who:
 				Routes.KUMA: return [ { "speaker": "球磨", "text": "祭りも、来年はもう無いんだよな。……今のうちに全部見とくか。" } ]
 				Routes.YUFU: return [ { "speaker": "由布", "text": "……こういうお祭り、あなたと来られてよかった。" } ]
-				Routes.AOI:  return [ { "speaker": "葵", "text": "見て、りんご飴！　射的も！　ぜんぶやろ、ぜんぶ！" } ]
+				Routes.AOI:  return AoiScript.festival()  # 葵の祭りの夜は本文（AoiScript）へ（第8弾 節目2）
 				"trio":      return [ { "speaker": "", "text": "三人で屋台を巡った。こういう夜が、まだ続くような気がした。" } ]
 		"last_fireworks":
 			match who:
