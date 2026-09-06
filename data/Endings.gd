@@ -13,6 +13,8 @@ extends RefCounted
 ## しきい値・配分はすべて名前付き定数（ハードコード禁止）。判定は Routes（データ）を回す。
 ## 裏エンド(SECRET)は全ノーマル到達で解放（周回記録は SaveData が持つ）。
 
+const PLAYER := "ぼく"  # 主人公の仮の呼び名（記録者エンドの独白などで使う）
+
 const SECRET := "secret"
 
 ## 記録者エンド（フォールバック）二種。
@@ -21,11 +23,33 @@ const SECRET := "secret"
 const WITNESS := "witness_summer"
 const SOLO := "solo_summer"
 
-## 全ノーマル・エンディング（三ルート×3着地＋記録者エンド二種）。全到達で裏エンド解放。
+## 葵ルートの三分岐（8/31）。三つは対等＝優劣・正解・失敗はない（実装指示 第8弾 §2-1）。
+## 命名に bad/fail/best 等の色をつけない。home を消極的選択として扱わない（最も積極的で切ない願い）。
+const AOI_END_HIMAWARI := "aoi_end_himawari"  # 輝きの恋「夏を、夏のまま」（ひまわり畑）
+const AOI_END_HILL := "aoi_end_hill"          # 見届ける恋「終わりを、共に」（丘）
+const AOI_END_HOME := "aoi_end_home"          # 寄り添う恋「ただ、あなたのそばで」（主人公の家）
+
+## 葵ルートの「傾き」タグ（中立名）。量ではなく方向で着地を決める（§2-2）。
+const LEAN_WARMTH := "warmth"        # 明るさ・楽しさを膨らませる方向 → ひまわり畑へ
+const LEAN_SHADOW := "shadow"        # 寂しさ・終わりに寄り添う方向 → 丘へ
+const LEAN_CLOSENESS := "closeness"  # 距離を縮める・二人だけの親密さ → 家へ
+
+## 同点・僅差のときの優先順位（先頭が優先。理由は後で調整可＝§2-3）。破綻なく必ず1つに決まる。
+const LEAN_PRIORITY := [LEAN_SHADOW, LEAN_CLOSENESS, LEAN_WARMTH]
+
+## 傾きの方向 → 着地の対応（直書きしない＝§5）。
+const LEAN_TO_END := {
+	LEAN_WARMTH: AOI_END_HIMAWARI,
+	LEAN_SHADOW: AOI_END_HILL,
+	LEAN_CLOSENESS: AOI_END_HOME,
+}
+
+## 全ノーマル・エンディング（球磨×3＋由布×3＋葵の三分岐＋記録者エンド二種）。全到達で裏エンド解放。
+## 葵は三分岐のいずれも "aoi_" 始まり＝裏エンド判定では「葵ルート到達」で1つと数える（§3）。
 const NORMAL_IDS := [
 	"kuma_friendship", "kuma_struggle", "kuma_bitter",
 	"yufu_cross", "yufu_childhood", "yufu_beside",
-	"aoi_now", "aoi_future", "aoi_unknown",
+	AOI_END_HIMAWARI, AOI_END_HILL, AOI_END_HOME,
 	WITNESS, SOLO,
 ]
 
@@ -77,19 +101,21 @@ static func ura_seen() -> bool:
 
 ## この周回の結末を1つ選ぶ。
 ## 深く完結したルートがあればそのエンディング、無ければ「関わりの総量」で記録者エンド二種に分岐。
-static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, visits: Dictionary, counters: Dictionary) -> String:
+## 葵ルートだけは着地を「傾き（方向）」で決めるので aoi_lean を受け取る（§2-2）。
+static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, visits: Dictionary, counters: Dictionary, aoi_lean: Dictionary = {}) -> String:
 	var best_route := ""
 	var best_depth := -1
 	var best_aff := -1
 
-	# 「立場を選び（＝中盤に踏み込み）、かつ十分に深く進んだ」ルートの中から、最も深いものを採る。
+	# 「十分に深く進んだ（主軸として進めた）」ルートの中から、最も深いものを採る。
 	for route_id in Routes.ids():
-		var st := int(stance.get(route_id, GameState.Stance.NONE))
-		if st == GameState.Stance.NONE:
-			continue
 		var depth := _route_depth(route_id, flags)
 		if depth < DEEP_MILESTONES:
-			continue  # 立場は選んだが、節目が浅い＝主軸とは見なさない
+			continue  # 節目が浅い＝主軸とは見なさない
+		# 球磨・由布は中盤の立場(stance)を選んで初めて主軸とみなす（従来どおり）。
+		# 葵は着地を“方向”で決めるルート＝深さのみで主軸判定し、立場は問わない（§2-2）。
+		if route_id != Routes.AOI and int(stance.get(route_id, GameState.Stance.NONE)) == GameState.Stance.NONE:
+			continue
 		var aff := int(affinity.get(route_id, 0))
 		if depth > best_depth or (depth == best_depth and aff > best_aff):
 			best_route = route_id
@@ -101,8 +127,25 @@ static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, vi
 		var score := engagement_score(affinity, flags, visits, counters)
 		return WITNESS if score >= WITNESS_MIN else SOLO
 
+	# 葵ルートが主軸 → 傾きの方向で三分岐（量ではなく方向。三つは対等）。
+	if best_route == Routes.AOI:
+		return _aoi_ending(aoi_lean)
+
 	var st_best := int(stance.get(best_route, GameState.Stance.NONE))
 	return _route_ending(best_route, st_best, int(affinity.get(best_route, 0)))
+
+
+## 葵ルートの三分岐（8/31）。最も高い“方向”の着地へ。同点は LEAN_PRIORITY の先頭が優先。
+## どの方向にも傾かなくても必ず三つのいずれかに落ちる（記録者エンドには行かない＝§2-3）。
+static func _aoi_ending(aoi_lean: Dictionary) -> String:
+	var best_dir := LEAN_PRIORITY[0]
+	var best_val := -1
+	for dir in LEAN_PRIORITY:  # 優先順位の高い方から見るので、同点は先頭が残る
+		var v := int(aoi_lean.get(dir, 0))
+		if v > best_val:
+			best_val = v
+			best_dir = dir
+	return String(LEAN_TO_END[best_dir])
 
 
 ## 「関わりの総量スコア」＝他者とどれだけ関わったか。一人で過ごす活動は加えない（設計意図）。
@@ -142,7 +185,8 @@ static func _route_depth(route_id: String, flags: Dictionary) -> int:
 	return n
 
 
-## ルート×立場×関係値 → 着地(1〜3)。narrative なので各ルートの対応はここに持つ（数値は定数）。
+## ルート×立場×関係値 → 着地。narrative なので各ルートの対応はここに持つ（数値は定数）。
+## ※葵ルートは立場ではなく「傾き」で決めるので _aoi_ending を使う（ここには来ない）。
 static func _route_ending(route_id: String, st: int, aff: int) -> String:
 	match route_id:
 		Routes.KUMA:
@@ -155,11 +199,6 @@ static func _route_ending(route_id: String, st: int, aff: int) -> String:
 				GameState.Stance.A: return "yufu_cross" if aff >= AFF_DEEP else "yufu_childhood"  # 一線を越える
 				GameState.Stance.B: return "yufu_childhood"                                  # 幼なじみのまま
 				GameState.Stance.C: return "yufu_beside"                                     # 喪失に寄り添う
-		Routes.AOI:
-			match st:
-				GameState.Stance.A: return "aoi_now"                                         # 今を生き切る
-				GameState.Stance.B: return "aoi_future"                                      # 続きを願う
-				GameState.Stance.C: return "aoi_unknown"                                     # 知ろうとして届かない
 	return SOLO  # 安全弁（通常ここには来ない）。記録者エンド側へ寄せる
 
 
@@ -171,9 +210,9 @@ static func title_of(id: String) -> String:
 		"yufu_cross": return "幼なじみの、その先へ"
 		"yufu_childhood": return "言えなかった夏"
 		"yufu_beside": return "そばにいた夏"
-		"aoi_now": return "今を、生き切る"
-		"aoi_future": return "続きは、なくて"
-		"aoi_unknown": return "知らないまま、好きだった"
+		AOI_END_HIMAWARI: return "夏を、夏のまま"
+		AOI_END_HILL: return "終わりを、この目で"
+		AOI_END_HOME: return "ただ、そばにいて"
 		WITNESS: return "夏を、見届けた"
 		SOLO: return "ひとりの夏"
 		SECRET: return "そして、覚えている"
@@ -218,21 +257,9 @@ static func script_of(id: String) -> Array:
 				{ "speaker": "由布", "text": "……そばにいてくれて、ありがとう。" },
 				{ "speaker": "", "text": "恋の形にはならなかったが、一人じゃなかった。〔仮テキスト〕" },
 			]
-		"aoi_now":
-			return [
-				{ "speaker": "", "text": "最後まで先を考えず、二人で今を燃やし尽くした。" },
-				{ "speaker": "", "text": "あの夏は、確かにあった。理解はできなくても。〔仮テキスト〕" },
-			]
-		"aoi_future":
-			return [
-				{ "speaker": "葵", "text": "ごめんね。……未来は、あげられないや。" },
-				{ "speaker": "", "text": "もっと一緒にいたかった、という渇き。〔仮テキスト〕" },
-			]
-		"aoi_unknown":
-			return [
-				{ "speaker": "", "text": "これほど好きだったのに、何も分からなかった。" },
-				{ "speaker": "", "text": "彼女の核心には、ついに手が届かないまま夏が終わる。〔仮テキスト〕" },
-			]
+		AOI_END_HIMAWARI, AOI_END_HILL, AOI_END_HOME:
+			# 葵ルートの三分岐は本文層（AoiScript）に持つ。場所ごとの骨子＋共通の余韻。
+			return AoiScript.ending(id)
 		WITNESS:  # 見届けたエンド：広く関わり、夏の全体を記憶した記録者。裏エンドへの静かな種。
 			return [
 				{ "speaker": "", "text": "特定の誰かと、深く結ばれることはなかった。" },

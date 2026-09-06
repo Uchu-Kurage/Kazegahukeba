@@ -50,6 +50,11 @@ var stance := {}
 ## 記録者エンドの「関わりの総量」判定などに使う。会話の効果ノード count:{} から増える。
 var counters := {}
 
+## 葵ルートの「傾き」カウンタ。 direction(String) -> int（Endings.LEAN_* の三方向）。
+## 8/31 の三分岐は、量（スコア高低）ではなく、最も高い“方向”で決める（実装指示 第8弾 §2-2）。
+## 選択肢の lean タグごとに +1。方向の対応・優先順位・着地の割り当ては Endings に定数化。
+var aoi_lean := {}
+
 
 func _ready() -> void:
 	start_new_run()
@@ -66,6 +71,7 @@ func start_new_run() -> void:
 	visits.clear()
 	stance.clear()
 	counters.clear()
+	aoi_lean.clear()
 	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -82,6 +88,7 @@ func snapshot() -> Dictionary:
 		"visits": visits.duplicate(),
 		"stance": stance.duplicate(),
 		"counters": counters.duplicate(),
+		"aoi_lean": aoi_lean.duplicate(),
 	}
 
 
@@ -95,6 +102,7 @@ func restore(data: Dictionary) -> void:
 	visits = (data.get("visits", {}) as Dictionary).duplicate()
 	stance = (data.get("stance", {}) as Dictionary).duplicate()
 	counters = (data.get("counters", {}) as Dictionary).duplicate()
+	aoi_lean = (data.get("aoi_lean", {}) as Dictionary).duplicate()
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -147,6 +155,14 @@ func bump(counter_name: String, delta: int) -> void:
 	if counter_name == "":
 		return
 	counters[counter_name] = int(counters.get(counter_name, 0)) + delta
+
+
+## 葵ルートの「傾き」を1つ足す（会話の選択肢の lean タグから呼ぶ）。方向のみを記録する。
+func bump_lean(direction: String) -> void:
+	if direction == "":
+		return
+	aoi_lean[direction] = int(aoi_lean.get(direction, 0)) + 1
+	print("[lean] %s = %d" % [direction, aoi_lean[direction]])  # 確認用
 
 
 ## フラグを立てる／下ろす（会話の選択肢などから呼ぶ）。

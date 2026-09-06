@@ -46,6 +46,22 @@ func _input(event: InputEvent) -> void:
 		Nav.go_to_ura_ending()
 	elif event.is_action_pressed("debug_field"):
 		Nav.go_to_field("riverbank", "")
+	elif event.is_action_pressed("debug_aoi_warmth"):
+		_force_aoi_ending(Endings.LEAN_WARMTH)
+	elif event.is_action_pressed("debug_aoi_shadow"):
+		_force_aoi_ending(Endings.LEAN_SHADOW)
+	elif event.is_action_pressed("debug_aoi_closeness"):
+		_force_aoi_ending(Endings.LEAN_CLOSENESS)
+
+
+## 葵ルートの三分岐を強制して即着地（検証用）。葵を主軸として成立させ（全節目フラグ）、
+## 傾きを指定方向へ強く倒してから、通常のエンディング判定（Endings.pick）を通す。
+func _force_aoi_ending(direction: String) -> void:
+	for m in Routes.by_id(Routes.AOI)["milestones"]:
+		GameState.set_flag(Routes.flag_of(Routes.AOI, String(m["key"])), true)
+	GameState.aoi_lean = { direction: 99 }
+	SaveData.clear_run()
+	Nav.go_to_ending()
 
 
 func _process(_delta: float) -> void:

@@ -72,6 +72,9 @@ func _on_option_selected(option: Dictionary) -> void:
 	# 立場（中盤の A/B/C）は route_id 別の辞書で受け取り、そのルートに立てる。
 	for route_id in option.get("stance", {}):
 		GameState.set_stance(route_id, option["stance"][route_id])
+	# 葵ルートの「傾き」（三分岐の布石。方向のみ記録）。
+	if option.has("lean"):
+		GameState.bump_lean(String(option["lean"]))
 
 
 func _on_talk_finished() -> void:
