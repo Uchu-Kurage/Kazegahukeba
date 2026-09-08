@@ -16,6 +16,7 @@ const EXIT_PREFIX := "to_"
 var _field := {}
 var _from_id := ""      # どの画面から来たか（入口位置の決定に使う）
 var _walk_overlay: WalkOverlay  # 歩行領域の可視化（F10で切替。調整用）
+var _weather_overlay: ColorRect  # 天気の空色オーバーレイ（第9弾）
 
 
 func _build_map() -> void:
@@ -62,8 +63,9 @@ func _ready_done() -> void:
 	_walk_overlay.z_index = 50
 	_walk_overlay.visible = false
 	add_child(_walk_overlay)
+	# 天気（第9弾）：空色オーバーレイと環境音を今日の天気で切替。
+	_apply_weather(GameState.weather_today())
 	HUD.set_shown(true)
-	AudioManager.stop_ambient()
 	# 枠・日付の進行に追従（プロンプト更新／翌朝は家へ／8/31で終幕）。
 	GameState.phase_changed.connect(_on_phase_changed.unbind(1))
 	GameState.day_changed.connect(_on_day_changed)
@@ -72,6 +74,28 @@ func _ready_done() -> void:
 
 func _player_start() -> Vector2:
 	return _field.get("start", Vector2(576, 365))
+
+
+## 今日の天気を反映：画面全体に薄い色を重ね（雰囲気）、環境音を切り替える。
+## 空色シェーダの本格版は後日。まずは色オーバーレイ＋音で「その天気の日の一枚」を出す。
+func _apply_weather(weather_id: String) -> void:
+	var info := Weather.info(weather_id)
+	# 空色オーバーレイ（背景の上・キャラの上に薄く。歩行デバッグ表示より下）。
+	if _weather_overlay == null:
+		_weather_overlay = ColorRect.new()
+		_weather_overlay.size = Vector2(FieldMaps.VIEW_W, FieldMaps.VIEW_H)
+		_weather_overlay.z_index = 20
+		_weather_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_weather_overlay)
+	_weather_overlay.color = info["tint"]
+	# 環境音："silence"=無音に近づける／""=屋外の既定（蝉）／それ以外はそのキー。
+	var amb := String(info["ambient"])
+	if amb == "silence":
+		AudioManager.stop_ambient()
+	elif amb != "":
+		AudioManager.play_ambient(amb)
+	else:
+		AudioManager.play_ambient("cicada")
 
 
 ## デバッグ：F10 で歩行領域オーバーレイを切替（interact/skip は親 ExploreMap に委譲）。
