@@ -55,6 +55,10 @@ var counters := {}
 ## 選択肢の lean タグごとに +1。方向の対応・優先順位・着地の割り当ては Endings に定数化。
 var aoi_lean := {}
 
+## 天気（第9弾）。実際の天気は手組みスケジュール（Weather.SCHEDULE）を day_index で引く。
+## 予報の「当たり外れ」の揺らぎだけ、この周回固定のシード weather_seed で決める（山場は必ず当てる）。
+var weather_seed := 0
+
 
 func _ready() -> void:
 	start_new_run()
@@ -72,6 +76,7 @@ func start_new_run() -> void:
 	stance.clear()
 	counters.clear()
 	aoi_lean.clear()
+	weather_seed = randi()  # 予報の揺らぎ用（周回ごとに変わる）
 	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -89,6 +94,7 @@ func snapshot() -> Dictionary:
 		"stance": stance.duplicate(),
 		"counters": counters.duplicate(),
 		"aoi_lean": aoi_lean.duplicate(),
+		"weather_seed": weather_seed,
 	}
 
 
@@ -105,6 +111,7 @@ func restore(data: Dictionary) -> void:
 	stance = _dict_field(data, "stance")
 	counters = _dict_field(data, "counters")
 	aoi_lean = _dict_field(data, "aoi_lean")
+	weather_seed = int(data.get("weather_seed", 0)) if _is_num(data.get("weather_seed")) else randi()
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -179,6 +186,21 @@ func bump_lean(direction: String) -> void:
 		return
 	aoi_lean[direction] = int(aoi_lean.get(direction, 0)) + 1
 	print("[lean] %s = %d" % [direction, aoi_lean[direction]])  # 確認用
+
+
+## 今日の天気（実際）。手組みスケジュールを day_index で引く。
+func weather_today() -> String:
+	return Weather.of(day_index)
+
+
+## 明日の実際の天気（翌朝そのまま出る天気）。演出・限定風景の判定に使う。
+func weather_tomorrow() -> String:
+	return Weather.of(day_index + 1)
+
+
+## 明日の“予報”（外れうる）。前日夜/当日朝に見せるのはこちら。山場は必ず当たる。
+func weather_forecast() -> String:
+	return Weather.forecast(day_index + 1, weather_seed)
 
 
 ## フラグを立てる／下ろす（会話の選択肢などから呼ぶ）。

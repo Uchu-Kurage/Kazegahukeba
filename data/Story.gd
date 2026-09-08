@@ -173,6 +173,15 @@ static func debug_lines(state) -> PackedStringArray:
 		int(lean.get(Endings.LEAN_CLOSENESS, 0)),
 		Endings.title_of(Endings._aoi_ending(lean)),
 	])
+	# 天気（第9弾）：今日の実際／明日の実際／明日の予報（外れうる）。山場は必ず当たる。
+	var w_today := Weather.of(d)
+	var w_tomo := Weather.of(d + 1)
+	var w_fc := Weather.forecast(d + 1, int(state.weather_seed))
+	out.append("")
+	out.append("天気: 今日=%s / 明日=%s（予報=%s%s）" % [
+		Weather.name_of(w_today), Weather.name_of(w_tomo), Weather.name_of(w_fc),
+		"" if Weather.is_key_day(d + 1) else "・揺らぎ有",
+	])
 	return out
 
 

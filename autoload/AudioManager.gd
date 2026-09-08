@@ -130,6 +130,7 @@ func _build_ambients() -> void:
 	_ambients["cicada"] = _cicada(2.0)
 	_ambients["murmur"] = _murmur(2.0)
 	_ambients["fan"] = _fan(2.0)
+	_ambients["rain"] = _rain(2.0)  # 天気（雨・夕立・台風）用
 
 
 func _load_or(path: String, fallback: AudioStream) -> AudioStream:
@@ -233,6 +234,20 @@ func _murmur(dur: float) -> AudioStreamWAV:
 	for i in n:
 		prev += 0.02 * (randf_range(-1.0, 1.0) - prev)
 		s[i] = prev * 4.0 * 0.5
+	return _wav(s, true)
+
+
+## 雨：明るめのローパスノイズを細かく波打たせる（ザー…）。天気の雨/夕立/台風で使う。
+func _rain(dur: float) -> AudioStreamWAV:
+	var n := int(dur * MIX_RATE)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	var prev := 0.0
+	for i in n:
+		var t := float(i) / MIX_RATE
+		prev += 0.35 * (randf_range(-1.0, 1.0) - prev)   # 弱めのローパス（水より明るい）
+		var patter := 0.85 + 0.15 * sin(TAU * 11.0 * t)  # 細かい降りの揺らぎ
+		s[i] = prev * 1.6 * patter * 0.5
 	return _wav(s, true)
 
 

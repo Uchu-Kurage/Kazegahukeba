@@ -10,6 +10,8 @@ const START_WEEKDAY := 1
 
 var _day_pill: Panel
 var _day_label: Label
+var _weather_pill: Panel
+var _weather_label: Label
 var _prompt: Label
 
 # --- 動作確認用（デバッグ）オーバーレイ ---
@@ -23,6 +25,7 @@ func _ready() -> void:
 	GameState.day_changed.connect(_on_changed.unbind(1))
 	GameState.phase_changed.connect(_on_changed.unbind(1))
 	_refresh_day()
+	_refresh_weather()
 
 
 ## HUD 全体の表示・非表示（エンディング中などに隠す）。
@@ -81,6 +84,15 @@ func set_prompt(text: String) -> void:
 
 func _on_changed() -> void:
 	_refresh_day()
+	_refresh_weather()
+
+
+## 今日の天気と「明日の予報」を出す。予報は外れうる（山場以外は末尾に ? を付ける）。
+func _refresh_weather() -> void:
+	var today := GameState.weather_today()
+	var fc := GameState.weather_forecast()
+	var uncertain := "" if Weather.is_key_day(GameState.day_index + 1) else "？"
+	_weather_label.text = "%s ・ 明日は %s%s" % [Weather.name_of(today), Weather.name_of(fc), uncertain]
 
 
 func _refresh_day() -> void:
@@ -127,6 +139,23 @@ func _build_ui() -> void:
 	UITheme.style_label(_day_label, UITheme.SIZE_DAY)
 	_day_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_day_pill.add_child(_day_label)
+
+	# 右上：天気ピル（今日の天気＋明日の予報）。日めくりの下に重ねる。
+	_weather_pill = Panel.new()
+	_weather_pill.size = Vector2(300, 40)
+	_weather_pill.position = Vector2(1152 - _weather_pill.size.x - 16, 74)
+	_weather_pill.add_theme_stylebox_override("panel", UITheme.washi(12))
+	_weather_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_weather_pill)
+
+	_weather_label = Label.new()
+	_weather_label.position = Vector2(16, 6)
+	_weather_label.size = Vector2(_weather_pill.size.x - 32, 28)
+	_weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_weather_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	UITheme.style_label(_weather_label, UITheme.SIZE_SMALL)
+	_weather_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_weather_pill.add_child(_weather_label)
 
 	# 下：操作プロンプト（和紙の小ピル。左下）。
 	_prompt = Label.new()
