@@ -21,6 +21,7 @@ func _ready() -> void:
 	_bind("debug_aoi_warmth",    [KEY_F7])  # 明るさへ倒す → ひまわり畑エンド
 	_bind("debug_aoi_shadow",    [KEY_F8])  # 翳りへ倒す   → 丘エンド
 	_bind("debug_aoi_closeness", [KEY_F9])  # 親密さへ倒す → 家エンド
+	_bind("debug_walk", [KEY_F10])  # 散策画面：歩行領域オーバーレイの表示切替（調整用）
 
 
 func _bind(action: String, keys: Array) -> void:

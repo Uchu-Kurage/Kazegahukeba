@@ -19,12 +19,16 @@ var bounds := Rect2(24, 80, 1104, 520)
 var walkable_rects: Array[Rect2] = []
 
 ## 奥行きのスケール変化（散策画面で使う。無効なら等倍のまま）。
-## Y が _depth_y_near 以下＝手前で _depth_near、_depth_y_far 以上＝奥で _depth_far、間は補間。
+## 実効スケール = _depth_base × lerp(_depth_far, _depth_near, t)。
+##   t は Y が _depth_y_near（手前）で1・_depth_y_far（奥）で0。near/far は倍率、base は絶対倍率。
+## ⚠️ 以前は _sprite.scale を lerp 値で「上書き」していたため、PixelCharacter の基準倍率(2.2)が
+##    消えてキャラが小さくなっていた。base を掛ける方式にして、画面ごとに背丈を調整できるようにする。
 var _depth_on := false
 var _depth_y_near := 600.0
 var _depth_y_far := 150.0
 var _depth_near := 1.15
 var _depth_far := 0.72
+var _depth_base := 1.0
 
 var _sprite: PixelCharacter
 
@@ -70,22 +74,24 @@ func _physics_process(_delta: float) -> void:
 		_apply_depth_scale()
 
 
-## 奥行きスケールを有効化する（FieldScene から呼ぶ）。
-func set_depth_scale(y_near: float, y_far: float, near: float, far: float) -> void:
+## 奥行きスケールを有効化する（FieldScene から呼ぶ）。base は手前に立ったときの絶対倍率。
+func set_depth_scale(y_near: float, y_far: float, near: float, far: float, base: float = 1.0) -> void:
 	_depth_on = true
 	_depth_y_near = y_near
 	_depth_y_far = y_far
 	_depth_near = near
 	_depth_far = far
+	_depth_base = base
 	_apply_depth_scale()
 
 
 ## Y 座標に応じて見た目（スプライト）だけ拡縮する。当たり判定は変えない。
+## 実効スケール = base × lerp(far, near, t)。手前ほど大きく、奥ほど小さい。
 func _apply_depth_scale() -> void:
 	if not _depth_on or _sprite == null:
 		return
 	var t := clampf((position.y - _depth_y_far) / (_depth_y_near - _depth_y_far), 0.0, 1.0)
-	var s := lerpf(_depth_far, _depth_near, t)
+	var s := _depth_base * lerpf(_depth_far, _depth_near, t)
 	_sprite.scale = Vector2(s, s)
 
 
