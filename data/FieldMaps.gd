@@ -48,18 +48,20 @@ static func _screens_def() -> Array:
 		# 自販機くらいの背丈に（base で調整）。数値はこのデータで持ち、あとから詰めやすくする。
 		{ "id": "shops",     "name": "商店街",       "exits": [["home", "down"], ["school", "up"], ["fields", "left"], ["riverbank", "right"]],
 			"roads_override": [
-				Rect2(60, 500, 1030, 148),   # 手前：石畳の通り（ほぼ全幅）
-				Rect2(360, 415, 620, 95),    # 中景：奥へ続く道（狭まる・やや右寄り）
-				Rect2(520, 345, 360, 80),    # 遠景：二股の手前（さらに狭く）
+				Rect2(70, 500, 1010, 148),   # 手前：全幅の舗装（クロス点）
+				Rect2(360, 442, 560, 66),    # 通り入口（自販機の右〜右歩道の内側）
+				Rect2(470, 388, 330, 56),    # 中景（通りが狭まる）
+				Rect2(560, 340, 190, 52),    # 遠景
+				Rect2(620, 314, 92, 34),     # 消失点の手前（最奥）
 			],
 			"start_override": Vector2(560, 560),
 			"pos_override": {
-				"fields": Vector2(140, 570),     # 左手前 → 田んぼ
-				"riverbank": Vector2(1000, 570), # 右手前 → 河原
-				"home": Vector2(560, 610),       # 手前中央 → 家
-				"school": Vector2(660, 380),     # 奥 → 学校
+				"fields": Vector2(150, 575),     # 左手前 → 田んぼ
+				"riverbank": Vector2(980, 575),  # 右手前 → 河原
+				"home": Vector2(520, 610),       # 手前中央 → 家
+				"school": Vector2(665, 360),     # 奥（通りの先）→ 学校
 			},
-			"depth_override": { "y_near": 620.0, "y_far": 330.0, "near": 1.0, "far": 0.6, "base": 4.5 },
+			"depth_override": { "y_near": 620.0, "y_far": 315.0, "near": 1.0, "far": 0.6, "base": 7.0 },
 		},
 		{ "id": "school",    "name": "学校",         "exits": [["shops", "down"]] },
 		{ "id": "fields",    "name": "田んぼと畦道", "exits": [["shops", "right"], ["shrine", "up"], ["sunflower", "left"], ["riverbank", "down"]] },
