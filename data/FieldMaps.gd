@@ -42,7 +42,15 @@ const DEPTH_SCALE_BASE := 1.0
 ## side: "left"/"right"/"up"/"down"。双方向なので相手側にも対応する出口がある。
 static func _screens_def() -> Array:
 	return [
-		{ "id": "home",      "name": "家",           "exits": [["shops", "right"]] },
+		{ "id": "home",      "name": "家",           "exits": [["shops", "right"]],
+				"roads_override": [
+					Rect2(60, 500, 1030, 148),   # 手前の芝生・アプローチ（ほぼ全幅）
+					Rect2(560, 468, 560, 132),   # 右へ続く土の小道（→商店街）
+				],
+				"start_override": Vector2(480, 585),
+				"pos_override": { "shops": Vector2(1060, 500) },
+				"depth_override": { "y_near": 620.0, "y_far": 468.0, "near": 1.0, "far": 0.85, "base": 6.0 },
+			},
 		# 商店街：背景に合わせ、歩けるのは「手前の石畳〜奥へ続く通り」だけ（斜め見下ろしの台形を
 		# 矩形の和集合で近似：手前ほど広く、奥ほど狭い）。奥行きスケールを強めに効かせ、キャラは
 		# 自販機くらいの背丈に（base で調整）。数値はこのデータで持ち、あとから詰めやすくする。
@@ -63,11 +71,60 @@ static func _screens_def() -> Array:
 			},
 			"depth_override": { "y_near": 620.0, "y_far": 315.0, "near": 1.0, "far": 0.6, "base": 7.0 },
 		},
-		{ "id": "school",    "name": "学校",         "exits": [["shops", "down"]] },
-		{ "id": "fields",    "name": "田んぼと畦道", "exits": [["shops", "right"], ["shrine", "up"], ["sunflower", "left"], ["riverbank", "down"]] },
-		{ "id": "sunflower", "name": "ひまわり畑",   "exits": [["fields", "right"]] },
-		{ "id": "shrine",    "name": "神社",         "exits": [["fields", "down"], ["hill", "up"]] },
-		{ "id": "hill",      "name": "丘",           "exits": [["shrine", "down"]] },
+		{ "id": "school",    "name": "学校",         "exits": [["shops", "down"]],
+				"roads_override": [
+					Rect2(40, 445, 1080, 200),   # 校庭（土のグラウンド。建物は背景＝不可）
+				],
+				"start_override": Vector2(560, 560),
+				"pos_override": { "shops": Vector2(560, 620) },
+				"depth_override": { "y_near": 630.0, "y_far": 445.0, "near": 1.0, "far": 0.75, "base": 6.0 },
+			},
+		{ "id": "fields",    "name": "田んぼと畦道", "exits": [["shops", "right"], ["shrine", "up"], ["sunflower", "left"], ["riverbank", "down"]],
+				"roads_override": [
+					Rect2(60, 398, 1030, 46),    # 横の畦道（十字路。左右・奥の出口が並ぶ）
+					Rect2(478, 430, 150, 214),   # 手前へ延びる縦の畦道
+				],
+				"start_override": Vector2(552, 600),
+				"pos_override": {
+					"shops": Vector2(1050, 415),     # 右 → 商店街
+					"sunflower": Vector2(110, 415),  # 左 → ひまわり畑
+					"shrine": Vector2(552, 405),     # 奥 → 神社
+					"riverbank": Vector2(552, 620),  # 手前 → 河原と土手
+				},
+				"depth_override": { "y_near": 630.0, "y_far": 398.0, "near": 1.0, "far": 0.7, "base": 5.5 },
+			},
+		{ "id": "sunflower", "name": "ひまわり畑",   "exits": [["fields", "right"]],
+				"roads_override": [
+					Rect2(120, 400, 950, 60),    # 畑の前の小道（横。葵・右の出口が並ぶ）
+					Rect2(120, 430, 280, 210),   # 左下から来る土の道
+				],
+				"start_override": Vector2(300, 520),
+				"pos_override": { "fields": Vector2(1000, 420) },  # 右 → 田んぼと畦道
+				"depth_override": { "y_near": 630.0, "y_far": 400.0, "near": 1.0, "far": 0.8, "base": 5.0 },
+			},
+		{ "id": "shrine",    "name": "神社",         "exits": [["fields", "down"], ["hill", "up"]],
+				"roads_override": [
+					Rect2(120, 520, 620, 128),   # 手前の参道（中央〜左手前）
+					Rect2(120, 470, 420, 70),    # 参道が奥・左へ
+					Rect2(300, 442, 260, 50),    # 鳥居の手前
+					Rect2(560, 300, 150, 260),   # 石段（鳥居の先〜上へ＝丘方面）
+				],
+				"start_override": Vector2(400, 595),
+				"pos_override": {
+					"fields": Vector2(360, 610),  # 手前 → 田んぼと畦道
+					"hill": Vector2(635, 320),    # 石段の上 → 丘
+				},
+				"depth_override": { "y_near": 620.0, "y_far": 300.0, "near": 1.0, "far": 0.55, "base": 6.0 },
+			},
+		{ "id": "hill",      "name": "丘",           "exits": [["shrine", "down"]],
+				"roads_override": [
+					Rect2(80, 440, 660, 170),    # 丘の平地（左〜中央の芝生）
+					Rect2(620, 500, 460, 148),   # 右下へ下るトレイル（→神社）
+				],
+				"start_override": Vector2(400, 545),
+				"pos_override": { "shrine": Vector2(860, 600) },  # 右下のトレイル → 神社
+				"depth_override": { "y_near": 610.0, "y_far": 440.0, "near": 1.0, "far": 0.82, "base": 5.5 },
+			},
 		# 河原と土手：仮背景 riverbank.png（土手の畦道は左〜中央の陸地、右は川）に合わせ、
 		# 歩ける帯と出口位置を実際の道に沿って上書きする（他画面は side からの自動生成のまま）。
 		{ "id": "riverbank", "name": "河原と土手", "exits": [["shops", "left"], ["estuary", "right"], ["fields", "up"]],
@@ -82,8 +139,17 @@ static func _screens_def() -> Array:
 				"shops": Vector2(175, 485),    # 左手前＝町へ戻る
 				"estuary": Vector2(548, 332),  # 土手の先＝下流（河口）へ
 			},
+			"depth_override": { "y_near": 600.0, "y_far": 300.0, "near": 1.0, "far": 0.65, "base": 5.5 },
 		},
-		{ "id": "estuary",   "name": "河口",         "exits": [["riverbank", "left"]] },
+		{ "id": "estuary",   "name": "河口",         "exits": [["riverbank", "left"]],
+				"roads_override": [
+					Rect2(300, 400, 500, 92),    # 中央〜左の砂州（水際）
+					Rect2(560, 470, 340, 150),   # 手前〜右の砂浜
+				],
+				"start_override": Vector2(640, 500),
+				"pos_override": { "riverbank": Vector2(330, 430) },  # 左（上流）→ 河原と土手
+				"depth_override": { "y_near": 560.0, "y_far": 400.0, "near": 1.0, "far": 0.78, "base": 5.0 },
+			},
 	]
 
 
@@ -175,13 +241,13 @@ static func by_id(field_id: String) -> Dictionary:
 static func npcs_of(field_id: String) -> Array:
 	match field_id:
 		"riverbank": return [_npc("riverside", "球磨", "kuma", Vector2(300, 365))]
-		"shrine":    return [_npc("shrine", "由布", "yufu", Vector2(576, 300))]
-		"sunflower": return [_npc("shop", "葵", "aoi", Vector2(760, 365))]
-		"home":      return [_solo("home", "家で過ごす", Vector2(760, 365))]
-		"fields":    return [_solo("meadow", "畦道で過ごす", Vector2(760, 365))]
-		"shops":     return [_solo("stroll", "商店街をぶらつく", Vector2(760, 365))]
-		"hill":      return [_solo("hill", "丘で過ごす", Vector2(576, 300))]
-		"school":    return [_solo("school", "無人の校舎で過ごす", Vector2(760, 365))]
+		"shrine":    return [_npc("shrine", "由布", "yufu", Vector2(470, 500))]
+		"sunflower": return [_npc("shop", "葵", "aoi", Vector2(700, 425))]
+		"home":      return [_solo("home", "家で過ごす", Vector2(520, 560))]
+		"fields":    return [_solo("meadow", "畦道で過ごす", Vector2(820, 415))]
+		"shops":     return [_solo("stroll", "商店街をぶらつく", Vector2(760, 480))]
+		"hill":      return [_solo("hill", "丘で過ごす", Vector2(430, 505))]
+		"school":    return [_solo("school", "無人の校舎で過ごす", Vector2(620, 480))]
 	return []
 
 
