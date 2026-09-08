@@ -5,7 +5,7 @@ extends CharacterBody2D
 ## あとで Sprite2D / AnimatedSprite2D に差し替えれば、そのままドット絵キャラになる。
 ## 操作キーの登録は Controls（Autoload）に集約してある。
 
-@export var speed := 150.0
+@export var speed := 230.0
 
 ## Place 側から動きを止めるためのフラグ（今は常に歩ける）。
 var can_move := true
