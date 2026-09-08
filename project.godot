@@ -30,6 +30,9 @@ Fader="*res://autoload/Fader.gd"
 HUD="*res://scenes/HUD.tscn"
 ; 会話ウィンドウ。全シーンから Dialogue.start([...]) で呼べる。
 Dialogue="*res://autoload/Dialogue.gd"
+; スマホ（タッチ端末）向けの画面上コントローラ。移動/決定/戻る/デバッグメニューを
+; 既存の入力アクションへ橋渡しする。Controls（アクション登録）より後に置く。
+TouchControls="*res://autoload/TouchControls.gd"
 
 [display]
 
