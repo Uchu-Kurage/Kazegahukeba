@@ -93,19 +93,35 @@ func snapshot() -> Dictionary:
 
 
 ## セーブした進行状況を復元する（つづきから）。
+## 旧フォーマットや壊れたセーブでも落ちないよう、各フィールドは型を確かめてから取り込む
+## （型が違えば空で始める）。セーブ互換は保証しない方針だが、クラッシュはさせない。
 func restore(data: Dictionary) -> void:
-	day_index = int(data.get("day", 0))
-	phase = int(data.get("phase", Phase.MORNING))
-	schedule = (data.get("schedule", {}) as Dictionary).duplicate(true)
-	affinity = (data.get("affinity", {}) as Dictionary).duplicate()
-	flags = (data.get("flags", {}) as Dictionary).duplicate()
-	visits = (data.get("visits", {}) as Dictionary).duplicate()
-	stance = (data.get("stance", {}) as Dictionary).duplicate()
-	counters = (data.get("counters", {}) as Dictionary).duplicate()
-	aoi_lean = (data.get("aoi_lean", {}) as Dictionary).duplicate()
+	day_index = int(data.get("day", 0)) if _is_num(data.get("day")) else 0
+	phase = int(data.get("phase", Phase.MORNING)) if _is_num(data.get("phase")) else Phase.MORNING
+	schedule = _dict_field(data, "schedule", true)
+	affinity = _dict_field(data, "affinity")
+	flags = _dict_field(data, "flags")
+	visits = _dict_field(data, "visits")
+	stance = _dict_field(data, "stance")
+	counters = _dict_field(data, "counters")
+	aoi_lean = _dict_field(data, "aoi_lean")
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
+
+
+## セーブ辞書から Dictionary フィールドを安全に取り出す（型が違えば空を返す）。
+## ⚠️ `x as Dictionary` は非Dictionaryに対して null ではなく実行時エラーを投げるため、
+##    必ず is で型を確認してからコピーする。
+func _dict_field(data: Dictionary, key: String, deep: bool = false) -> Dictionary:
+	var v = data.get(key, {})
+	if v is Dictionary:
+		return (v as Dictionary).duplicate(deep)
+	return {}
+
+
+func _is_num(v) -> bool:
+	return typeof(v) == TYPE_INT or typeof(v) == TYPE_FLOAT
 
 
 func _autosave() -> void:
