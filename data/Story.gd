@@ -18,6 +18,10 @@ extends RefCounted
 static func script_for_location(location_id: String, state) -> Array:
 	var out: Array = []
 
+	# 0. 天気限定風景（第9弾）＝「その天気×その場所×その日」に一度だけ。見逃したら再発生しない。
+	#    枠の会話の先頭に差し込む（そのあと遍在・節目・日常が続く）。
+	out.append_array(_weather_scene(location_id, state))
+
 	# 4. 葵の遍在遭遇（枠を消費しない）＝他の場所を選んでいても軽く差し込む。
 	#    葵自身の場所（深く過ごす枠）では出さない（そこは 2. の節目に譲る）。
 	out.append_array(_aoi_ambient(location_id, state))
@@ -68,6 +72,18 @@ static func next_milestone(route: Dictionary, day: int, flags: Dictionary, affin
 		if ok:
 			return m
 	return {}
+
+
+# --- 天気限定風景（第9弾）------------------------------------------
+## 今日の天気×この場所×今日 に、未見の限定風景があれば返す（一度きり）。
+## 見たら進行フラグ wscene_<id> を立て、以後は出ない（＝見逃したら再発生しない）。
+static func _weather_scene(location_id: String, state) -> Array:
+	var e := WeatherScenes.match(state.day_index, location_id, Weather.of(state.day_index), state.flags)
+	if e.is_empty():
+		return []
+	var out := flatten(e["script"], state.flags)
+	out.append({ "effect": { "set": { WeatherScenes.flag_of(String(e["id"])): true } } })
+	return out
 
 
 # --- 葵の遍在遭遇（§3）----------------------------------------------
@@ -182,6 +198,8 @@ static func debug_lines(state) -> PackedStringArray:
 		Weather.name_of(w_today), Weather.name_of(w_tomo), Weather.name_of(w_fc),
 		"" if Weather.is_key_day(d + 1) else "・揺らぎ有",
 	])
+	# 天気限定風景（見逃したら再発生しない）＝この周回で見た数。
+	out.append("天気限定風景: %d / %d 見た" % [WeatherScenes.seen_count(state.flags), WeatherScenes.total()])
 	return out
 
 
