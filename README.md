@@ -90,6 +90,33 @@ PC 側の Godot でログや変数を見ながら、実機で動かす方法で�
 - **PC（非タッチ）では自動的に非表示**になり、従来どおりキーボードで操作できます。
   デスクトップで見た目を確認したいときは `TouchControls.gd` の `FORCE_SHOW` を `true` にします。
 
+### C. USB 接続なしでスマホで遊ぶ（Web 公開）
+
+A のリモートデバッグは「PC と実機をつないで開発中の動作を見る」ためのもの。
+**ただ遊ぶだけ**なら、Web(HTML5) に書き出して URL を開くのが一番手軽です（インストール・USB 不要）。
+タッチUI（B）がそのまま効きます。
+
+**自動公開（設定済み）**：`.github/workflows/deploy-web.yml` により、`main` に push するたびに
+GitHub Actions が HTML5 へ書き出し、**GitHub Pages に自動デプロイ**します。以後は公開 URL を
+スマホのブラウザで開くだけで最新版が遊べます。
+
+- **初回のみ**：リポジトリの **Settings → Pages** で **Source を「GitHub Actions」** に切り替える（1回だけ）。
+- 公開 URL は通常 `https://<ユーザー名>.github.io/Kazegahukeba/`。Actions の実行ログ（deploy ジョブ）にも表示されます。
+- `deploy-web.yml` の `GODOT_VERSION` は `project.godot` の `config/features`（現在 `4.6`）と**必ず一致**させる。
+  エディタのバージョンを上げたら、ここも合わせて更新する。
+
+**手元で書き出す場合**（Godot エディタから）：
+
+1. 「プロジェクト → エクスポート」を開く（プリセット **Web** は `export_presets.cfg` に定義済み）
+2. 初回は「テンプレートをダウンロード」でエディタと同じバージョンの Web テンプレートを入れる
+3. 「プロジェクトをエクスポート」で `build/web/index.html` を書き出す
+4. 書き出した `build/web/` を任意の静的ホスト（GitHub Pages / itch.io など）に置く
+
+> **GitHub Pages で動かすための肝**：`export_presets.cfg` の `variant/thread_support=false`（スレッド無効）。
+> スレッドを有効にすると `SharedArrayBuffer` が必要になり、ブラウザが COOP/COEP ヘッダを要求しますが、
+> GitHub Pages はそれを付けられません。単一スレッドで書き出すことで回避しています。
+> また `project.godot` は `gl_compatibility` レンダラなので、Web/モバイルのブラウザで安定して動きます。
+
 ## 動かし方
 
 1. **Godot 4.6** でこのフォルダ（`project.godot` のある場所）を開く。

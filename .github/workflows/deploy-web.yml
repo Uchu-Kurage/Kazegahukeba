@@ -1,0 +1,79 @@
+name: Web ビルドを GitHub Pages へ公開
+
+# main に push するたびに HTML5(Web) へ書き出し、GitHub Pages に自動デプロイする。
+# スマホは公開された URL をブラウザで開くだけで遊べる（インストール・USB 不要）。
+#
+# 【初回のみ必要な設定】リポジトリの Settings > Pages で
+#   Source を「GitHub Actions」に切り替えること（1回だけ）。
+#
+# GODOT_VERSION は project.godot の features（現在 4.6）と必ず一致させる。
+# エディタのバージョンを上げたら、ここも合わせて更新する。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時に走らせない（後から来た方を優先）。
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.6-stable
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Godot(headless) と Web エクスポートテンプレートを用意
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}"
+          wget -q "${BASE}/Godot_v${GODOT_VERSION}_linux.x86_64.zip" -O godot.zip
+          wget -q "${BASE}/Godot_v${GODOT_VERSION}_export_templates.tpz" -O templates.tpz
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}_linux.x86_64" godot
+          chmod +x godot
+          # テンプレートは <version>.stable フォルダに置く必要がある（例: 4.6.stable）。
+          VERSION_DIR="${GODOT_VERSION/-/.}"
+          mkdir -p "${HOME}/.local/share/godot/export_templates/${VERSION_DIR}"
+          unzip -q templates.tpz
+          mv templates/* "${HOME}/.local/share/godot/export_templates/${VERSION_DIR}/"
+
+      - name: アセットをインポート（初回生成）
+        run: |
+          # 初回は .godot キャッシュが無いのでインポートを一度回す（戻り値は無視）。
+          ./godot --headless --path . --import || true
+
+      - name: Web へエクスポート
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          ./godot --headless --path . --export-release "Web" build/web/index.html
+          # 出力確認（index.html が無ければ失敗させる）。
+          test -f build/web/index.html
+
+      - name: Pages 用アーティファクトをアップロード
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pages へデプロイ
+        id: deployment
+        uses: actions/deploy-pages@v4
