@@ -114,7 +114,7 @@ static func _branch(node: Dictionary, take: bool) -> Array:
 ## 各ルートの「到達済み節目」「次の節目と解放条件」「関係値」「立場」が一目で分かる。
 static func debug_lines(state) -> PackedStringArray:
 	var out := PackedStringArray()
-	var d := state.day_index
+	var d: int = state.day_index
 	var drift := "on" if state.flags.get(Timeline.F_KUMA_DRIFTING, false) else "off"
 	out.append("=== DEBUG (F3で消す) ===")
 	out.append("%d日目 %s / phase=%s  背景:球磨離脱=%s" % [
