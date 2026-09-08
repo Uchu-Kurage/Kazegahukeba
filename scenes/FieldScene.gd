@@ -15,6 +15,7 @@ const EXIT_PREFIX := "to_"
 
 var _field := {}
 var _from_id := ""      # どの画面から来たか（入口位置の決定に使う）
+var _walk_overlay: WalkOverlay  # 歩行領域の可視化（F10で切替。調整用）
 
 
 func _build_map() -> void:
@@ -47,8 +48,20 @@ func _ready_done() -> void:
 		roads.append(r)
 	_player.walkable_rects = roads
 	_player.position = FieldMaps.entry_position(_field, _from_id)
-	_player.set_depth_scale(FieldMaps.DEPTH_Y_NEAR, FieldMaps.DEPTH_Y_FAR,
-		FieldMaps.DEPTH_SCALE_NEAR, FieldMaps.DEPTH_SCALE_FAR)
+	# 奥行きスケールは画面ごとの設定（FieldMaps の depth）で。手前で最大・奥で最小、base で背丈調整。
+	var d: Dictionary = _field.get("depth", {})
+	_player.set_depth_scale(
+		float(d.get("y_near", FieldMaps.DEPTH_Y_NEAR)), float(d.get("y_far", FieldMaps.DEPTH_Y_FAR)),
+		float(d.get("near", FieldMaps.DEPTH_SCALE_NEAR)), float(d.get("far", FieldMaps.DEPTH_SCALE_FAR)),
+		float(d.get("base", FieldMaps.DEPTH_SCALE_BASE)))
+	# 歩行領域オーバーレイ（既定は非表示。F10 で切替して範囲・縮尺を目で見て詰める）。
+	_walk_overlay = WalkOverlay.new()
+	_walk_overlay.rects = _field.get("roads", [])
+	_walk_overlay.y_near = float(d.get("y_near", FieldMaps.DEPTH_Y_NEAR))
+	_walk_overlay.y_far = float(d.get("y_far", FieldMaps.DEPTH_Y_FAR))
+	_walk_overlay.z_index = 50
+	_walk_overlay.visible = false
+	add_child(_walk_overlay)
 	HUD.set_shown(true)
 	AudioManager.stop_ambient()
 	# 枠・日付の進行に追従（プロンプト更新／翌朝は家へ／8/31で終幕）。
@@ -59,6 +72,17 @@ func _ready_done() -> void:
 
 func _player_start() -> Vector2:
 	return _field.get("start", Vector2(576, 365))
+
+
+## デバッグ：F10 で歩行領域オーバーレイを切替（interact/skip は親 ExploreMap に委譲）。
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("debug_walk"):
+		if _walk_overlay != null:
+			_walk_overlay.visible = not _walk_overlay.visible
+			_walk_overlay.queue_redraw()
+			HUD.set_prompt("歩行領域オーバーレイ: %s（F10）" % ("ON" if _walk_overlay.visible else "OFF"))
+		return
+	super(event)
 
 
 func _on_interact(spot) -> void:

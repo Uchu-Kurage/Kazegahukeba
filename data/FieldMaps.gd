@@ -34,13 +34,33 @@ const DEPTH_Y_NEAR := 600.0   # この Y 以下（手前）で最大
 const DEPTH_Y_FAR := 150.0    # この Y 以上（奥）で最小
 const DEPTH_SCALE_NEAR := 1.15
 const DEPTH_SCALE_FAR := 0.72
+## 実効スケール = base × lerp(far, near, t)。base は「手前に立ったときの絶対倍率」。
+## 既定は 1.0（＝従来挙動を維持）。画面ごとに "depth_override" で上書きする（直書きしない）。
+const DEPTH_SCALE_BASE := 1.0
 
 ## 9場所の接続（辺の向こう＝出口。side は画面のどの辺に置くか）。
 ## side: "left"/"right"/"up"/"down"。双方向なので相手側にも対応する出口がある。
 static func _screens_def() -> Array:
 	return [
 		{ "id": "home",      "name": "家",           "exits": [["shops", "right"]] },
-		{ "id": "shops",     "name": "商店街",       "exits": [["home", "down"], ["school", "up"], ["fields", "left"], ["riverbank", "right"]] },
+		# 商店街：背景に合わせ、歩けるのは「手前の石畳〜奥へ続く通り」だけ（斜め見下ろしの台形を
+		# 矩形の和集合で近似：手前ほど広く、奥ほど狭い）。奥行きスケールを強めに効かせ、キャラは
+		# 自販機くらいの背丈に（base で調整）。数値はこのデータで持ち、あとから詰めやすくする。
+		{ "id": "shops",     "name": "商店街",       "exits": [["home", "down"], ["school", "up"], ["fields", "left"], ["riverbank", "right"]],
+			"roads_override": [
+				Rect2(60, 500, 1030, 148),   # 手前：石畳の通り（ほぼ全幅）
+				Rect2(360, 415, 620, 95),    # 中景：奥へ続く道（狭まる・やや右寄り）
+				Rect2(520, 345, 360, 80),    # 遠景：二股の手前（さらに狭く）
+			],
+			"start_override": Vector2(560, 560),
+			"pos_override": {
+				"fields": Vector2(140, 570),     # 左手前 → 田んぼ
+				"riverbank": Vector2(1000, 570), # 右手前 → 河原
+				"home": Vector2(560, 610),       # 手前中央 → 家
+				"school": Vector2(660, 380),     # 奥 → 学校
+			},
+			"depth_override": { "y_near": 620.0, "y_far": 330.0, "near": 1.0, "far": 0.6, "base": 4.5 },
+		},
 		{ "id": "school",    "name": "学校",         "exits": [["shops", "down"]] },
 		{ "id": "fields",    "name": "田んぼと畦道", "exits": [["shops", "right"], ["shrine", "up"], ["sunflower", "left"], ["riverbank", "down"]] },
 		{ "id": "sunflower", "name": "ひまわり畑",   "exits": [["fields", "right"]] },
@@ -99,8 +119,17 @@ static func _build(s: Dictionary) -> Dictionary:
 		if uses_v:
 			roads.append(ROAD_V)
 	var start: Vector2 = s.get("start_override", CENTER)
+	# 奥行きスケール：画面ごとの上書きがあれば使い、無ければ既定値（従来挙動）。
+	var dov: Dictionary = s.get("depth_override", {})
+	var depth := {
+		"y_near": float(dov.get("y_near", DEPTH_Y_NEAR)),
+		"y_far": float(dov.get("y_far", DEPTH_Y_FAR)),
+		"near": float(dov.get("near", DEPTH_SCALE_NEAR)),
+		"far": float(dov.get("far", DEPTH_SCALE_FAR)),
+		"base": float(dov.get("base", DEPTH_SCALE_BASE)),
+	}
 	return { "id": s["id"], "name": s["name"], "bg": "res://assets/field/%s.png" % s["id"],
-		"roads": roads, "start": start, "exits": exits }
+		"roads": roads, "start": start, "exits": exits, "depth": depth }
 
 
 static func _arrow(side: String) -> String:
