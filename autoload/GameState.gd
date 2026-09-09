@@ -58,6 +58,8 @@ var aoi_lean := {}
 ## 天気（第9弾）。実際の天気は手組みスケジュール（Weather.SCHEDULE）を day_index で引く。
 ## 予報の「当たり外れ」の揺らぎだけ、この周回固定のシード weather_seed で決める（山場は必ず当てる）。
 var weather_seed := 0
+## 朝の予報（世界に溶けた開示）を、その日にもう出したか（一日一回。-1=まだ）。
+var last_forecast_day := -1
 
 
 func _ready() -> void:
@@ -77,6 +79,7 @@ func start_new_run() -> void:
 	counters.clear()
 	aoi_lean.clear()
 	weather_seed = randi()  # 予報の揺らぎ用（周回ごとに変わる）
+	last_forecast_day = -1
 	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -95,6 +98,7 @@ func snapshot() -> Dictionary:
 		"counters": counters.duplicate(),
 		"aoi_lean": aoi_lean.duplicate(),
 		"weather_seed": weather_seed,
+		"last_forecast_day": last_forecast_day,
 	}
 
 
@@ -112,6 +116,7 @@ func restore(data: Dictionary) -> void:
 	counters = _dict_field(data, "counters")
 	aoi_lean = _dict_field(data, "aoi_lean")
 	weather_seed = int(data.get("weather_seed", 0)) if _is_num(data.get("weather_seed")) else randi()
+	last_forecast_day = int(data.get("last_forecast_day", -1)) if _is_num(data.get("last_forecast_day")) else -1
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)

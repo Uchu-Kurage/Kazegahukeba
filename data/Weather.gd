@@ -71,7 +71,7 @@ const SCHEDULE := [
 
 ## 山場の日（day_index）。この日の天気は予報を必ず当てる（前日の予報も外さない）。
 ## ＝設計書「山場の前日は予報を当てる」。特殊天気（夕立/霧/台風/夕焼け）も揺らがせない。
-const KEY_DAYS := [4, 20, 22, 23, 24, 28, 30]
+const KEY_DAYS := [4, 19, 22, 23, 24, 28, 30]
 
 ## 予報の当たり外れ：日常の予報がこの確率で「1段ズレ」る（山場は対象外）。0-100。
 const FORECAST_WOBBLE_PCT := 30
@@ -134,6 +134,21 @@ static func info(id: String) -> Dictionary:
 		TYPHOON:
 			return { "name": "台風", "icon": "🌀", "tint": Color(0.34, 0.40, 0.52, 0.46), "ambient": "rain" }
 	return { "name": "晴れ", "icon": "🌤", "tint": Color(1, 1, 1, 0.0), "ambient": "" }
+
+
+## 予報のセリフで使う言い回し（「あしたは○○になりそう」の○○）。世界に溶けた開示用。
+static func forecast_phrase(id: String) -> String:
+	match id:
+		CLEAR_MAX: return "雲ひとつない快晴"
+		CLEAR: return "晴れ"
+		CLOUDY: return "曇り"
+		RAIN: return "雨"
+		SHOWER: return "にわか雨"
+		SUNSET: return "夕焼けの空"
+		FOG: return "濃い霧"
+		TYPHOON_PRE: return "荒れる前の蒸し暑さ"
+		TYPHOON: return "大荒れの空模様"
+	return "晴れ"
 
 
 static func name_of(id: String) -> String:

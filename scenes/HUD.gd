@@ -87,12 +87,9 @@ func _on_changed() -> void:
 	_refresh_weather()
 
 
-## 今日の天気と「明日の予報」を出す。予報は外れうる（山場以外は末尾に ? を付ける）。
+## 今日の天気だけを出す。明日の予報は「世界に溶けた形」（朝の予報＝ラジオ/朝刊/祖母）で伝える。
 func _refresh_weather() -> void:
-	var today := GameState.weather_today()
-	var fc := GameState.weather_forecast()
-	var uncertain := "" if Weather.is_key_day(GameState.day_index + 1) else "？"
-	_weather_label.text = "%s ・ 明日は %s%s" % [Weather.name_of(today), Weather.name_of(fc), uncertain]
+	_weather_label.text = Weather.name_of(GameState.weather_today())
 
 
 func _refresh_day() -> void:
