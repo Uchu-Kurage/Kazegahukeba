@@ -71,10 +71,60 @@ func _ready_done() -> void:
 	GameState.phase_changed.connect(_on_phase_changed.unbind(1))
 	GameState.day_changed.connect(_on_day_changed)
 	GameState.game_ended.connect(_on_game_ended)
+	# 朝の家で、明日の予報を「世界に溶けた形」で一度だけ開示（ラジオ／朝刊／祖母）。
+	_maybe_morning_forecast()
 
 
 func _player_start() -> Vector2:
 	return _field.get("start", Vector2(576, 365))
+
+
+## 朝、家にいるときに一度だけ「明日の予報」をさりげなく伝える（第9弾・予報演出のリズム）。
+## 山場の前日は確実に・印象的に。通常日は日替わりの情報源でさらっと（外れることもある）。
+func _maybe_morning_forecast() -> void:
+	if GameState.phase != GameState.Phase.MORNING:
+		return
+	if String(_field.get("id", "")) != "home":
+		return
+	if GameState.last_forecast_day == GameState.day_index:
+		return
+	if GameState.day_index + 1 >= GameState.TOTAL_DAYS:
+		return  # 明日がない（最終日）
+	GameState.last_forecast_day = GameState.day_index
+	var nodes := _forecast_nodes()
+	if nodes.is_empty():
+		return
+	set_player_can_move(false)
+	Dialogue.finished.connect(func() -> void: set_player_can_move(true), CONNECT_ONE_SHOT)
+	Dialogue.start(nodes)
+
+
+## 明日の予報セリフ（1行）。予報は weather_forecast（山場は的中／通常は揺らぎ有）。
+func _forecast_nodes() -> Array:
+	var fc := GameState.weather_forecast()
+	var phrase := Weather.forecast_phrase(fc)
+	if Weather.is_key_day(GameState.day_index + 1):
+		# 山場の前日：心の準備をさせる、はっきりした予報。
+		match fc:
+			Weather.TYPHOON:
+				return [{ "speaker": "ラジオ", "text": "……大型の台風が近づいています。明日は大荒れになるでしょう。外出はお控えください。" }]
+			Weather.CLEAR_MAX:
+				return [{ "speaker": "祖母", "text": "あしたは雲ひとつない快晴だってさ。いい一日になりそうだねえ。" }]
+			Weather.SHOWER:
+				return [{ "speaker": "ラジオ", "text": "……明日は所により、にわか雨があるでしょう。急な空模様の変化にご注意を。" }]
+			Weather.FOG:
+				return [{ "speaker": "祖母", "text": "あしたの朝は、濃い霧が出るらしいよ。足もと、気をつけてね。" }]
+			Weather.SUNSET:
+				return [{ "speaker": "", "text": "朝刊の予報欄。「あすは日中晴れ、夕方は美しい夕焼けが見られるでしょう」。" }]
+		return [{ "speaker": "ラジオ", "text": "……明日は%sになるでしょう。" % phrase }]
+	# 通常日：日替わりの情報源で、さらっと。
+	match GameState.day_index % 3:
+		0:
+			return [{ "speaker": "祖母", "text": "あしたは%sになりそうだねえ。" % phrase }]
+		1:
+			return [{ "speaker": "ラジオ", "text": "……あすの天気は、%sでしょう。" % phrase }]
+		_:
+			return [{ "speaker": "", "text": "朝刊の予報欄に目をやる。あすは%s、とある。" % phrase }]
 
 
 ## 今日の天気を反映：画面全体に薄い色を重ね（雰囲気）、環境音を切り替える。
