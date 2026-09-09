@@ -212,42 +212,97 @@ static func route_filler(route_id: String, level: int) -> Array:
 	return [ { "speaker": "", "text": "何気ない時間が過ぎていく。" } ]
 
 
-## 約束の誘い（第9弾 §2/§6）。応じる＝記帳（promise 効果）／濁す＝ロックしない／断る＝成立せず。
+## 約束の誘い（第9弾 §2/§6/§7）。応じる＝記帳（promise 効果）／濁す＝ロックしない／断る＝成立せず。
 ## 対象日が埋まっていれば if_day_free の else で「先約セリフ」を出し、キャラが自然に引く（§3）。
-## テキストは仮置き。断りは柔らかく、正誤を感じさせないこと（§10）。
-static func route_invite(route_id: String) -> Array:
+## stage＝これまで果たした約束の数（§7 の連鎖）。果たすほど次の“種”へ進む。
+## 段階を越えたら空配列＝その系統は完結（もう誘わないだけ・責めない）。テキストは仮置き。
+static func route_invite(route_id: String, stage: int = 0) -> Array:
+	var chain: Array = _invite_chain(route_id)
+	if stage < 0 or stage >= chain.size():
+		return []  # 種は尽きた（系統の完結）
+	return [ chain[stage] ]
+
+
+## キャラごとの誘いの連鎖（段階順）。各要素は if_day_free ノード（空き＝誘い／埋まり＝先約）。
+static func _invite_chain(route_id: String) -> Array:
 	match route_id:
 		Routes.KUMA:
-			# 球磨：勢い・翌日の短射程（in_days=1）。
+			# 球磨：勢い・短射程（当日〜翌日）。果たすほど、次の遊びへ転がっていく。
 			return [
-				{ "if_day_free": 1, "then": [
-					{ "speaker": "球磨", "text": "なあ、明日の午後、川いこうぜ。ひさびさに釣りでもさ。" },
-					{ "text": "", "choices": [
-						{ "text": "「行く」", "then": [ { "speaker": "球磨", "text": "よし、決まりな！　明日、川で待ってるわ。" } ],
-							"promise": { "in_days": 1, "character": "kuma", "place": "riverside", "time_of_day": "afternoon", "flavor": "球磨と川で釣り" } },
-						{ "text": "「考えとく」", "then": [ { "speaker": "球磨", "text": "なんだよ、はっきりしろって。……ま、気が向いたらな。" } ] },
-						{ "text": "「今日はごめん」", "then": [ { "speaker": "球磨", "text": "おう。……また誘うわ。" } ] },
-					] },
-				], "else": [
-					{ "speaker": "球磨", "text": "明日はもう、予定あるんだろ？　……そっか。また今度な。" },
-				] },
+				_invite("球磨", "kuma", 1, "riverside", "afternoon", "球磨と川で釣り",
+					"なあ、明日の午後、川いこうぜ。ひさびさに釣りでもさ。",
+					"「行く」", "よし、決まりな！　明日、川で待ってるわ。",
+					"なんだよ、はっきりしろって。……ま、気が向いたらな。",
+					"おう。……また誘うわ。",
+					"明日はもう、予定あるんだろ？　……そっか。また今度な。"),
+				_invite("球磨", "kuma", 1, "riverside", "evening", "球磨と夜釣り",
+					"この前の釣り、楽しかったよな。今度は夜だ。夜釣り、明日どうよ？",
+					"「乗った」", "だろ？　夜の川、すげえぞ。明日な！",
+					"迷うなよ〜。……ま、いつでも言えよ。",
+					"りょーかい。また今度な。",
+					"明日は埋まってんのか。……じゃ、また空いてる日にな。"),
+				_invite("球磨", "kuma", 2, "riverside", "morning", "球磨と、海まで",
+					"なあ、ガキの頃さ、この川の先の海まで行こうって言ってたろ。……明後日、ほんとに行ってみねえか。",
+					"「行こう」", "……おう。じゃあ、明後日。ちゃんと、行こうな。",
+					"おいおい、ここで濁すのかよ。……ま、待ってるわ。",
+					"……そっか。うん、無理にとは言わねえ。",
+					"明後日はもう予定あんのか。……ま、海は逃げねえしな。また今度。"),
 			]
 		Routes.YUFU:
-			# 由布：計画・先の日付（in_days=3）。重みを持たせる。
+			# 由布：計画・先の日付・低頻度。守ることに意味が宿る。
 			return [
-				{ "if_day_free": 3, "then": [
-					{ "speaker": "由布", "text": "……ねえ。三日後の夕方、少し歩かない？　見せたい場所があるの。" },
-					{ "text": "", "choices": [
-						{ "text": "うなずく", "then": [ { "speaker": "由布", "text": "……うん。じゃあ、約束、ね。" } ],
-							"promise": { "in_days": 3, "character": "yufu", "place": "shrine", "time_of_day": "evening", "flavor": "由布と、見せたい場所へ" } },
-						{ "text": "「考えとく」", "then": [ { "speaker": "由布", "text": "……そう。気が向いたら、でいいから。" } ] },
-						{ "text": "「その日は、ちょっと」", "then": [ { "speaker": "由布", "text": "ううん、いいの。忘れて。……ごめんね、急に。" } ] },
-					] },
-				], "else": [
-					{ "speaker": "由布", "text": "三日後は……もう、約束があるみたいね。ふふ、また別の日に。" },
-				] },
+				_invite("由布", "yufu", 3, "shrine", "evening", "由布と、見せたい場所へ",
+					"……ねえ。三日後の夕方、少し歩かない？　見せたい場所があるの。",
+					"うなずく", "……うん。じゃあ、約束、ね。",
+					"……そう。気が向いたら、でいいから。",
+					"ううん、いいの。忘れて。……ごめんね、急に。",
+					"三日後は……もう、約束があるみたいね。ふふ、また別の日に。"),
+				_invite("由布", "yufu", 3, "shrine", "evening", "由布と、約束の続き",
+					"この前の場所、覚えてる？　……あの続きを、見せたいの。三日後、また夕方に。",
+					"「約束する」", "うん。……ちゃんと、待ってるから。",
+					"……いいの、無理はしないで。気が向いたら、ね。",
+					"そっか。……ごめんね、また急に誘って。",
+					"三日後は、先約があるのね。……ふふ、大丈夫。またいつか。"),
 			]
 	return []
+
+
+## 誘い1件（if_day_free ノード）を組み立てる。応じる選択だけが promise を持ち記帳する（§2）。
+static func _invite(who: String, char_id: String, in_days: int, place: String, tod: String, flavor: String,
+		ask: String, yes_label: String, yes_reply: String, vague_reply: String, no_reply: String, busy_reply: String) -> Dictionary:
+	return { "if_day_free": in_days, "then": [
+		{ "speaker": who, "text": ask },
+		{ "text": "", "choices": [
+			{ "text": yes_label, "then": [ { "speaker": who, "text": yes_reply } ],
+				"promise": { "in_days": in_days, "character": char_id, "place": place, "time_of_day": tod, "flavor": flavor } },
+			{ "text": "「考えとく」", "then": [ { "speaker": who, "text": vague_reply } ] },
+			{ "text": "「今日はごめん」", "then": [ { "speaker": who, "text": no_reply } ] },
+		] },
+	], "else": [
+		{ "speaker": who, "text": busy_reply },
+	] }
+
+
+## 8/31 の葵の会話（§5-3）。葵ルートで最後の日、葵の場所で起きる。応じると schedule[8/31] に
+## 葵が初めて書き込まれる（promise_aoi_final＝場所は傾きの着地から動的に決まる）。自動出現ではなく、
+## 自分の意志で約束する感触を残す。断り・濁しはいつもの3択と同じく柔らかく、正誤を感じさせない。
+## ⚠️ 正体・別れの言葉は明示しない。無言の一マスが「これが最後」を告げる（§10）。
+static func aoi_finalday() -> Array:
+	return [
+		{ "speaker": "", "text": "八月三十一日。世界が、うすく透きとおって見える。葵は、いつもの場所で、いつものように笑っていた。" },
+		{ "speaker": "葵", "text": "ねえ。……明日って、たぶん、来ないよね。" },
+		{ "speaker": "葵", "text": "だからさ。今日は――ちゃんと、約束しよ。あたしと。はじめてで、さいごの。" },
+		{ "text": "", "choices": [
+			{ "text": "「約束する」", "then": [
+				{ "speaker": "葵", "text": "……うん。ぜったい、だよ。指切り。" },
+				{ "speaker": "", "text": "小指をからめると、葵の指は、驚くほど冷たくて、それでいて、たしかにそこにあった。" },
+			], "promise_aoi_final": true },
+			{ "text": "「……今日は、そばにいるだけでいい」", "then": [
+				{ "speaker": "葵", "text": "ふふ。……そっか。うん、それも、いいね。" },
+				{ "speaker": "", "text": "約束はしなかった。ただ、日が暮れるまで、となりにいた。" },
+			] },
+		] },
+	]
 
 
 ## 葵の遍在遭遇（枠を消費しない軽い遭遇）。§3。

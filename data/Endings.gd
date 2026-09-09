@@ -44,6 +44,20 @@ const LEAN_TO_END := {
 	LEAN_CLOSENESS: AOI_END_HOME,
 }
 
+## 三分岐の着地 → 8/31 に予定表へ載る「場所」id（第9弾 §5-3）。
+## 予定表の無言の一マスが、着地（＝別れの温度）を可視化する。home は Locations にあるが
+## himawari/hill は着地専用の場所名（GameState.place_name が補完表示する）。
+const END_TO_PLACE := {
+	AOI_END_HIMAWARI: "himawari",
+	AOI_END_HILL: "hill",
+	AOI_END_HOME: "home",
+}
+
+
+## 8/31 の葵の約束が載る場所 id（傾きの着地から導く）。
+static func aoi_landing_place(end_id: String) -> String:
+	return String(END_TO_PLACE.get(end_id, "home"))
+
 ## 全ノーマル・エンディング（球磨×3＋由布×3＋葵の三分岐＋記録者エンド二種）。全到達で裏エンド解放。
 ## 葵は三分岐のいずれも "aoi_" 始まり＝裏エンド判定では「葵ルート到達」で1つと数える（§3）。
 const NORMAL_IDS := [

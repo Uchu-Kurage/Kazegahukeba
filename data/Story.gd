@@ -22,9 +22,20 @@ static func script_for_location(location_id: String, state) -> Array:
 	#    枠の会話の先頭に差し込む（そのあと遍在・節目・日常が続く）。
 	out.append_array(_weather_scene(location_id, state))
 
-	# 4. 葵の遍在遭遇（枠を消費しない）＝他の場所を選んでいても軽く差し込む。
-	#    葵自身の場所（深く過ごす枠）では出さない（そこは 2. の節目に譲る）。
-	out.append_array(_aoi_ambient(location_id, state))
+	# 1. 8/31 の葵（§5-3）＝予定表に葵が載る唯一の日。葵の場所で葵ルートなら、最後の約束を差し出す。
+	#    ここで約束すると schedule[8/31] に葵が初めて書き込まれ、その“場所”が三分岐の着地を可視化する。
+	var finalday := _aoi_finalday(location_id, state)
+	if not finalday.is_empty():
+		out.append_array(finalday)
+		return out  # 最後の日の特別会話に専念（節目・日常には譲らない）
+
+	# 4. 葵の遭遇（§5-1）＝「見つける遊び」。特定の日・場所（・天気）の未見の遭遇が最優先。
+	#    無ければ従来の遍在遭遇。いずれも枠は消費しない（会話の頭に差し込む）。葵の場所では出さない。
+	var aoi_enc := _aoi_encounter(location_id, state)
+	if not aoi_enc.is_empty():
+		out.append_array(aoi_enc)
+	else:
+		out.append_array(_aoi_ambient(location_id, state))
 
 	# その場所に紐づくルート（＝深く過ごせる相手）を引く。
 	var route := Routes.by_location(location_id)
@@ -87,6 +98,24 @@ static func _weather_scene(location_id: String, state) -> Array:
 	return out
 
 
+# --- 葵の遭遇（§5-1）------------------------------------------------
+## 特定の日・場所（・天気）の、未見の遭遇があれば差し込む（一度きり・見逃したら再発生しない）。
+## 枠は消費しない。関わりの総量には数える（counters["aoi_ambient"]）＝記録者エンドの布石。
+static func _aoi_encounter(location_id: String, state) -> Array:
+	var aoi := Routes.by_id(Timeline.AOI_ROUTE)
+	if not aoi.is_empty() and location_id == aoi["location"]:
+		return []  # 葵の場所では深く過ごす（遭遇ではない）
+	var e := AoiEncounters.match(state.day_index, location_id, Weather.of(state.day_index), state.flags)
+	if e.is_empty():
+		return []
+	var out := flatten(e["script"], state.flags)
+	out.append({ "effect": {
+		"set": { AoiEncounters.flag_of(String(e["id"])): true },
+		"count": { "aoi_ambient": 1 },
+	} })
+	return out
+
+
 # --- 葵の遍在遭遇（§3）----------------------------------------------
 ## 今日の葵の居場所がこの場所なら、軽い遭遇を差し込む（枠は消費しない＝関係値は上げない）。
 ## ⚠️ 二層構造の鉄則：正体を匂わせない。「明るく親しみやすい普通の夏の娘」として通す。
@@ -101,18 +130,43 @@ static func _aoi_ambient(location_id: String, state) -> Array:
 	return flatten(Dialogues.aoi_ambient(), state.flags)
 
 
-# --- 約束の誘い（第9弾 §6）------------------------------------------
+# --- 8/31 の葵（§5-3）----------------------------------------------
+## 最後の日、葵の場所で、葵ルートなら「最後の約束」を差し出す（予定表に載る唯一の例外）。
+## 応じると schedule[8/31] に葵が書き込まれ、その“場所”が三分岐の着地を可視化する（自動でなく会話選択）。
+## 「葵ルートに入っている」判定は、今この周回が葵の着地に向かっているか（＝Endings.pick が葵）で見る。
+static func _aoi_finalday(location_id: String, state) -> Array:
+	if int(state.day_index) != GameState.TOTAL_DAYS - 1:
+		return []
+	var aoi := Routes.by_id(Timeline.AOI_ROUTE)
+	if aoi.is_empty() or location_id != aoi["location"]:
+		return []
+	if not _is_aoi_route(state):
+		return []
+	if not state.day_free(state.day_index):
+		return []  # すでに約束済み（重ねて誘わない）
+	return flatten(Dialogues.aoi_finalday(), state.flags)
+
+
+## この周回が「葵ルート」か＝現時点の状態で選ばれる結末が葵の三分岐のいずれかか。
+static func _is_aoi_route(state) -> bool:
+	var end_id := Endings.pick(state.affinity, state.flags, state.stance, state.visits, state.counters, state.aoi_lean)
+	return String(end_id).begins_with("aoi_")
+
+
+# --- 約束の誘い（第9弾 §6・§7）--------------------------------------
 ## 節目の無い日、その相手が約束を差し出す。球磨=短射程・高頻度／由布=先の日・低頻度。
+## §7 連鎖：果たした数（counters[route+"_chain"]）を段階として、次の“種”の誘いへ進める。
 ## 対象日が埋まっていれば Dialogues 側の if_day_free で「先約セリフ」に分岐する。
 ## 葵は誘わない（§5：予定表に載らない）。
 static func _invite_nodes(route_id: String, state) -> Array:
+	var stage := int(state.counters.get(route_id + "_chain", 0))
 	match route_id:
 		Routes.KUMA:
-			return Dialogues.route_invite(Routes.KUMA)  # 毎回（勢い・直近マス）
+			return Dialogues.route_invite(Routes.KUMA, stage)  # 毎回（勢い・直近マス）
 		Routes.YUFU:
 			# 由布は控えめ（先の枠を独占しすぎない）。3日に一度だけ差し出す。
 			if int(state.day_index) % 3 == 0:
-				return Dialogues.route_invite(Routes.YUFU)
+				return Dialogues.route_invite(Routes.YUFU, stage)
 	return []
 
 

@@ -262,6 +262,9 @@ func _on_option_selected(option: Dictionary) -> void:
 	# 約束の記帳（第9弾）：応じた選択肢が持つ promise を予定表に書き込む。
 	if option.has("promise"):
 		_record_promise(option["promise"])
+	# 8/31 の葵の約束（§5-3）：場所は傾きの着地から動的に決まる。
+	if option.get("promise_aoi_final", false):
+		GameState.make_aoi_final_promise()
 
 
 # --- 夜（§Q1：特別な夜があれば発生／無ければ就寝で翌朝）------------------

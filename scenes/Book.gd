@@ -213,7 +213,7 @@ func _refresh_detail() -> void:
 	var p: Dictionary = GameState.promise_of(idx)
 	if not p.is_empty():
 		var who := GameState.char_display(String(p.get("character", "")))
-		var place := Locations.name_of(String(p.get("place", "")))
+		var place := GameState.place_name(String(p.get("place", "")))
 		var tod := _tod_text(String(p.get("time_of_day", "")))
 		var flavor := String(p.get("flavor_text", ""))
 		match String(p.get("status", "")):
