@@ -31,14 +31,14 @@ const META := {
 static func all() -> Array:
 	return [
 		{
-			"id": "shimmer_shops", "day": 1, "location": "stroll", "weather": Weather.CLEAR_MAX,
+			"id": "shimmer_shops", "day": 10, "location": "stroll", "weather": Weather.CLEAR_MAX,
 			"script": [
 				{ "speaker": "", "text": "商店街のアスファルトが、陽炎でゆらいでいる。" },
 				{ "speaker": "", "text": "何もかもが白くまぶしくて、夏のいちばん濃いところに立っている気がした。" },
 			],
 		},
 		{
-			"id": "rainbow_hill", "day": 4, "location": "hill", "weather": Weather.SHOWER,
+			"id": "rainbow_hill", "day": 13, "location": "hill", "weather": Weather.SHOWER,
 			"script": [
 				{ "speaker": "", "text": "通り雨が上がって、雲の切れ間から日が差した。" },
 				{ "speaker": "", "text": "町の向こうに、うすい虹がかかっている。ほんの少しの間だけ。" },
@@ -46,14 +46,14 @@ static func all() -> Array:
 			],
 		},
 		{
-			"id": "rain_river", "day": 7, "location": "riverside", "weather": Weather.RAIN,
+			"id": "rain_river", "day": 16, "location": "riverside", "weather": Weather.RAIN,
 			"script": [
 				{ "speaker": "", "text": "雨の河原。川面に無数の輪ができては、重なって消えていく。" },
 				{ "speaker": "", "text": "雨の音のほかは、何も聞こえない。世界が少しだけ、狭くなったみたいだ。" },
 			],
 		},
 		{
-			"id": "hush_paddies", "day": 22, "location": "meadow", "weather": Weather.TYPHOON_PRE,
+			"id": "hush_paddies", "day": 31, "location": "meadow", "weather": Weather.TYPHOON_PRE,
 			"script": [
 				{ "speaker": "", "text": "田んぼの上の空が、やけに張りつめている。" },
 				{ "speaker": "", "text": "いつのまにか、蝉が鳴きやんでいた。稲だけが、風のこない中で静かに揺れている。" },
@@ -61,7 +61,7 @@ static func all() -> Array:
 			],
 		},
 		{
-			"id": "fog_paddies", "day": 24, "location": "meadow", "weather": Weather.FOG,
+			"id": "fog_paddies", "day": 33, "location": "meadow", "weather": Weather.FOG,
 			"script": [
 				{ "speaker": "", "text": "台風が去った朝。田んぼが、白い霧に沈んでいた。" },
 				{ "speaker": "", "text": "見慣れたはずの畦道が、知らない場所みたいに続いている。" },
@@ -69,7 +69,7 @@ static func all() -> Array:
 			],
 		},
 		{
-			"id": "dusk_hill", "day": 28, "location": "hill", "weather": Weather.SUNSET,
+			"id": "dusk_hill", "day": 37, "location": "hill", "weather": Weather.SUNSET,
 			"script": [
 				{ "speaker": "", "text": "丘の上から、町ぜんぶが夕焼けに染まっていくのを見ていた。" },
 				{ "speaker": "", "text": "屋根も、川も、田んぼも、みんなオレンジ色。どこかで、蜩が鳴きはじめる。" },
@@ -95,7 +95,7 @@ static func all() -> Array:
 			],
 		},
 		{
-			"id": "typhoon_night", "time": "night", "event": "sleep", "day": 23, "weather": Weather.TYPHOON,
+			"id": "typhoon_night", "time": "night", "event": "sleep", "day": 32, "weather": Weather.TYPHOON,
 			"script": [
 				{ "speaker": "", "text": "雨戸を、風が叩いている。台風の夜。町ぜんぶが、雨と風の音に沈んでいた。" },
 				{ "speaker": "", "text": "布団の中で、その音を聞いていた。明日、世界はどうなっているんだろう。" },
