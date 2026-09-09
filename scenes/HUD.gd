@@ -5,7 +5,7 @@ extends CanvasLayer
 ## 見た目は UITheme に集約。日付・時間帯は GameState のシグナルで自動更新。
 
 const WEEKDAYS := ["日", "月", "火", "水", "木", "金", "土"]
-## 曜日の基準：8/1 を月曜と仮定（DAY38 が水になる＝イメージボードの例に合わせる）。表記は仮。
+## 曜日の基準：起点（7/23＝1日目）を月曜と仮定。表記は仮（暦の厳密さより雰囲気優先）。
 const START_WEEKDAY := 1
 
 var _day_pill: Panel

@@ -16,9 +16,11 @@ enum Phase { MORNING, AFTERNOON, NIGHT }
 enum Stance { NONE, A, B, C }
 
 ## --- カレンダー設定 ---
-const START_MONTH := 8
-const START_DAY := 1
-## 8/1 を 1 日目として全 40 日。世界の終わりまでの日数（＋αは作りながら調整）。
+## 予定表＝8/31 を終点とする 40 日間。起点はその 40 日前＝7/23（世界の終わりに向かう夏）。
+## day_index=39 が 8/31（＝最後に過ごす日／三分岐の着地）、その翌日 9/1 が裏エンド。
+const START_MONTH := 7
+const START_DAY := 23
+## 7/23 を 1 日目として全 40 日（day39＝8/31 で終幕）。日数は TOTAL_DAYS で一括調整。
 const TOTAL_DAYS := 40
 
 ## --- シグナル（状態が変わったら UI へ知らせる）---
@@ -28,7 +30,7 @@ signal game_ended()                  ## 最終日を越えた（＝世界の終�
 signal schedule_changed()            ## 予定表（約束・日記）が変わった（予定表UIが購読して再描画）
 
 ## --- 実行時の状態 ---
-var day_index := 0                   ## 0 = 8/1、1 = 8/2 ...
+var day_index := 0                   ## 0 = 7/23、1 = 7/24 ...、39 = 8/31
 var phase: Phase = Phase.MORNING
 
 ## その日どこへ行ったかの記録。 day_index -> { Phase(int): location_id(String) }
@@ -349,7 +351,7 @@ func _advance_day() -> void:
 
 # --- 表示用ヘルパー -------------------------------------------------
 
-## day_index から実際の月日を求める（8/1 起点で素直に加算していく）。
+## day_index から実際の月日を求める（7/23 起点で素直に加算していく）。
 func date_of(index: int) -> Dictionary:
 	var days_in_month := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 	var month := START_MONTH

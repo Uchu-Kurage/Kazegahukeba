@@ -15,10 +15,10 @@ extends RefCounted
 ##
 ## テキストは仮置き。葵が絡む夜も正体を匂わせない（二層構造厳守）。
 
-# --- 配置する日付（day_index。0=8/1。すべて定数＝あとで調整可能）---
-const EARLY_FIREWORKS_DAY := 6    # 7日目の夜：序盤の花火（三人で・差分出し分け）
-const FESTIVAL_DAY := 19          # 20日目の夜：夏祭り（誰と過ごすか選ぶ）
-const LAST_FIREWORKS_DAY := 36    # 37日目の夜：最後の花火（誰と過ごすか選ぶ）
+# --- 配置する日付（day_index。0=7/23。すべて定数＝あとで調整可能）---
+const EARLY_FIREWORKS_DAY := 15   # 16日目＝8/7 の夜：序盤の花火（三人で・差分出し分け）
+const FESTIVAL_DAY := 28          # 29日目＝8/20 の夜：夏祭り（誰と過ごすか選ぶ・後半の絶頂）
+const LAST_FIREWORKS_DAY := 36    # 37日目＝8/28 の夜：最後の花火（誰と過ごすか選ぶ・惜別の快晴）
 
 # --- 夜専用フラグ ---
 ## shared 系は {route_id}_{suffix}（例 kuma_festival_night）。エンディングテキストの分岐に使える。

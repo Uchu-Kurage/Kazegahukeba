@@ -15,7 +15,7 @@ extends CanvasLayer
 ## 葵は載らない（§5）。約束システムの外側の存在。
 
 const COLS := 7
-const START_WEEKDAY := 1  ## 8/1 を月曜と仮定（HUD と揃える）
+const START_WEEKDAY := 1  ## 起点（7/23＝1日目）を月曜と仮定（HUD と揃える）
 const WEEKDAYS := ["日", "月", "火", "水", "木", "金", "土"]
 
 const CELL_W := 150
