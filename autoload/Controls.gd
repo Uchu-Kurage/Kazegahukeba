@@ -12,6 +12,7 @@ func _ready() -> void:
 	_bind("walk_down",  [KEY_S, KEY_DOWN])
 	_bind("interact",   [KEY_E, KEY_SPACE, KEY_ENTER])
 	_bind("skip",       [KEY_Q])
+	_bind("book",       [KEY_TAB, KEY_B])  # 予定表＝約束帳を開く／閉じる（枠は消費しない）
 	# --- 動作確認用（デバッグ）---
 	_bind("debug_toggle", [KEY_F3])  # ルート到達状況オーバーレイの表示切替
 	_bind("debug_end",    [KEY_F4])  # いまの状態で即エンディング判定へ（分岐確認用）

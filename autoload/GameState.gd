@@ -25,6 +25,7 @@ const TOTAL_DAYS := 40
 signal day_changed(day_index: int)   ## 新しい日になった
 signal phase_changed(phase: Phase)   ## 時間帯が変わった
 signal game_ended()                  ## 最終日を越えた（＝世界の終わり）
+signal schedule_changed()            ## 予定表（約束・日記）が変わった（予定表UIが購読して再描画）
 
 ## --- 実行時の状態 ---
 var day_index := 0                   ## 0 = 8/1、1 = 8/2 ...
@@ -61,6 +62,13 @@ var weather_seed := 0
 ## 朝の予報（世界に溶けた開示）を、その日にもう出したか（一日一回。-1=まだ）。
 var last_forecast_day := -1
 
+## 予定表＝約束帳（第9弾）。 day_index(int) -> Promise 辞書。一日一予定・先埋め優先（§3）。
+##   Promise = { character, place, time_of_day, status("planned"/"fulfilled"/"missed"), flavor_text }
+##   葵は載らない（§5。8/31 の一度だけ例外）。
+var promises := {}
+## 過去マス用の絵日記。 day_index(int) -> { weather, note }。日送り時に確定する（§4）。
+var diary := {}
+
 
 func _ready() -> void:
 	start_new_run()
@@ -80,6 +88,8 @@ func start_new_run() -> void:
 	aoi_lean.clear()
 	weather_seed = randi()  # 予報の揺らぎ用（周回ごとに変わる）
 	last_forecast_day = -1
+	promises.clear()
+	diary.clear()
 	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -99,6 +109,8 @@ func snapshot() -> Dictionary:
 		"aoi_lean": aoi_lean.duplicate(),
 		"weather_seed": weather_seed,
 		"last_forecast_day": last_forecast_day,
+		"promises": promises.duplicate(true),
+		"diary": diary.duplicate(true),
 	}
 
 
@@ -117,6 +129,8 @@ func restore(data: Dictionary) -> void:
 	aoi_lean = _dict_field(data, "aoi_lean")
 	weather_seed = int(data.get("weather_seed", 0)) if _is_num(data.get("weather_seed")) else randi()
 	last_forecast_day = int(data.get("last_forecast_day", -1)) if _is_num(data.get("last_forecast_day")) else -1
+	promises = _dict_field(data, "promises", true)
+	diary = _dict_field(data, "diary", true)
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -168,6 +182,11 @@ func _record_choice(location_id: String) -> void:
 		var who := Locations.character_of(location_id)
 		if who != "":
 			affinity[who] = int(affinity.get(who, 0)) + 1
+			# 今日その相手と過ごしたら、planned の約束を「果たした」にする（§4）。
+			var p: Dictionary = promises.get(day_index, {})
+			if not p.is_empty() and String(p.get("status", "")) == "planned" and String(p.get("character", "")) == who:
+				p["status"] = "fulfilled"
+				schedule_changed.emit()
 
 
 ## 関係値を増減する（会話の選択肢などから呼ぶ）。
@@ -208,6 +227,78 @@ func weather_forecast() -> String:
 	return Weather.forecast(day_index + 1, weather_seed)
 
 
+# --- 予定表＝約束帳（第9弾）--------------------------------------------
+
+## その日が空いているか（一日一予定・先埋め優先）。
+func day_free(day: int) -> bool:
+	return not promises.has(day)
+
+
+## 約束を記帳する（会話の「応じる」選択などから）。既に埋まっていれば成立しない（先約優先）。
+## 葵は原則ここに載せない（§5。8/31 の会話約束のみ例外的に呼ぶ）。
+func make_promise(day: int, character: String, place: String, time_of_day: String, flavor: String) -> bool:
+	if day < 0 or day >= TOTAL_DAYS or promises.has(day):
+		return false
+	promises[day] = {
+		"character": character, "place": place, "time_of_day": time_of_day,
+		"status": "planned", "flavor_text": flavor,
+	}
+	print("[promise] d%d %s @ %s (%s)" % [day, character, place, time_of_day])
+	schedule_changed.emit()
+	_autosave()
+	return true
+
+
+func promise_of(day: int) -> Dictionary:
+	return promises.get(day, {})
+
+
+## 一日を締める：未達の planned は missed に、絵日記を確定する（責めない・静かに残す）。
+func _close_day(day: int) -> void:
+	var p: Dictionary = promises.get(day, {})
+	if not p.is_empty() and String(p.get("status", "")) == "planned":
+		p["status"] = "missed"
+	_write_diary(day)
+	schedule_changed.emit()
+
+
+## その日の絵日記の一言を確定する（果たした約束の清書／未達／空白日の自動一言）。
+func _write_diary(day: int) -> void:
+	var entry := { "weather": Weather.of(day) }
+	var p: Dictionary = promises.get(day, {})
+	if not p.is_empty():
+		match String(p.get("status", "")):
+			"fulfilled":
+				entry["note"] = "%sと%sで過ごした。" % [char_display(String(p["character"])), Locations.name_of(String(p["place"]))]
+			"missed":
+				entry["note"] = "%sとの約束は、果たせなかった。" % char_display(String(p["character"]))
+			_:
+				entry["note"] = _blank_note(day)
+	else:
+		entry["note"] = _blank_note(day)
+	diary[day] = entry
+
+
+## 約束のない日の自動一言（ぼくのなつやすみ的な豊かさ。何もしない夏も肯定する）。
+const BLANK_NOTES := [
+	"セミの声を、ずっと聞いていた。", "大きな入道雲を、ただ見上げていた。",
+	"知らない路地で、近道を見つけた。", "何もしない一日。それも悪くなかった。",
+	"風が、少しだけ涼しかった。", "水たまりに、空が映っていた。",
+	"どこかで、風鈴が鳴っていた。",
+]
+func _blank_note(day: int) -> String:
+	return BLANK_NOTES[day % BLANK_NOTES.size()]
+
+
+## キャラID→表示名（予定表・絵日記用）。
+func char_display(id: String) -> String:
+	match id:
+		"kuma": return "球磨"
+		"yufu": return "由布"
+		"aoi": return "葵"
+	return id
+
+
 ## フラグを立てる／下ろす（会話の選択肢などから呼ぶ）。
 func set_flag(flag_name: String, value: bool) -> void:
 	flags[flag_name] = value
@@ -243,6 +334,7 @@ func _advance_phase() -> void:
 
 
 func _advance_day() -> void:
+	_close_day(day_index)  # 今日ぶんを確定（未達の約束→missed／絵日記を書く）
 	day_index += 1
 	if day_index >= TOTAL_DAYS:
 		SaveData.clear_run()  # クリアしたので「つづきから」は消す
