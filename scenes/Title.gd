@@ -4,7 +4,7 @@ extends Control
 ## 「はじめる」で新しい周回を開始。エンディング記録（図鑑）や記録の消去もここから。
 ## 周回をまたぐ記録は SaveData が持っているので、ここはそれを見せて選ばせるだけ。
 
-enum Screen { MAIN, RECORDS, CONFIRM }
+enum Screen { MAIN, RECORDS, ALMANAC, CONFIRM }
 
 var _screen := Screen.MAIN
 var _items: Array = []   ## いま選べる項目 [{id, label}]
@@ -60,6 +60,8 @@ func _activate() -> void:
 
 		"records":
 			_go(Screen.RECORDS)
+		"almanac":
+			_go(Screen.ALMANAC)
 		"clear":
 			_go(Screen.CONFIRM)
 		"quit":
@@ -87,9 +89,12 @@ func _go(screen: Screen) -> void:
 			if Endings.ura_unlocked():
 				_items.append({ "id": "ura", "label": "９月１日" })
 			_items.append({ "id": "records", "label": "エンディング記録" })
+			_items.append({ "id": "almanac", "label": "風物詩図鑑" })
 			_items.append({ "id": "clear", "label": "記録を消す" })
 			_items.append({ "id": "quit", "label": "おわる" })
 		Screen.RECORDS:
+			_items = [{ "id": "back", "label": "戻る" }]
+		Screen.ALMANAC:
 			_items = [{ "id": "back", "label": "戻る" }]
 		Screen.CONFIRM:
 			_items = [
@@ -130,9 +135,23 @@ func _screen_lines() -> Array:
 	match _screen:
 		Screen.RECORDS:
 			return _records_lines()
+		Screen.ALMANAC:
+			return _almanac_lines()
 		Screen.CONFIRM:
 			return ["記録を消しますか？（到達エンドと周回数がすべて消えます）"]
 	return []
+
+
+## 風物詩図鑑：周回をまたいで見た天気限定風景の一覧（未見は？？？）。
+func _almanac_lines() -> Array:
+	var ids := WeatherScenes.ids()
+	var lines := ["【風物詩図鑑】　%d / %d" % [SaveData.scene_seen_count(ids), ids.size()]]
+	for id in ids:
+		if SaveData.has_scene(id):
+			lines.append("　✓ %s（%s）" % [WeatherScenes.title_of(id), WeatherScenes.hint_of(id)])
+		else:
+			lines.append("　― ？？？")
+	return lines
 
 
 func _records_lines() -> Array:

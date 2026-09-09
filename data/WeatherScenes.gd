@@ -14,6 +14,19 @@ extends RefCounted
 
 const PREFIX := "wscene_"
 
+## 風物詩図鑑の表示メタ（id → [題名, 条件のヒント]）。台本データは触らずここに集約。
+const META := {
+	"shimmer_shops": ["陽炎", "快晴の商店街で"],
+	"rainbow_hill": ["虹", "夕立の日、丘で"],
+	"rain_river": ["雨の川面", "雨の日、河原で"],
+	"hush_paddies": ["凪いだ田んぼ", "台風前の田んぼで"],
+	"fog_paddies": ["霧の田んぼ", "霧の朝、田んぼで"],
+	"dusk_hill": ["夕焼けの町", "夕焼けの丘で"],
+	"milkyway_festival": ["天の川", "祭りの夜（快晴）"],
+	"stars_clear_night": ["満天の星", "快晴の夜、就寝前"],
+	"typhoon_night": ["台風の夜", "台風の夜、就寝前"],
+}
+
 
 static func all() -> Array:
 	return [
@@ -93,6 +106,28 @@ static func all() -> Array:
 
 static func flag_of(id: String) -> String:
 	return PREFIX + id
+
+
+## flag 名（wscene_xxx）から風物詩 id を取り出す（cross-run 記録のフックで使う）。
+static func id_from_flag(flag_name: String) -> String:
+	return flag_name.trim_prefix(PREFIX) if flag_name.begins_with(PREFIX) else ""
+
+
+## 全風物詩の id（図鑑の並び順＝all() の順）。
+static func ids() -> Array:
+	var out: Array = []
+	for e in all():
+		out.append(String(e["id"]))
+	return out
+
+
+## 図鑑用：題名と条件ヒント。
+static func title_of(id: String) -> String:
+	return String(META.get(id, [id, ""])[0])
+
+
+static func hint_of(id: String) -> String:
+	return String(META.get(id, [id, ""])[1])
 
 
 ## 昼の枠：条件に合う「未見の」情景を返す（無ければ {}）。day を持つ entry は day 一致が必須。
