@@ -61,14 +61,28 @@ static func name_of(day: int) -> String:
 
 
 ## その特別な夜で流す会話（フラット化済み）を返す。Town から呼ぶ。
+## 先頭に「夜の限定風景」（天気が合えば一度だけ＝天の川 等）を差し込む（第9弾）。
 static func script_for(night: Dictionary, state) -> Array:
+	var out: Array = _weather_night(night, state)
 	if String(night["type"]) == "fixed":
-		var out := Story.flatten(Dialogues.night_script(String(night["script"])), state.flags)
+		out.append_array(Story.flatten(Dialogues.night_script(String(night["script"])), state.flags))
 		var eff := {}                       # 通過フラグ（三人で見た印）を最後に立てる
 		eff[String(night["sets"])] = true
 		out.append({ "effect": { "set": eff } })
 		return out
-	return _shared_script(night, state)
+	out.append_array(_shared_script(night, state))
+	return out
+
+
+## 夜の限定風景（特別な夜）：event=夜イベントID・今日の天気が合えば、頭に一度だけ差し込む。
+static func _weather_night(night: Dictionary, state) -> Array:
+	var d := int(state.day_index)
+	var e := WeatherScenes.night_match(d, Weather.of(d), String(night["id"]), state.flags)
+	if e.is_empty():
+		return []
+	var out := Story.flatten(e["script"], state.flags)
+	out.append({ "effect": { "set": { WeatherScenes.flag_of(String(e["id"])): true } } })
+	return out
 
 
 ## 「誰と過ごすか」を選ぶ夜。昼の選択機構（Dialogue の選択肢）を流用。

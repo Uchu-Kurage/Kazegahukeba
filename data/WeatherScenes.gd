@@ -63,6 +63,31 @@ static func all() -> Array:
 				{ "speaker": "", "text": "この景色を、いつか、たまらなく思い出すんだろうな、と思った。" },
 			],
 		},
+
+		# --- 夜の限定風景（time:"night"）---
+		# 特別な夜：event に夜イベントID。天気が合うと、その夜の台本の頭に一度だけ差し込む。
+		{
+			"id": "milkyway_festival", "time": "night", "event": "festival", "weather": Weather.CLEAR_MAX,
+			"script": [
+				{ "speaker": "", "text": "屋台の灯りを離れて空を見上げると、澄んだ夜空に、天の川がくっきりと流れていた。" },
+				{ "speaker": "", "text": "こんなに星が多いなんて、と思う。祭りのざわめきが、急に遠く聞こえた。" },
+			],
+		},
+		# 通常の就寝前：event "sleep"。日付は問わず、その天気で寝た初回に一度だけ。
+		{
+			"id": "stars_clear_night", "time": "night", "event": "sleep", "weather": Weather.CLEAR_MAX,
+			"script": [
+				{ "speaker": "", "text": "眠る前に、窓を開けた。快晴の夜空に、数えきれないほどの星が散らばっている。" },
+				{ "speaker": "", "text": "こんな夜が、あと何回あるんだろう。そう思いながら、しばらく見上げていた。" },
+			],
+		},
+		{
+			"id": "typhoon_night", "time": "night", "event": "sleep", "day": 23, "weather": Weather.TYPHOON,
+			"script": [
+				{ "speaker": "", "text": "雨戸を、風が叩いている。台風の夜。町ぜんぶが、雨と風の音に沈んでいた。" },
+				{ "speaker": "", "text": "布団の中で、その音を聞いていた。明日、世界はどうなっているんだろう。" },
+			],
+		},
 	]
 
 
@@ -70,10 +95,30 @@ static func flag_of(id: String) -> String:
 	return PREFIX + id
 
 
-## 条件に合う「未見の」情景を返す（無ければ {}）。day を持つ entry は day 一致が必須。
+## 昼の枠：条件に合う「未見の」情景を返す（無ければ {}）。day を持つ entry は day 一致が必須。
 static func match(day: int, location_id: String, weather: String, flags: Dictionary) -> Dictionary:
 	for e in all():
-		if String(e["location"]) != location_id:
+		if String(e.get("time", "day")) != "day":
+			continue
+		if String(e.get("location", "")) != location_id:
+			continue
+		if String(e["weather"]) != weather:
+			continue
+		if e.has("day") and int(e["day"]) != day:
+			continue
+		if flags.get(flag_of(String(e["id"])), false):
+			continue
+		return e
+	return {}
+
+
+## 夜：条件に合う「未見の」夜の情景を返す（無ければ {}）。
+## event は夜イベントID（"festival" 等）／通常の就寝前は "sleep"。day を持つ entry は day 一致必須。
+static func night_match(day: int, weather: String, event: String, flags: Dictionary) -> Dictionary:
+	for e in all():
+		if String(e.get("time", "day")) != "night":
+			continue
+		if String(e.get("event", "")) != event:
 			continue
 		if String(e["weather"]) != weather:
 			continue
