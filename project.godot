@@ -28,6 +28,8 @@ Fader="*res://autoload/Fader.gd"
 ; カレンダー等の常時UI。シーンをまたいで表示し続けるため Autoload（シーン）にする。
 ; GameState のシグナルを購読するので、GameState より後に登録する。
 HUD="*res://scenes/HUD.tscn"
+; 予定表＝約束帳（いつでも開ける常設ビュー）。GameState のシグナルを購読するので後に置く。
+Book="*res://scenes/Book.tscn"
 ; 会話ウィンドウ。全シーンから Dialogue.start([...]) で呼べる。
 Dialogue="*res://autoload/Dialogue.gd"
 ; スマホ（タッチ端末）向けの画面上コントローラ。移動/決定/戻る/デバッグメニューを

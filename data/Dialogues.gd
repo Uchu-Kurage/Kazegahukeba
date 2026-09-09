@@ -212,6 +212,44 @@ static func route_filler(route_id: String, level: int) -> Array:
 	return [ { "speaker": "", "text": "何気ない時間が過ぎていく。" } ]
 
 
+## 約束の誘い（第9弾 §2/§6）。応じる＝記帳（promise 効果）／濁す＝ロックしない／断る＝成立せず。
+## 対象日が埋まっていれば if_day_free の else で「先約セリフ」を出し、キャラが自然に引く（§3）。
+## テキストは仮置き。断りは柔らかく、正誤を感じさせないこと（§10）。
+static func route_invite(route_id: String) -> Array:
+	match route_id:
+		Routes.KUMA:
+			# 球磨：勢い・翌日の短射程（in_days=1）。
+			return [
+				{ "if_day_free": 1, "then": [
+					{ "speaker": "球磨", "text": "なあ、明日の午後、川いこうぜ。ひさびさに釣りでもさ。" },
+					{ "text": "", "choices": [
+						{ "text": "「行く」", "then": [ { "speaker": "球磨", "text": "よし、決まりな！　明日、川で待ってるわ。" } ],
+							"promise": { "in_days": 1, "character": "kuma", "place": "riverside", "time_of_day": "afternoon", "flavor": "球磨と川で釣り" } },
+						{ "text": "「考えとく」", "then": [ { "speaker": "球磨", "text": "なんだよ、はっきりしろって。……ま、気が向いたらな。" } ] },
+						{ "text": "「今日はごめん」", "then": [ { "speaker": "球磨", "text": "おう。……また誘うわ。" } ] },
+					] },
+				], "else": [
+					{ "speaker": "球磨", "text": "明日はもう、予定あるんだろ？　……そっか。また今度な。" },
+				] },
+			]
+		Routes.YUFU:
+			# 由布：計画・先の日付（in_days=3）。重みを持たせる。
+			return [
+				{ "if_day_free": 3, "then": [
+					{ "speaker": "由布", "text": "……ねえ。三日後の夕方、少し歩かない？　見せたい場所があるの。" },
+					{ "text": "", "choices": [
+						{ "text": "うなずく", "then": [ { "speaker": "由布", "text": "……うん。じゃあ、約束、ね。" } ],
+							"promise": { "in_days": 3, "character": "yufu", "place": "shrine", "time_of_day": "evening", "flavor": "由布と、見せたい場所へ" } },
+						{ "text": "「考えとく」", "then": [ { "speaker": "由布", "text": "……そう。気が向いたら、でいいから。" } ] },
+						{ "text": "「その日は、ちょっと」", "then": [ { "speaker": "由布", "text": "ううん、いいの。忘れて。……ごめんね、急に。" } ] },
+					] },
+				], "else": [
+					{ "speaker": "由布", "text": "三日後は……もう、約束があるみたいね。ふふ、また別の日に。" },
+				] },
+			]
+	return []
+
+
 ## 葵の遍在遭遇（枠を消費しない軽い遭遇）。§3。
 ## ⚠️ 二層構造の鉄則：正体を匂わせない。ただの「よく会う、明るい子」として通す。
 static func aoi_ambient() -> Array:

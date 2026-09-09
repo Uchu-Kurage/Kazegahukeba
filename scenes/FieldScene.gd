@@ -239,6 +239,13 @@ func _on_spend_finished(location_id: String) -> void:
 	_refresh_prompt()
 
 
+## 約束（promise）を予定表に記帳する。in_days は今日からの相対日。
+func _record_promise(pr: Dictionary) -> void:
+	var day := GameState.day_index + int(pr.get("in_days", 0))
+	GameState.make_promise(day, String(pr.get("character", "")), String(pr.get("place", "")),
+		String(pr.get("time_of_day", "")), String(pr.get("flavor", "")))
+
+
 ## 会話の選択肢／効果ノードの効果を GameState に反映する（Place/Town と同じ処理）。
 func _on_option_selected(option: Dictionary) -> void:
 	for who in option.get("affinity", {}):
@@ -252,6 +259,9 @@ func _on_option_selected(option: Dictionary) -> void:
 	# 葵ルートの「傾き」（三分岐の布石。方向のみ記録）。
 	if option.has("lean"):
 		GameState.bump_lean(String(option["lean"]))
+	# 約束の記帳（第9弾）：応じた選択肢が持つ promise を予定表に書き込む。
+	if option.has("promise"):
+		_record_promise(option["promise"])
 
 
 # --- 夜（§Q1：特別な夜があれば発生／無ければ就寝で翌朝）------------------

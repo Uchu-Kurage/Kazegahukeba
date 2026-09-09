@@ -75,6 +75,12 @@ func _on_option_selected(option: Dictionary) -> void:
 	# 葵ルートの「傾き」（三分岐の布石。方向のみ記録）。
 	if option.has("lean"):
 		GameState.bump_lean(String(option["lean"]))
+	# 約束の記帳（第9弾）。
+	if option.has("promise"):
+		var pr: Dictionary = option["promise"]
+		GameState.make_promise(GameState.day_index + int(pr.get("in_days", 0)),
+			String(pr.get("character", "")), String(pr.get("place", "")),
+			String(pr.get("time_of_day", "")), String(pr.get("flavor", "")))
 
 
 func _on_talk_finished() -> void:

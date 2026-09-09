@@ -36,9 +36,10 @@ static func script_for_location(location_id: String, state) -> Array:
 	# 2. 選択中ルートの節目イベント（次の1件）。
 	var ev := next_milestone(route, state.day_index, state.flags, state.affinity)
 	if ev.is_empty():
-		# 3. 節目が無い日は、関係値に応じた日常会話。
+		# 3. 節目が無い日は、関係値に応じた日常会話＋（球磨・由布は）約束の誘い。
 		var level := _affinity_level(int(state.affinity.get(route["id"], 0)))
 		out.append_array(flatten(Dialogues.route_filler(route["id"], level), state.flags))
+		out.append_array(flatten(_invite_nodes(route["id"], state), state.flags, state))
 		return out
 
 	var key := String(ev["key"])
@@ -100,20 +101,41 @@ static func _aoi_ambient(location_id: String, state) -> Array:
 	return flatten(Dialogues.aoi_ambient(), state.flags)
 
 
+# --- 約束の誘い（第9弾 §6）------------------------------------------
+## 節目の無い日、その相手が約束を差し出す。球磨=短射程・高頻度／由布=先の日・低頻度。
+## 対象日が埋まっていれば Dialogues 側の if_day_free で「先約セリフ」に分岐する。
+## 葵は誘わない（§5：予定表に載らない）。
+static func _invite_nodes(route_id: String, state) -> Array:
+	match route_id:
+		Routes.KUMA:
+			return Dialogues.route_invite(Routes.KUMA)  # 毎回（勢い・直近マス）
+		Routes.YUFU:
+			# 由布は控えめ（先の枠を独占しすぎない）。3日に一度だけ差し出す。
+			if int(state.day_index) % 3 == 0:
+				return Dialogues.route_invite(Routes.YUFU)
+	return []
+
+
 # --- フラグ条件つきノードの展開 --------------------------------------
 ## 台本の中の条件ノードを、いまのフラグで確定させてフラット配列にする。
 ##   { "if_flag": "world_kuma_drifting", "then": [...], "else": [...] }
 ##   { "if_not_flag": "...", "then": [...], "else": [...] }
+##   { "if_day_free": N, "then":[空きの誘い], "else":[先約セリフ] }（第9弾。state 必須）
+##     → N 日後(day_index+N)の予定表が空いていれば then、埋まっていれば else。
 ## → §2「背景フラグを参照して描写を出し分ける」を、Dialogue 側を汚さずデータで実現。
-static func flatten(nodes: Array, flags: Dictionary) -> Array:
+static func flatten(nodes: Array, flags: Dictionary, state = null) -> Array:
 	var out: Array = []
 	for n in nodes:
 		if typeof(n) == TYPE_DICTIONARY and n.has("if_flag"):
 			var take: bool = flags.get(String(n["if_flag"]), false)
-			out.append_array(flatten(_branch(n, take), flags))
+			out.append_array(flatten(_branch(n, take), flags, state))
 		elif typeof(n) == TYPE_DICTIONARY and n.has("if_not_flag"):
 			var take2: bool = not flags.get(String(n["if_not_flag"]), false)
-			out.append_array(flatten(_branch(n, take2), flags))
+			out.append_array(flatten(_branch(n, take2), flags, state))
+		elif typeof(n) == TYPE_DICTIONARY and n.has("if_day_free"):
+			# 対象日が空いているか（予定表・先埋め優先）。state が無ければ空扱い。
+			var free := true if state == null else bool(state.day_free(int(state.day_index) + int(n["if_day_free"])))
+			out.append_array(flatten(_branch(n, free), flags, state))
 		else:
 			out.append(n)
 	return out
