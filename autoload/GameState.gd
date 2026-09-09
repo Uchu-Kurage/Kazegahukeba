@@ -188,6 +188,8 @@ func _record_choice(location_id: String) -> void:
 			var p: Dictionary = promises.get(day_index, {})
 			if not p.is_empty() and String(p.get("status", "")) == "planned" and String(p.get("character", "")) == who:
 				p["status"] = "fulfilled"
+				# §7 連鎖：果たした数を段階として、次の“種”の誘いを解放する（果たさなければ進まない）。
+				bump(who + "_chain", 1)
 				schedule_changed.emit()
 
 
@@ -255,6 +257,26 @@ func promise_of(day: int) -> Dictionary:
 	return promises.get(day, {})
 
 
+## 8/31 の葵の約束を記帳する（§5-3。予定表に葵が載る唯一の例外）。
+## 場所は「傾き（方向）」の着地から動的に決める＝予定表の一マスが三分岐を可視化する。
+## 自動でなく会話選択から呼ぶ（Story/Dialogues の promise_aoi_final）。
+func make_aoi_final_promise() -> bool:
+	var end_id := Endings._aoi_ending(aoi_lean)
+	var place := Endings.aoi_landing_place(end_id)
+	return make_promise(TOTAL_DAYS - 1, "aoi", place, "afternoon", "最後の日を、葵と。")
+
+
+## 場所ID→表示名。予定表・絵日記で使う。着地専用の場所（ひまわり畑・丘）も補う。
+func place_name(id: String) -> String:
+	var n := Locations.name_of(id)
+	if n != "":
+		return n
+	match id:
+		"himawari": return "ひまわり畑"
+		"hill": return "丘"
+	return id
+
+
 ## 一日を締める：未達の planned は missed に、絵日記を確定する（責めない・静かに残す）。
 func _close_day(day: int) -> void:
 	var p: Dictionary = promises.get(day, {})
@@ -271,7 +293,7 @@ func _write_diary(day: int) -> void:
 	if not p.is_empty():
 		match String(p.get("status", "")):
 			"fulfilled":
-				entry["note"] = "%sと%sで過ごした。" % [char_display(String(p["character"])), Locations.name_of(String(p["place"]))]
+				entry["note"] = "%sと%sで過ごした。" % [char_display(String(p["character"])), place_name(String(p["place"]))]
 			"missed":
 				entry["note"] = "%sとの約束は、果たせなかった。" % char_display(String(p["character"]))
 			_:
