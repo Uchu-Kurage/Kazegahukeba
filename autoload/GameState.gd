@@ -207,6 +207,11 @@ func weather_forecast() -> String:
 func set_flag(flag_name: String, value: bool) -> void:
 	flags[flag_name] = value
 	print("[flag] %s = %s" % [flag_name, str(value)])  # 確認用（エンディング実装時に削除可）
+	# 天気限定風景を見たら、周回をまたぐ図鑑（風物詩）にも記録する。
+	if value:
+		var scene_id := WeatherScenes.id_from_flag(flag_name)
+		if scene_id != "":
+			SaveData.mark_scene(scene_id)
 
 
 ## あるルートの立場を決める（中盤の A/B/C 選択から呼ぶ）。値は Stance の enum。
