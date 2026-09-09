@@ -172,11 +172,34 @@ func _on_option_selected(option: Dictionary) -> void:
 # --- 夜（§Q1：特別な夜があれば発生／無ければ就寝で翌朝）------------------
 func _night_action() -> void:
 	var night := Nights.for_day(GameState.day_index)
-	if night.is_empty():
+	if not night.is_empty():
+		_start_special_night(night)
+		return
+	# 特別な夜でなければ就寝。ただし「夜の限定風景」（快晴の星空・台風の夜 等）があれば
+	# 寝る前に一度だけ流す（見逃したら再発生しない）。
+	var scene := WeatherScenes.night_match(GameState.day_index, GameState.weather_today(), "sleep", GameState.flags)
+	if scene.is_empty():
 		AudioManager.play_sfx("page")
 		GameState.flip_calendar()   # 就寝 → 翌日へ
 	else:
-		_start_special_night(night)
+		_start_sleep_scene(scene)
+
+
+## 就寝前の夜の限定風景を流し、終わったら翌日へ。
+func _start_sleep_scene(scene: Dictionary) -> void:
+	set_player_can_move(false)
+	Dialogue.option_selected.connect(_on_option_selected)
+	Dialogue.finished.connect(_on_sleep_scene_finished, CONNECT_ONE_SHOT)
+	var nodes := Story.flatten(scene["script"], GameState.flags)
+	nodes.append({ "effect": { "set": { WeatherScenes.flag_of(String(scene["id"])): true } } })
+	Dialogue.start(nodes)
+
+
+func _on_sleep_scene_finished() -> void:
+	if Dialogue.option_selected.is_connected(_on_option_selected):
+		Dialogue.option_selected.disconnect(_on_option_selected)
+	AudioManager.play_sfx("page")
+	GameState.flip_calendar()
 
 
 func _start_special_night(night: Dictionary) -> void:
