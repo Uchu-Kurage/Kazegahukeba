@@ -79,6 +79,14 @@ func _on_night_option(option: Dictionary) -> void:
 		GameState.add_affinity(who, int(option["affinity"][who]))
 	for flag_name in option.get("set", {}):
 		GameState.set_flag(flag_name, option["set"][flag_name])
+	# 風物詩の発見（第10弾）：祭りの夜など、夜イベントからの明示発火にも対応。
+	if option.has("discover"):
+		var d = option["discover"]
+		if d is Array:
+			for x in d:
+				GameState.discover_fubutsushi(String(x))
+		else:
+			GameState.discover_fubutsushi(String(d))
 
 
 func _on_night_finished() -> void:

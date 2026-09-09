@@ -83,6 +83,8 @@ func _ready_done() -> void:
 	_maybe_morning_forecast()
 	# 道マップ（第9弾）：入場時に独白・見逃せる一品・遭遇を差し込む（すべて枠非消費）。
 	_maybe_road_intro()
+	# 風物詩（第10弾）：入場時に環境発見を1回だけ判定（天気・時間帯・期間で出し分け・枠非消費）。
+	_maybe_ambient_fubutsushi()
 
 
 func _player_start() -> Vector2:
@@ -174,6 +176,35 @@ func _maybe_road_intro() -> void:
 	Dialogue.option_selected.connect(_on_option_selected)
 	Dialogue.finished.connect(_on_road_seq_finished, CONNECT_ONE_SHOT)
 	Dialogue.start(seq)
+
+
+# --- 夏の風物詩コレクション（第10弾）＝環境発見（枠非消費）------------------
+
+## 入場時に一度だけ、この画面で見つかる風物詩を判定する。既に別の会話中なら見送る（一期一会）。
+## 発見時は既存メッセージウィンドウで record_text を静かに出すだけ（達成音・トーストは無し）。
+func _maybe_ambient_fubutsushi() -> void:
+	if Dialogue.is_active():
+		return  # 予報・道の会話などを優先（この入場では見送る＝取りこぼしは咎めない）
+	var fid := String(_field.get("id", ""))
+	if Roads.is_road(fid):
+		return  # 道は道の風物詩（別系統）に任せる
+	var id := GameState.evaluate_ambient_fubutsushi(_place_token(fid))
+	if id == "":
+		return
+	var e := Fubutsushi.entry_of(id)
+	set_player_can_move(false)
+	AudioManager.play_sfx("page")  # 風鈴一つ程度の控えめな合図（達成音は鳴らさない）
+	Dialogue.finished.connect(_on_road_seq_finished, CONNECT_ONE_SHOT)  # 後片付け（枠は消費しない）
+	Dialogue.start([{ "speaker": "", "text": String(e.get("record_text", "")) }])
+
+
+## 画面ID → 風物詩マスタの場所トークン（設計書の命名に合わせる）。
+func _place_token(field_id: String) -> String:
+	match field_id:
+		"shops": return "shopping"
+		"fields": return "ricefield"
+		"estuary": return "rivermouth"
+	return field_id
 
 
 ## 道の風物詩（基本セット・常設）を眺める。図鑑に記録するが、道の風景としては残る（再閲覧可）。
@@ -336,6 +367,14 @@ func _on_option_selected(option: Dictionary) -> void:
 	# 8/31 の葵の約束（§5-3）：場所は傾きの着地から動的に決まる。
 	if option.get("promise_aoi_final", false):
 		GameState.make_aoi_final_promise()
+	# 風物詩の発見（第10弾）：イベント／会話から明示発火（id 文字列または配列）。
+	if option.has("discover"):
+		var d = option["discover"]
+		if d is Array:
+			for x in d:
+				GameState.discover_fubutsushi(String(x))
+		else:
+			GameState.discover_fubutsushi(String(d))
 
 
 # --- 夜（§Q1：特別な夜があれば発生／無ければ就寝で翌朝）------------------

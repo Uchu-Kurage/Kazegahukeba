@@ -93,7 +93,7 @@ static func all() -> Array:
 		# --- 夜の限定風景（time:"night"）---
 		# 特別な夜：event に夜イベントID。天気が合うと、その夜の台本の頭に一度だけ差し込む。
 		{
-			"id": "milkyway_festival", "time": "night", "event": "festival", "weather": Weather.CLEAR_MAX,
+			"id": "milkyway_festival", "time": "night", "event": "festival", "weather": Weather.CLEAR_MAX, "discover": "amanogawa",
 			"script": [
 				{ "speaker": "", "text": "屋台の灯りを離れて空を見上げると、澄んだ夜空に、天の川がくっきりと流れていた。" },
 				{ "speaker": "", "text": "こんなに星が多いなんて、と思う。祭りのざわめきが、急に遠く聞こえた。" },
