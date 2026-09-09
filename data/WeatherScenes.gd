@@ -25,6 +25,19 @@ const META := {
 	"milkyway_festival": ["天の川", "祭りの夜（快晴）"],
 	"stars_clear_night": ["満天の星", "快晴の夜、就寝前"],
 	"typhoon_night": ["台風の夜", "台風の夜、就寝前"],
+	# 通路シーン（道マップ）の風物詩（第9弾）。基本セット＝常設・再閲覧可／一品＝一期一会。
+	"road_a_higanbana": ["ヒガンバナ", "畦道への道で"],
+	"road_a_kakashi": ["案山子", "畦道への道で"],
+	"road_a_puddle": ["夕立あとの水たまり", "雨の日、畦道への道で"],
+	"road_b_toro": ["参道の灯籠", "祭りへの参道で"],
+	"road_b_moss": ["参道の苔", "祭りへの参道で"],
+	"road_b_lanterns": ["祭りの提灯", "祭りの日、参道で"],
+	"road_c_farview": ["町の遠景", "丘への坂道で"],
+	"road_c_thunderhead": ["入道雲", "丘への坂道で"],
+	"road_c_afterglow": ["坂の上の夕焼け", "夕焼けの日、丘への坂道で"],
+	"road_d_stream": ["流れる水", "川沿いの道で"],
+	"road_d_driftwood": ["流木", "川沿いの道で"],
+	"road_d_glitter": ["川面のきらめき", "快晴の昼、川沿いの道で"],
 }
 
 
@@ -104,6 +117,64 @@ static func all() -> Array:
 	]
 
 
+## 通路シーン（道マップ）の風物詩（第9弾）。location に road_* を持ち、図鑑にもそのまま載る。
+##   standing:true … 基本セット（常設・再閲覧可）。拾っても道の風景として残る（match では自動発火しない）。
+##   weather/day    … 見逃せる一品（一期一会）。その条件の日にだけ道の入場で一度きり差し込む。
+## pos は道の上のホットスポット位置（基本セットの調べどころ）。背景差し替え時に微調整可。
+static func roads() -> Array:
+	return [
+		# road_a：商店街⇔田んぼ（畦道への道）。
+		{ "id": "road_a_higanbana", "location": "road_a", "standing": true, "pos": Vector2(250, 380),
+			"script": [ { "speaker": "", "text": "畦のふちに、ヒガンバナが一列。燃えるような赤が、青い田をいっそう青く見せている。" } ] },
+		{ "id": "road_a_kakashi", "location": "road_a", "standing": true, "pos": Vector2(760, 380),
+			"script": [ { "speaker": "", "text": "古びた案山子が一本。片腕が下がって、こちらに手を振っているようにも見えた。" } ] },
+		{ "id": "road_a_puddle", "location": "road_a", "weather": Weather.RAIN, "pos": Vector2(520, 392),
+			"script": [
+				{ "speaker": "", "text": "雨あがりの畦道。轍のくぼみに、小さな水たまり。そこにだけ、切り取ったように青空が映っていた。" },
+				{ "speaker": "", "text": "覗き込むと、逆さまの雲がゆっくり流れていく。踏むのが惜しくて、そっとよけて通った。" },
+			] },
+		# road_b：田んぼ⇔神社（祭りへの参道）。
+		{ "id": "road_b_toro", "location": "road_b", "standing": true, "pos": Vector2(576, 250),
+			"script": [ { "speaker": "", "text": "鳥居の手前に、石の灯籠が二基。苔むした笠に、木漏れ日がちらちらと落ちている。" } ] },
+		{ "id": "road_b_moss", "location": "road_b", "standing": true, "pos": Vector2(576, 470),
+			"script": [ { "speaker": "", "text": "参道の敷石の目地に、深い緑の苔。ふかふかとして、夏の湿り気をぜんぶ吸っているみたいだ。" } ] },
+		{ "id": "road_b_lanterns", "location": "road_b", "day": 28, "pos": Vector2(576, 350),
+			"script": [
+				{ "speaker": "", "text": "参道の両脇に、提灯がずらりと吊るされていた。まだ日は高いのに、もう祭りの気配で満ちている。" },
+				{ "speaker": "", "text": "夜になれば、この道はぜんぶ、あたたかな橙色に灯るのだろう。" },
+			] },
+		# road_c：神社⇔丘（丘への坂道。葵の道）。
+		{ "id": "road_c_farview", "location": "road_c", "standing": true, "pos": Vector2(576, 220),
+			"script": [ { "speaker": "", "text": "坂の途中で振り返ると、町がぜんぶ、足の下に開けていた。屋根の海が、白い光の底に沈んでいる。" } ] },
+		{ "id": "road_c_thunderhead", "location": "road_c", "standing": true, "pos": Vector2(576, 440),
+			"script": [ { "speaker": "", "text": "坂の上の空に、入道雲がひとつ。まぶしいほど白く盛り上がって、まるで夏そのものみたいだった。" } ] },
+		{ "id": "road_c_afterglow", "location": "road_c", "weather": Weather.SUNSET, "pos": Vector2(576, 320),
+			"script": [
+				{ "speaker": "", "text": "坂を登りきるころ、空がゆっくりと燃えはじめた。町も、川も、田んぼも、みんな橙色に。" },
+				{ "speaker": "", "text": "この坂の先の丘で、いつか、この夕焼けを誰かと見るのかもしれない。ふと、そんな気がした。" },
+			] },
+		# road_d：河原⇔河口（川沿いの道。下流へ）。
+		{ "id": "road_d_stream", "location": "road_d", "standing": true, "pos": Vector2(300, 380),
+			"script": [ { "speaker": "", "text": "川は、ただ静かに下流へ流れていく。戻ることのない水を、しばらく目で追った。" } ] },
+		{ "id": "road_d_driftwood", "location": "road_d", "standing": true, "pos": Vector2(820, 380),
+			"script": [ { "speaker": "", "text": "白くさらされた流木が、岸に打ち上げられていた。どこから来て、どこへ行くはずだったんだろう。" } ] },
+		{ "id": "road_d_glitter", "location": "road_d", "weather": Weather.CLEAR_MAX, "pos": Vector2(560, 392),
+			"script": [
+				{ "speaker": "", "text": "真昼の川面が、数えきれないほどの光の粒でざわめいている。まぶしくて、目を細めた。" },
+				{ "speaker": "", "text": "この一瞬のきらめきは、たぶん、二度と同じ形では見られない。" },
+			] },
+	]
+
+
+## 道マップの、その場所の「基本セット（常設）」風物詩を返す（FieldScene がホットスポット化する）。
+static func standing_at(location_id: String) -> Array:
+	var out: Array = []
+	for e in roads():
+		if String(e.get("location", "")) == location_id and e.get("standing", false):
+			out.append(e)
+	return out
+
+
 static func flag_of(id: String) -> String:
 	return PREFIX + id
 
@@ -113,10 +184,12 @@ static func id_from_flag(flag_name: String) -> String:
 	return flag_name.trim_prefix(PREFIX) if flag_name.begins_with(PREFIX) else ""
 
 
-## 全風物詩の id（図鑑の並び順＝all() の順）。
+## 全風物詩の id（図鑑の並び順＝既存画面→道マップの順）。道マップの風物詩も同じ図鑑に載る。
 static func ids() -> Array:
 	var out: Array = []
 	for e in all():
+		out.append(String(e["id"]))
+	for e in roads():
 		out.append(String(e["id"]))
 	return out
 
@@ -130,14 +203,20 @@ static func hint_of(id: String) -> String:
 	return String(META.get(id, [id, ""])[1])
 
 
-## 昼の枠：条件に合う「未見の」情景を返す（無ければ {}）。day を持つ entry は day 一致が必須。
+## 昼の枠：条件に合う「未見の」情景を返す（無ければ {}）。既存画面＋道マップの一品を対象にする。
+## day を持つ entry は day 一致必須。weather を持つ entry は天気一致必須（道の day 限定は weather 無し可）。
+## standing（道の基本セット・常設）は自動発火しないので対象外。
 static func match(day: int, location_id: String, weather: String, flags: Dictionary) -> Dictionary:
-	for e in all():
+	var pool: Array = all()
+	pool.append_array(roads())
+	for e in pool:
 		if String(e.get("time", "day")) != "day":
+			continue
+		if e.get("standing", false):
 			continue
 		if String(e.get("location", "")) != location_id:
 			continue
-		if String(e["weather"]) != weather:
+		if e.has("weather") and String(e["weather"]) != weather:
 			continue
 		if e.has("day") and int(e["day"]) != day:
 			continue
@@ -165,14 +244,14 @@ static func night_match(day: int, weather: String, event: String, flags: Diction
 	return {}
 
 
-## この周回で見た限定風景の数（図鑑・デバッグ用）。
+## この周回で見た限定風景の数（図鑑・デバッグ用）。既存画面＋道マップ。
 static func seen_count(flags: Dictionary) -> int:
 	var n := 0
-	for e in all():
-		if flags.get(flag_of(String(e["id"])), false):
+	for id in ids():
+		if flags.get(flag_of(id), false):
 			n += 1
 	return n
 
 
 static func total() -> int:
-	return all().size()
+	return ids().size()
