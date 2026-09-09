@@ -17,6 +17,7 @@ var _field := {}
 var _from_id := ""      # どの画面から来たか（入口位置の決定に使う）
 var _walk_overlay: WalkOverlay  # 歩行領域の可視化（F10で切替。調整用）
 var _weather_overlay: ColorRect  # 天気の空色オーバーレイ（第9弾）
+var _weather_fx: WeatherFX       # 天気の専用ビジュアル（虹・星空・霧・雨）
 
 
 func _build_map() -> void:
@@ -88,6 +89,9 @@ func _apply_weather(weather_id: String) -> void:
 		_weather_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_weather_overlay)
 	_weather_overlay.color = info["tint"]
+	# 天気の専用ビジュアル（霧の帯・雨脚・雨上がりの虹）を色の上に重ねる。
+	_ensure_weather_fx()
+	_weather_fx.setup(_fx_mode_for(weather_id))
 	# 環境音："silence"=無音に近づける／""=屋外の既定（蝉）／それ以外はそのキー。
 	var amb := String(info["ambient"])
 	if amb == "silence":
@@ -96,6 +100,37 @@ func _apply_weather(weather_id: String) -> void:
 		AudioManager.play_ambient(amb)
 	else:
 		AudioManager.play_ambient("cicada")
+
+
+func _ensure_weather_fx() -> void:
+	if _weather_fx == null:
+		_weather_fx = WeatherFX.new()
+		_weather_fx.z_index = 25  # 色オーバーレイ(20)の上・歩行デバッグ(50)の下
+		add_child(_weather_fx)
+
+
+## 昼の天気 → 専用ビジュアルのモード。
+func _fx_mode_for(weather_id: String) -> String:
+	match weather_id:
+		Weather.FOG: return "fog"
+		Weather.RAIN, Weather.TYPHOON: return "rain"
+		Weather.SHOWER: return "rainbow"  # 夕立の晴れ間の虹＋弱い雨
+	return "none"
+
+
+## 夜の情景用ビジュアル（特別な夜・就寝前の限定風景で使う）。
+## 暗幕をかけ、快晴なら星空／天の川、荒天なら雨。
+func _apply_night_fx() -> void:
+	_ensure_weather_fx()
+	if _weather_overlay != null:
+		_weather_overlay.color = Color(0.05, 0.07, 0.16, 0.35)  # 夜の暗幕
+	var w := GameState.weather_today()
+	if w == Weather.CLEAR_MAX or w == Weather.CLEAR:
+		_weather_fx.setup("stars")
+	elif w == Weather.RAIN or w == Weather.SHOWER or w == Weather.TYPHOON:
+		_weather_fx.setup("rain")
+	else:
+		_weather_fx.setup("none")
 
 
 ## デバッグ：F10 で歩行領域オーバーレイを切替（interact/skip は親 ExploreMap に委譲）。
@@ -187,6 +222,7 @@ func _night_action() -> void:
 
 ## 就寝前の夜の限定風景を流し、終わったら翌日へ。
 func _start_sleep_scene(scene: Dictionary) -> void:
+	_apply_night_fx()  # 夜の暗幕＋星空/雨
 	set_player_can_move(false)
 	Dialogue.option_selected.connect(_on_option_selected)
 	Dialogue.finished.connect(_on_sleep_scene_finished, CONNECT_ONE_SHOT)
@@ -203,6 +239,7 @@ func _on_sleep_scene_finished() -> void:
 
 
 func _start_special_night(night: Dictionary) -> void:
+	_apply_night_fx()  # 夜の暗幕＋星空/雨（祭りの快晴夜＝天の川）
 	AudioManager.play_sfx("confirm")
 	set_player_can_move(false)
 	Dialogue.option_selected.connect(_on_option_selected)
