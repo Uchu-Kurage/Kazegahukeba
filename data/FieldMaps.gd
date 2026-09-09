@@ -54,7 +54,7 @@ static func _screens_def() -> Array:
 		# 商店街：背景に合わせ、歩けるのは「手前の石畳〜奥へ続く通り」だけ（斜め見下ろしの台形を
 		# 矩形の和集合で近似：手前ほど広く、奥ほど狭い）。奥行きスケールを強めに効かせ、キャラは
 		# 自販機くらいの背丈に（base で調整）。数値はこのデータで持ち、あとから詰めやすくする。
-		{ "id": "shops",     "name": "商店街",       "exits": [["home", "down"], ["school", "up"], ["fields", "left"], ["riverbank", "right"]],
+		{ "id": "shops",     "name": "商店街",       "exits": [["home", "down"], ["school", "up"], ["road_a", "left"], ["riverbank", "right"]],
 			"roads_override": [
 				Rect2(70, 500, 1010, 148),   # 手前：全幅の舗装（クロス点）
 				Rect2(360, 442, 560, 66),    # 通り入口（自販機の右〜右歩道の内側）
@@ -64,7 +64,7 @@ static func _screens_def() -> Array:
 			],
 			"start_override": Vector2(560, 560),
 			"pos_override": {
-				"fields": Vector2(150, 575),     # 左手前 → 田んぼ
+				"road_a": Vector2(150, 575),     # 左手前 → 畦道への道（→田んぼ）
 				"riverbank": Vector2(980, 575),  # 右手前 → 河原
 				"home": Vector2(520, 610),       # 手前中央 → 家
 				"school": Vector2(665, 360),     # 奥（通りの先）→ 学校
@@ -79,16 +79,16 @@ static func _screens_def() -> Array:
 				"pos_override": { "shops": Vector2(560, 620) },
 				"depth_override": { "y_near": 630.0, "y_far": 445.0, "near": 1.0, "far": 0.75, "base": 6.0 },
 			},
-		{ "id": "fields",    "name": "田んぼと畦道", "exits": [["shops", "right"], ["shrine", "up"], ["sunflower", "left"], ["riverbank", "down"]],
+		{ "id": "fields",    "name": "田んぼと畦道", "exits": [["road_a", "right"], ["road_b", "up"], ["sunflower", "left"], ["riverbank", "down"]],
 				"roads_override": [
 					Rect2(60, 398, 1030, 46),    # 横の畦道（十字路。左右・奥の出口が並ぶ）
 					Rect2(478, 430, 150, 214),   # 手前へ延びる縦の畦道
 				],
 				"start_override": Vector2(552, 600),
 				"pos_override": {
-					"shops": Vector2(1050, 415),     # 右 → 商店街
+					"road_a": Vector2(1050, 415),    # 右 → 畦道への道（→商店街）
 					"sunflower": Vector2(110, 415),  # 左 → ひまわり畑
-					"shrine": Vector2(552, 405),     # 奥 → 神社
+					"road_b": Vector2(552, 405),     # 奥 → 祭りへの参道（→神社）
 					"riverbank": Vector2(552, 620),  # 手前 → 河原と土手
 				},
 				"depth_override": { "y_near": 630.0, "y_far": 398.0, "near": 1.0, "far": 0.7, "base": 5.5 },
@@ -102,7 +102,7 @@ static func _screens_def() -> Array:
 				"pos_override": { "fields": Vector2(1000, 420) },  # 右 → 田んぼと畦道
 				"depth_override": { "y_near": 630.0, "y_far": 400.0, "near": 1.0, "far": 0.8, "base": 5.0 },
 			},
-		{ "id": "shrine",    "name": "神社",         "exits": [["fields", "down"], ["hill", "up"]],
+		{ "id": "shrine",    "name": "神社",         "exits": [["road_b", "down"], ["road_c", "up"]],
 				"roads_override": [
 					Rect2(120, 520, 620, 128),   # 手前の参道（中央〜左手前）
 					Rect2(120, 470, 420, 70),    # 参道が奥・左へ
@@ -111,23 +111,23 @@ static func _screens_def() -> Array:
 				],
 				"start_override": Vector2(400, 595),
 				"pos_override": {
-					"fields": Vector2(360, 610),  # 手前 → 田んぼと畦道
-					"hill": Vector2(635, 320),    # 石段の上 → 丘
+					"road_b": Vector2(360, 610),  # 手前 → 祭りへの参道（→田んぼ）
+					"road_c": Vector2(635, 320),  # 石段の上 → 丘への坂道（→丘）
 				},
 				"depth_override": { "y_near": 620.0, "y_far": 300.0, "near": 1.0, "far": 0.55, "base": 6.0 },
 			},
-		{ "id": "hill",      "name": "丘",           "exits": [["shrine", "down"]],
+		{ "id": "hill",      "name": "丘",           "exits": [["road_c", "down"]],
 				"roads_override": [
 					Rect2(80, 440, 660, 170),    # 丘の平地（左〜中央の芝生）
 					Rect2(620, 500, 460, 148),   # 右下へ下るトレイル（→神社）
 				],
 				"start_override": Vector2(400, 545),
-				"pos_override": { "shrine": Vector2(860, 600) },  # 右下のトレイル → 神社
+				"pos_override": { "road_c": Vector2(860, 600) },  # 右下のトレイル → 丘への坂道（→神社）
 				"depth_override": { "y_near": 610.0, "y_far": 440.0, "near": 1.0, "far": 0.82, "base": 5.5 },
 			},
 		# 河原と土手：仮背景 riverbank.png（土手の畦道は左〜中央の陸地、右は川）に合わせ、
 		# 歩ける帯と出口位置を実際の道に沿って上書きする（他画面は side からの自動生成のまま）。
-		{ "id": "riverbank", "name": "河原と土手", "exits": [["shops", "left"], ["estuary", "right"], ["fields", "up"]],
+		{ "id": "riverbank", "name": "河原と土手", "exits": [["shops", "left"], ["road_d", "right"], ["fields", "up"]],
 			"roads_override": [
 				Rect2(80, 320, 470, 190),    # 左の田んぼ道＋土手のふもと
 				Rect2(150, 296, 430, 130),   # 土手の上の畦道（中央へ延びる）
@@ -137,19 +137,26 @@ static func _screens_def() -> Array:
 			"pos_override": {
 				"fields": Vector2(160, 330),   # 左奥＝田んぼ方面
 				"shops": Vector2(175, 485),    # 左手前＝町へ戻る
-				"estuary": Vector2(548, 332),  # 土手の先＝下流（河口）へ
+				"road_d": Vector2(548, 332),   # 土手の先＝川沿いの道（→河口）
 			},
 			"depth_override": { "y_near": 600.0, "y_far": 300.0, "near": 1.0, "far": 0.65, "base": 5.5 },
 		},
-		{ "id": "estuary",   "name": "河口",         "exits": [["riverbank", "left"]],
+		{ "id": "estuary",   "name": "河口",         "exits": [["road_d", "left"]],
 				"roads_override": [
 					Rect2(300, 400, 500, 92),    # 中央〜左の砂州（水際）
 					Rect2(560, 470, 340, 150),   # 手前〜右の砂浜
 				],
 				"start_override": Vector2(640, 500),
-				"pos_override": { "riverbank": Vector2(330, 430) },  # 左（上流）→ 河原と土手
+				"pos_override": { "road_d": Vector2(330, 430) },  # 左（上流）→ 川沿いの道（→河原）
 				"depth_override": { "y_near": 560.0, "y_far": 400.0, "near": 1.0, "far": 0.78, "base": 5.0 },
 			},
+			# --- 通路シーン（道マップ。第9弾）＝目的地の“あいだ”を歩く。移動は枠非消費。--------
+			# 背景PNG（road_*.png）が無ければプレースホルダ描画。横スクロール/見下ろしの作り込みは
+			# 実背景の差し替え時に。ここでは歩ける帯・両端の出口・接続だけを通す（双方向）。
+			{ "id": "road_a", "name": "畦道への道", "exits": [["shops", "left"], ["fields", "right"]] },
+			{ "id": "road_b", "name": "祭りへの参道", "exits": [["fields", "down"], ["shrine", "up"]] },
+			{ "id": "road_c", "name": "丘への坂道", "exits": [["shrine", "down"], ["hill", "up"]] },
+			{ "id": "road_d", "name": "川沿いの道", "exits": [["riverbank", "left"], ["estuary", "right"]] },
 	]
 
 

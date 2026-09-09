@@ -15,6 +15,7 @@ const EXIT_PREFIX := "to_"
 
 var _field := {}
 var _from_id := ""      # どの画面から来たか（入口位置の決定に使う）
+var _road_hotspots := {}  # 道マップの基本セット風物詩スポット（"look_<id>" → WeatherScenes entry）
 var _walk_overlay: WalkOverlay  # 歩行領域の可視化（F10で切替。調整用）
 var _weather_overlay: ColorRect  # 天気の空色オーバーレイ（第9弾）
 var _weather_fx: WeatherFX       # 天気の専用ビジュアル（虹・星空・霧・雨）
@@ -41,6 +42,13 @@ func _build_map() -> void:
 	# 人／一人で過ごす場所（過ごすと枠を消費する）。id は既存の location_id（spend）。
 	for n in FieldMaps.npcs_of(String(_field["id"])):
 		add_spot(String(n["spend"]), String(n["name"]), String(n["who"]), n["pos"])
+
+	# 道マップ（第9弾）：基本セットの風物詩を「調べどころ」として置く（枠非消費・常設・再閲覧可）。
+	if Roads.is_road(String(_field["id"])):
+		for e in WeatherScenes.standing_at(String(_field["id"])):
+			var sid := "look_%s" % String(e["id"])
+			add_spot(sid, WeatherScenes.title_of(String(e["id"])), "", e["pos"])
+			_road_hotspots[sid] = e
 
 
 ## プレイヤー生成後：道の上だけ歩けるよう制限し、来た画面に対応する入口に立たせる。
@@ -73,6 +81,8 @@ func _ready_done() -> void:
 	GameState.game_ended.connect(_on_game_ended)
 	# 朝の家で、明日の予報を「世界に溶けた形」で一度だけ開示（ラジオ／朝刊／祖母）。
 	_maybe_morning_forecast()
+	# 道マップ（第9弾）：入場時に独白・見逃せる一品・遭遇を差し込む（すべて枠非消費）。
+	_maybe_road_intro()
 
 
 func _player_start() -> Vector2:
@@ -125,6 +135,65 @@ func _forecast_nodes() -> Array:
 			return [{ "speaker": "ラジオ", "text": "……あすの天気は、%sでしょう。" % phrase }]
 		_:
 			return [{ "speaker": "", "text": "朝刊の予報欄に目をやる。あすは%s、とある。" % phrase }]
+
+
+# --- 道マップ（第9弾）＝通路シーンの独白・風物詩・遭遇（すべて枠非消費）------------
+
+## 入場時に一度だけ流す：見逃せる一品（一期一会）＋遭遇（1日1回）＋独白（1日1回）。
+## 枠は消費しない（choose_location を呼ばない）。約束が絡む遭遇は promise 効果で予定表に記帳される。
+func _maybe_road_intro() -> void:
+	var rid := String(_field.get("id", ""))
+	if not Roads.is_road(rid):
+		return
+	if GameState.phase == GameState.Phase.NIGHT:
+		return
+	var day := GameState.day_index
+	var seq: Array = []
+	# 見逃せる一品（天気/日付限定・一度きり）。図鑑に記録し、以後は出ない。
+	var scene := WeatherScenes.match(day, rid, GameState.weather_today(), GameState.flags)
+	if not scene.is_empty():
+		seq.append_array(Story.flatten(scene["script"], GameState.flags))
+		seq.append({ "effect": { "set": { WeatherScenes.flag_of(String(scene["id"])): true } } })
+	# 遭遇（1日1回。葵は喪失後に現れない＝Roads 側で空を返す）。
+	var enc_key := "road_enc_%s_%d" % [rid, day]
+	if not GameState.flags.get(enc_key, false):
+		var enc := Story.flatten(Roads.encounter(rid, GameState), GameState.flags, GameState)
+		if not enc.is_empty():
+			seq.append_array(enc)
+			GameState.set_flag(enc_key, true)
+	# 独白（1日1回。他に何も無くても、道の性格を一言）。
+	var mono_key := "road_mono_%s_%d" % [rid, day]
+	if not GameState.flags.get(mono_key, false):
+		var mono := Roads.monologue(rid, GameState)
+		if not mono.is_empty():
+			seq.append_array(mono)
+			GameState.set_flag(mono_key, true)
+	if seq.is_empty():
+		return
+	set_player_can_move(false)
+	Dialogue.option_selected.connect(_on_option_selected)
+	Dialogue.finished.connect(_on_road_seq_finished, CONNECT_ONE_SHOT)
+	Dialogue.start(seq)
+
+
+## 道の風物詩（基本セット・常設）を眺める。図鑑に記録するが、道の風景としては残る（再閲覧可）。
+func _inspect_hotspot(spot) -> void:
+	var e: Dictionary = _road_hotspots.get(spot.location_id, {})
+	if e.is_empty():
+		return
+	AudioManager.play_sfx("confirm")
+	GameState.set_flag(WeatherScenes.flag_of(String(e["id"])), true)  # 図鑑へ（常設なので消えない）
+	set_player_can_move(false)
+	Dialogue.finished.connect(_on_road_seq_finished, CONNECT_ONE_SHOT)
+	Dialogue.start(Story.flatten(e["script"], GameState.flags))
+
+
+## 道の会話（独白・遭遇・風物詩）が終わったとき。枠は消費しない（choose_location を呼ばない）。
+func _on_road_seq_finished() -> void:
+	if Dialogue.option_selected.is_connected(_on_option_selected):
+		Dialogue.option_selected.disconnect(_on_option_selected)
+	set_player_can_move(true)
+	_refresh_prompt()
 
 
 ## 今日の天気を反映：画面全体に薄い色を重ね（雰囲気）、環境音を切り替える。
@@ -206,6 +275,8 @@ func _on_interact(spot) -> void:
 	var ex := _exit_by_id(spot.location_id)
 	if not ex.is_empty():
 		_take_exit(ex)
+	elif _road_hotspots.has(spot.location_id):
+		_inspect_hotspot(spot)  # 道の風物詩を眺める（枠非消費・常設）
 	else:
 		_spend(spot)  # 人／一人で過ごす場所 → 枠を消費して既存の会話・イベントへ
 

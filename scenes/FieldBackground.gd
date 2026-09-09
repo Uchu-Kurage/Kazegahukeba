@@ -79,5 +79,15 @@ func _draw_placeholder() -> void:
 		"hill":
 			draw_rect(Rect2(0, 0, W, H), Color(0.44, 0.58, 0.36))         # 丘の草
 			draw_rect(Rect2(0, 0, W, 120), Color(0.55, 0.72, 0.90))       # 見晴らす空
+		# 通路シーン（道マップ・第9弾）の仮背景。実背景の差し替え前提。
+		"road_a", "road_b":  # 見下ろし＝畦道／参道
+			draw_rect(Rect2(0, 0, W, H), Color(0.52, 0.62, 0.36))         # 田畑・木々の緑
+			draw_rect(Rect2(0, 0, W, 90), Color(0.60, 0.74, 0.88))        # 奥の空
+		"road_c":  # 横スクロール＝登坂（上ほど空、下に町）
+			draw_rect(Rect2(0, 0, W, H), Color(0.46, 0.60, 0.38))
+			draw_rect(Rect2(0, 0, W, 200), Color(0.56, 0.73, 0.92))       # 見晴らす空
+		"road_d":  # 横スクロール＝川沿い
+			draw_rect(Rect2(0, 0, W, H), Color(0.38, 0.50, 0.30))         # 河原の草
+			draw_rect(Rect2(0, 60, W, 130), Color(0.32, 0.54, 0.72))      # 川
 		_:
 			draw_rect(Rect2(0, 0, W, H), Color(0.40, 0.50, 0.34))
