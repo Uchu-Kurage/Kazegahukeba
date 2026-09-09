@@ -13,6 +13,7 @@ var _hint: Label
 
 func _ready() -> void:
 	HUD.set_shown(false)     # 裏エンド中はカレンダー等を隠す
+	GameState.day_index = GameState.TOTAL_DAYS  # 9月1日（sep1）＝特別枠の風物詩を許可する日にする
 	AudioManager.stop_bgm()   # 蝉が減った静けさ（涼しい秋の空気）
 	AudioManager.stop_ambient()
 	_bg = UraBackground.new()
@@ -27,6 +28,8 @@ func _run() -> void:
 		_bg.set_tone(String(scene["tone"]))
 		Dialogue.start(scene["nodes"])
 		await Dialogue.finished
+	# 風物詩の最後の一枠（第10弾 §6）＝9月1日でのみ発火。「世界は、続くらしい」＝感情のオチ。
+	GameState.discover_fubutsushi("shingari_no_natsu")
 	# 到達を記録（周回記録の「裏エンド」に反映）。解放とは別に「見た」印。
 	SaveData.mark_ending(Endings.SECRET)
 	_show_end()

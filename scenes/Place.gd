@@ -84,6 +84,14 @@ func _on_option_selected(option: Dictionary) -> void:
 	# 8/31 の葵の約束（§5-3）：場所は傾きの着地から動的に決まる。
 	if option.get("promise_aoi_final", false):
 		GameState.make_aoi_final_promise()
+	# 風物詩の発見（第10弾）：イベント／会話から明示発火（id 文字列または配列）。
+	if option.has("discover"):
+		var d = option["discover"]
+		if d is Array:
+			for x in d:
+				GameState.discover_fubutsushi(String(x))
+		else:
+			GameState.discover_fubutsushi(String(d))
 
 
 func _on_talk_finished() -> void:

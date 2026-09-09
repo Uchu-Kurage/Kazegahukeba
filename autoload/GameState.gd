@@ -28,6 +28,7 @@ signal day_changed(day_index: int)   ## 新しい日になった
 signal phase_changed(phase: Phase)   ## 時間帯が変わった
 signal game_ended()                  ## 最終日を越えた（＝世界の終わり）
 signal schedule_changed()            ## 予定表（約束・日記）が変わった（予定表UIが購読して再描画）
+signal fubutsushi_discovered(id: String)  ## 風物詩を新しく見つけた（第10弾。絵日記帳が購読して再描画）
 
 ## --- 実行時の状態 ---
 var day_index := 0                   ## 0 = 7/23、1 = 7/24 ...、39 = 8/31
@@ -71,6 +72,10 @@ var promises := {}
 ## 過去マス用の絵日記。 day_index(int) -> { weather, note }。日送り時に確定する（§4）。
 var diary := {}
 
+## 夏の風物詩コレクション（第10弾）。 id(String) -> { collected(bool), day(int) }。
+## その夏に集めた記録＝プレイスルー単位（周回でリセット）。マスタは Fubutsushi.json。
+var collected_fubutsushi := {}
+
 
 func _ready() -> void:
 	start_new_run()
@@ -92,6 +97,7 @@ func start_new_run() -> void:
 	last_forecast_day = -1
 	promises.clear()
 	diary.clear()
+	collected_fubutsushi.clear()  # 風物詩は「その夏に集めた記録」＝周回でリセット（第10弾 §7）
 	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -113,6 +119,7 @@ func snapshot() -> Dictionary:
 		"last_forecast_day": last_forecast_day,
 		"promises": promises.duplicate(true),
 		"diary": diary.duplicate(true),
+		"fubutsushi": collected_fubutsushi.duplicate(true),
 	}
 
 
@@ -133,6 +140,7 @@ func restore(data: Dictionary) -> void:
 	last_forecast_day = int(data.get("last_forecast_day", -1)) if _is_num(data.get("last_forecast_day")) else -1
 	promises = _dict_field(data, "promises", true)
 	diary = _dict_field(data, "diary", true)
+	collected_fubutsushi = _dict_field(data, "fubutsushi", true)
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -321,6 +329,128 @@ func char_display(id: String) -> String:
 		"yufu": return "由布"
 		"aoi": return "葵"
 	return id
+
+
+# --- 夏の風物詩コレクション（第10弾）--------------------------------------
+
+## 収集済みか。
+func is_collected(id: String) -> bool:
+	var e: Dictionary = collected_fubutsushi.get(id, {})
+	return bool(e.get("collected", false))
+
+
+## マスタのエントリを返す（無ければ空）。
+func get_entry(id: String) -> Dictionary:
+	return Fubutsushi.entry_of(id)
+
+
+## 風物詩を1件収集する（会話・イベント・環境発見の共通API）。
+## 収集済みは無視。特別枠 sep1_only は 9/1（裏エンド）以外では絶対に取得できない（§6/§9）。
+func discover_fubutsushi(id: String) -> bool:
+	if id == "" or is_collected(id):
+		return false
+	var e := Fubutsushi.entry_of(id)
+	if e.is_empty():
+		return false
+	if String(e.get("period", "any")) == "sep1_only" and not _is_sep1():
+		return false
+	collected_fubutsushi[id] = { "collected": true, "day": day_index }
+	print("[fubutsushi] %s (d%d)" % [id, day_index])
+	fubutsushi_discovered.emit(id)
+	_autosave()
+	return true
+
+
+## 環境発見（ambient）：その場所・時間帯・天気・期間に合う未収集の風物詩を1件だけ拾う。
+## 1回の入場で最大1件（静けさ優先）。複数該当時は cycle="B"（今年かぎり）優先→若いid（並び順）。
+## 見つけた id を返す（無ければ ""）。place は Fubutsushi 側の場所トークン。
+func evaluate_ambient_fubutsushi(place: String) -> String:
+	var best := ""
+	var best_is_b := false
+	for id in Fubutsushi.ordered_ids():
+		var e := Fubutsushi.entry_of(id)
+		if String(e.get("trigger", "ambient")) != "ambient":
+			continue
+		if is_collected(id):
+			continue
+		if not _fubutsushi_matches(e, place):
+			continue
+		var is_b := String(e.get("cycle", "")) == "B"
+		if best == "":
+			best = id
+			best_is_b = is_b
+		elif is_b and not best_is_b:
+			best = id  # B（今年かぎり）を優先的に拾う
+			best_is_b = true
+	if best != "":
+		discover_fubutsushi(best)
+	return best
+
+
+## スロット一致（空配列＝any）。時間帯・天気は現在状態のトークン集合と交差判定。
+func _fubutsushi_matches(e: Dictionary, place: String) -> bool:
+	var places: Array = e.get("places", [])
+	if not (places.is_empty() or places.has(place)):
+		return false
+	var times: Array = e.get("time", [])
+	if not times.is_empty() and _intersects(times, _time_tokens(phase)) == false:
+		return false
+	var ws: Array = e.get("weather", [])
+	if not ws.is_empty() and _intersects(ws, _weather_tokens(weather_today())) == false:
+		return false
+	return _period_ok(String(e.get("period", "any")))
+
+
+func _intersects(a: Array, b: Array) -> bool:
+	for x in a:
+		if x in b:
+			return true
+	return false
+
+
+## 時間帯（Phase）→ マスタの time トークン集合。3フェーズを緩めに写像する。
+func _time_tokens(p: Phase) -> Array:
+	match p:
+		Phase.MORNING: return ["early_morning", "day"]
+		Phase.AFTERNOON: return ["day", "evening"]
+		Phase.NIGHT: return ["evening", "night"]
+	return []
+
+
+## 実際の天気 → マスタの weather トークン集合（clear/rain/thunder/after_rain）。
+func _weather_tokens(w: String) -> Array:
+	match w:
+		Weather.CLEAR, Weather.CLEAR_MAX: return ["clear"]
+		Weather.RAIN: return ["rain"]
+		Weather.SHOWER: return ["rain", "after_rain"]  # 夕立＝雨＋雨上がり
+		Weather.TYPHOON, Weather.TYPHOON_PRE: return ["rain", "thunder"]
+	return []  # 曇り・夕焼け・霧は天気トークンなし（天気指定のない風物詩のみ該当）
+
+
+## 期間条件を day_index レンジに写像（起点 7/23 の暦。8/1=day9 … 8/31=day39）。
+func _period_ok(period: String) -> bool:
+	match period:
+		"any", "": return true
+		"early_aug": return day_index >= 9 and day_index <= 18    # 8/1〜8/10
+		"mid_aug": return day_index >= 19 and day_index <= 28     # 8/11〜8/20
+		"late_aug": return day_index >= 29 and day_index <= 39    # 8/21〜8/31
+		"obon": return day_index >= 21 and day_index <= 28        # お盆〜夏祭り
+		"sep1_only": return _is_sep1()
+	return true
+
+
+## 9月1日（＝8/31 を越えた裏エンドの日）か。特別枠の取得可否に使う。
+func _is_sep1() -> bool:
+	return day_index >= TOTAL_DAYS
+
+
+## 収集数（内部・デバッグ用。UI には数値を前面に出さない方針）。
+func collected_count() -> int:
+	var n := 0
+	for id in collected_fubutsushi:
+		if is_collected(id):
+			n += 1
+	return n
 
 
 ## フラグを立てる／下ろす（会話の選択肢などから呼ぶ）。

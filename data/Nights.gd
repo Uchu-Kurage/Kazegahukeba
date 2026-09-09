@@ -82,6 +82,9 @@ static func _weather_night(night: Dictionary, state) -> Array:
 		return []
 	var out := Story.flatten(e["script"], state.flags)
 	out.append({ "effect": { "set": { WeatherScenes.flag_of(String(e["id"])): true } } })
+	# 夜の限定風景に紐づく風物詩（例：天の川）があれば同時に収集（第10弾）。
+	if e.has("discover"):
+		out.append({ "effect": { "discover": e["discover"] } })
 	return out
 
 
@@ -113,8 +116,13 @@ static func _shared_script(night: Dictionary, state) -> Array:
 	})
 	var head := [
 		{ "speaker": "", "text": "%s。浴衣、出店、遠くで鳴る太鼓。" % String(night["name"]) },
-		{ "text": "この夜を、誰と過ごす？", "choices": choices },
 	]
+	# 夏祭りの夜は、縁日の風物詩をまとめて収集（第10弾。誰と過ごすかに関わらず、その場の情景）。
+	if id == "festival":
+		head.append({ "effect": { "discover": [
+			"natsumatsuri", "bonodori", "bonodori_taiko", "ramune", "mukaebi", "hanabi_taikai",
+		] } })
+	head.append({ "text": "この夜を、誰と過ごす？", "choices": choices })
 	return Story.flatten(head, state.flags)
 
 
