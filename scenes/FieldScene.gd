@@ -81,39 +81,45 @@ func _ready_done() -> void:
 	GameState.phase_changed.connect(_on_phase_changed.unbind(1))
 	GameState.day_changed.connect(_on_day_changed)
 	GameState.game_ended.connect(_on_game_ended)
-	# 朝の家で、明日の予報を「世界に溶けた形」で一度だけ開示（ラジオ／朝刊／祖母）。
-	_maybe_morning_forecast()
-	# 道マップ（第9弾）：入場時に独白・見逃せる一品・遭遇を差し込む（すべて枠非消費）。
-	_maybe_road_intro()
-	# 風物詩（第10弾）：入場時に環境発見を1回だけ判定（天気・時間帯・期間で出し分け・枠非消費）。
-	_maybe_ambient_fubutsushi()
-	# 第10弾：部屋（家）の午前／午後は「今日はどこへ行こうか」＝見下ろしマップへ。
-	#   予報・風物詩などの会話が出ていれば、それが終わってから開く。夜は就寝（下の _on_interact）。
-	if String(_field["id"]) == Areas.HOME and GameState.phase != GameState.Phase.NIGHT:
-		_leave_room()
+	# 第10弾：部屋（家）の午前／午後は「朝の独白＋予報＋部屋の風物詩」を流してから見下ろしマップへ。
+	#   夜は就寝（下の _on_interact）。それ以外の画面（エリア内）は道・風物詩の演出だけ。
+	if String(_field["id"]) == Areas.HOME:
+		if GameState.phase != GameState.Phase.NIGHT:
+			_home_intro_and_map()
+		else:
+			_maybe_ambient_fubutsushi()  # 夜の家：ヤモリ・網戸ごしの風など
+	else:
+		# 道マップ（第9弾）：入場時に独白・見逃せる一品・遭遇（すべて枠非消費）。
+		_maybe_road_intro()
+		# 風物詩（第10弾）：入場時に環境発見を1回だけ（天気・時間帯・期間で出し分け・枠非消費）。
+		_maybe_ambient_fubutsushi()
 
 
 func _player_start() -> Vector2:
 	return _field.get("start", Vector2(576, 365))
 
 
-## 朝、家にいるときに一度だけ「明日の予報」をさりげなく伝える（第9弾・予報演出のリズム）。
-## 山場の前日は確実に・印象的に。通常日は日替わりの情報源でさらっと（外れることもある）。
-func _maybe_morning_forecast() -> void:
-	if GameState.phase != GameState.Phase.MORNING:
-		return
-	if String(_field.get("id", "")) != "home":
-		return
-	if GameState.last_forecast_day == GameState.day_index:
-		return
-	if GameState.day_index + 1 >= GameState.TOTAL_DAYS:
-		return  # 明日がない（最終日）
-	GameState.last_forecast_day = GameState.day_index
-	var nodes := _forecast_nodes()
+## 部屋（家）の朝／昼：独白 → 明日の予報（朝・一日一回・山場は的中）→ 部屋の風物詩（環境発見）を
+## ひと続きに流し、終わったら見下ろしマップを開く（＝行き先を選ぶ）。すべて枠非消費。
+func _home_intro_and_map() -> void:
+	var nodes: Array = RoomLines.intro(GameState)  # 朝の独白（天気・時期・約束で出し分け）
+	# 明日の予報（世界に溶けた開示）＝朝だけ・一日一回・最終日は出さない。
+	if GameState.phase == GameState.Phase.MORNING \
+			and GameState.last_forecast_day != GameState.day_index \
+			and GameState.day_index + 1 < GameState.TOTAL_DAYS:
+		var fc := _forecast_nodes()
+		if not fc.is_empty():
+			GameState.last_forecast_day = GameState.day_index
+			nodes.append_array(fc)
+	# 部屋の風物詩（朝顔・扇風機・ヤモリ等）を環境発見（枠非消費・一期一会）。
+	var aid := GameState.evaluate_ambient_fubutsushi("home")
+	if aid != "":
+		nodes.append({ "speaker": "", "text": String(Fubutsushi.entry_of(aid).get("record_text", "")) })
 	if nodes.is_empty():
+		Nav.go_to_overworld()
 		return
 	set_player_can_move(false)
-	Dialogue.finished.connect(func() -> void: set_player_can_move(true), CONNECT_ONE_SHOT)
+	Dialogue.finished.connect(func() -> void: Nav.go_to_overworld(), CONNECT_ONE_SHOT)
 	Dialogue.start(nodes)
 
 
@@ -353,14 +359,6 @@ func _on_spend_finished(location_id: String) -> void:
 	GameState.spend_in_area(location_id)
 	set_player_can_move(true)
 	_refresh_prompt()
-
-
-## 部屋（家）で見下ろしマップを開く。会話が出ていれば終わってから、無ければすぐに。
-func _leave_room() -> void:
-	if Dialogue.is_active():
-		Dialogue.finished.connect(func() -> void: Nav.go_to_overworld(), CONNECT_ONE_SHOT)
-	else:
-		Nav.go_to_overworld()
 
 
 ## 家に帰る＝その半日を終える（phase を進める）→ 部屋へ一発で戻る（道の逆走なし）。
