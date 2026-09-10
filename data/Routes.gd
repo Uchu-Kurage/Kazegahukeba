@@ -54,17 +54,14 @@ static func all() -> Array:
 		{
 			"id": KUMA, "character": KUMA, "location": "riverside",
 			"milestones": [
-				# --- 序盤（出会い直し＋夢 → 河口の約束 → あがき開始）---
-				_m("dream",   [],          AFF_EARLY_1, Timeline.EARLY_START, Timeline.EARLY_END),
-				_m("promise", ["dream"],   AFF_EARLY_2, Timeline.EARLY_START, Timeline.EARLY_END),
-				_m("struggle",["promise"], AFF_EARLY_3, Timeline.EARLY_START, Timeline.EARLY_END),
-				# --- 中盤（前借りの空しさ → 河口志向 → 選択A/B/C）---
-				_m("hollow",  ["struggle"],AFF_MID_1,   Timeline.MID_START,   Timeline.MID_END),
-				_m("river",   ["hollow"],  AFF_MID_2,   Timeline.MID_START,   Timeline.MID_END),
-				_m("stance",  ["river"],   AFF_STANCE,  Timeline.MID_START,   Timeline.MID_END),
-				# --- 終盤（折れる瞬間 → 気づき）---
-				_m("broke",   ["stance"],  AFF_LATE_1,  Timeline.LATE_START,  Timeline.LATE_END),
-				_m("realize", ["broke"],   AFF_LATE_2,  Timeline.LATE_START,  Timeline.LATE_END),
+				# --- 日常（第11弾本文。KumaScript に集約）---
+				_m("kawara",    [],           AFF_EARLY_1, Timeline.EARLY_START, Timeline.EARLY_END),  # 河原・出会い直し（基準）
+				_m("shotengai", ["kawara"],   AFF_EARLY_2, Timeline.EARLY_START, Timeline.EARLY_END),  # 商店街・あがきの始まり
+				_m("hanabi",    ["shotengai"],AFF_EARLY_3, Timeline.EARLY_START, Timeline.MID_END),    # 河原・花火（三人・親密ピーク）
+				# --- 節目（あがきが軋む → 折れる瞬間 → 気づき）---
+				_m("agaki",     ["hanabi"],   AFF_MID_1,   Timeline.MID_START,   Timeline.MID_END),    # 報われないあがき（球磨が浮く）
+				_m("break",     ["agaki"],    AFF_MID_2,   Timeline.MID_START,   Timeline.LATE_END),   # 折れる瞬間（青さの正体・三段選択）
+				_m("kizuki",    ["break"],    AFF_LATE_1,  Timeline.LATE_START,  Timeline.LATE_END),   # 終盤の気づき（由布と和解）
 			],
 		},
 		{

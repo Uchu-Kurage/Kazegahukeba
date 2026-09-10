@@ -44,6 +44,31 @@ const LEAN_TO_END := {
 	LEAN_CLOSENESS: AOI_END_HOME,
 }
 
+## 球磨ルートの三分岐（8/31）。三つは対等＝優劣・正解・失敗はない（実装指示 第11弾 §2-1）。
+## 命名に bad/fail/best 等の色をつけない。着地3（kuma_end_yufu）を失敗エンドとして扱わない
+## （ビターだが「球磨は一人じゃなかった」救いを持つ＝§5）。
+const KUMA_END_FRIEND := "kuma_end_friend"      # 友情を貫く（王道）※終盤の花火＝序盤との対比
+const KUMA_END_STRUGGLE := "kuma_end_struggle"  # あがきを共にする（青さを青さのまま肯定）
+const KUMA_END_YUFU := "kuma_end_yufu"          # 球磨と由布が近づく（ビター・でも温かい）
+
+## 球磨ルートの選択が積む記録キー（本文 KumaScript の "count" タグが増やす）。§2-2。
+## 方向（二種）＋関わりの量。着地は「量の下限 → 由布／超えたら方向」で決まる（葵の純方向とは違う）。
+const KUMA_STAY := "kuma_stay"          # 折れる球磨に寄り添う方向 → 着地1（友情）へ
+const KUMA_PUSH := "kuma_push"          # 「まだ終わってない」と焚きつける方向 → 着地2（あがき）へ
+const KUMA_ENGAGE := "kuma_engagement"  # 球磨との関わりの量（特に折れる瞬間に立ち会ったか）
+
+## 方向が同点のときの優先順位（先頭が優先＝§2-3。まず破綻なく1つに決まればよい。理由は後で調整）。
+const KUMA_DIR_PRIORITY := [KUMA_STAY, KUMA_PUSH]
+## 方向 → 着地の対応（直書きしない＝§5）。
+const KUMA_DIR_TO_END := {
+	KUMA_STAY: KUMA_END_FRIEND,
+	KUMA_PUSH: KUMA_END_STRUGGLE,
+}
+## 関わりの量の下限。これ“未満”なら着地3（由布が隣にいた）＝方向は見ない（§2-2）。
+## 折れる瞬間・気づきに立ち会えば越える／早い段階で離れると越えない、程よい仮値（後で調整＝§2-3）。
+const KUMA_ENGAGE_MIN := 3
+
+
 ## 三分岐の着地 → 8/31 に予定表へ載る「場所」id（第9弾 §5-3）。
 ## 予定表の無言の一マスが、着地（＝別れの温度）を可視化する。home は Locations にあるが
 ## himawari/hill は着地専用の場所名（GameState.place_name が補完表示する）。
@@ -61,7 +86,7 @@ static func aoi_landing_place(end_id: String) -> String:
 ## 全ノーマル・エンディング（球磨×3＋由布×3＋葵の三分岐＋記録者エンド二種）。全到達で裏エンド解放。
 ## 葵は三分岐のいずれも "aoi_" 始まり＝裏エンド判定では「葵ルート到達」で1つと数える（§3）。
 const NORMAL_IDS := [
-	"kuma_friendship", "kuma_struggle", "kuma_bitter",
+	KUMA_END_FRIEND, KUMA_END_STRUGGLE, KUMA_END_YUFU,
 	"yufu_cross", "yufu_childhood", "yufu_beside",
 	AOI_END_HIMAWARI, AOI_END_HILL, AOI_END_HOME,
 	WITNESS, SOLO,
@@ -126,9 +151,11 @@ static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, vi
 		var depth := _route_depth(route_id, flags)
 		if depth < DEEP_MILESTONES:
 			continue  # 節目が浅い＝主軸とは見なさない
-		# 球磨・由布は中盤の立場(stance)を選んで初めて主軸とみなす（従来どおり）。
-		# 葵は着地を“方向”で決めるルート＝深さのみで主軸判定し、立場は問わない（§2-2）。
-		if route_id != Routes.AOI and int(stance.get(route_id, GameState.Stance.NONE)) == GameState.Stance.NONE:
+		# 由布は中盤の立場(stance)を選んで初めて主軸とみなす（従来どおり）。
+		# 葵・球磨は着地を“方向”で決めるルート＝深さのみで主軸判定し、立場は問わない
+		#   （葵＝第8弾 §2-2／球磨＝第11弾 §2-2。球磨に stance 節目はない）。
+		if route_id != Routes.AOI and route_id != Routes.KUMA \
+				and int(stance.get(route_id, GameState.Stance.NONE)) == GameState.Stance.NONE:
 			continue
 		var aff := int(affinity.get(route_id, 0))
 		if depth > best_depth or (depth == best_depth and aff > best_aff):
@@ -145,6 +172,10 @@ static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, vi
 	if best_route == Routes.AOI:
 		return _aoi_ending(aoi_lean)
 
+	# 球磨ルートが主軸 → 「関わりの量の下限 → 由布／超えたら方向」で三分岐（§2-2。三つは対等）。
+	if best_route == Routes.KUMA:
+		return _kuma_ending(counters)
+
 	var st_best := int(stance.get(best_route, GameState.Stance.NONE))
 	return _route_ending(best_route, st_best, int(affinity.get(best_route, 0)))
 
@@ -160,6 +191,23 @@ static func _aoi_ending(aoi_lean: Dictionary) -> String:
 			best_val = v
 			best_dir = dir
 	return String(LEAN_TO_END[best_dir])
+
+
+## 球磨ルートの三分岐（8/31）。葵と違い「関わりの量」の下限を先に見る二段構え（§2-2）。
+##   1) 関わりの量が下限未満 → kuma_end_yufu（空白を由布が埋め、折れる球磨の隣に由布がいた）。
+##      ※これは「失敗」ではない。方向は見ない。ビターだが「球磨は一人じゃなかった」救いを持つ（§5）。
+##   2) 下限以上 → stay / push の高い方の方向へ。同点は KUMA_DIR_PRIORITY の先頭（stay）が優先。
+static func _kuma_ending(counters: Dictionary) -> String:
+	if int(counters.get(KUMA_ENGAGE, 0)) < KUMA_ENGAGE_MIN:
+		return KUMA_END_YUFU
+	var best_dir := KUMA_DIR_PRIORITY[0]
+	var best_val := -1
+	for dir in KUMA_DIR_PRIORITY:  # 優先順位の高い方から見るので、同点は先頭が残る
+		var v := int(counters.get(dir, 0))
+		if v > best_val:
+			best_val = v
+			best_dir = dir
+	return String(KUMA_DIR_TO_END[best_dir])
 
 
 ## 「関わりの総量スコア」＝他者とどれだけ関わったか。一人で過ごす活動は加えない（設計意図）。
@@ -200,14 +248,10 @@ static func _route_depth(route_id: String, flags: Dictionary) -> int:
 
 
 ## ルート×立場×関係値 → 着地。narrative なので各ルートの対応はここに持つ（数値は定数）。
-## ※葵ルートは立場ではなく「傾き」で決めるので _aoi_ending を使う（ここには来ない）。
+## ※葵ルートは「傾き」で _aoi_ending、球磨ルートは「量＋方向」で _kuma_ending が決める（ここには来ない）。
+##   ここに来るのは立場(stance)で決まる由布ルートのみ。
 static func _route_ending(route_id: String, st: int, aff: int) -> String:
 	match route_id:
-		Routes.KUMA:
-			match st:
-				GameState.Stance.A: return "kuma_struggle"                                   # 一緒にあがいた
-				GameState.Stance.B: return "kuma_friendship" if aff >= AFF_DEEP else "kuma_struggle"  # 寄り添い
-				GameState.Stance.C: return "kuma_bitter"                                     # 諫めた／すれ違い
 		Routes.YUFU:
 			match st:
 				GameState.Stance.A: return "yufu_cross" if aff >= AFF_DEEP else "yufu_childhood"  # 一線を越える
@@ -218,9 +262,9 @@ static func _route_ending(route_id: String, st: int, aff: int) -> String:
 
 static func title_of(id: String) -> String:
 	match id:
-		"kuma_friendship": return "友を見送る夏"
-		"kuma_struggle": return "あがきの果てに"
-		"kuma_bitter": return "すれ違いの夏"
+		KUMA_END_FRIEND: return "友を、覚えている"
+		KUMA_END_STRUGGLE: return "あがきの、果てまで"
+		KUMA_END_YUFU: return "遠くから、見送る"
 		"yufu_cross": return "幼なじみの、その先へ"
 		"yufu_childhood": return "言えなかった夏"
 		"yufu_beside": return "そばにいた夏"
@@ -236,26 +280,9 @@ static func title_of(id: String) -> String:
 ## エンディングで流す会話ノード（Dialogue にそのまま渡せる）。テキストは仮置き。
 static func script_of(id: String) -> Array:
 	match id:
-		"kuma_friendship":
-			return [
-				{ "speaker": "", "text": "八月の終わり。空はほとんど白く褪せている。" },
-				{ "speaker": "球磨", "text": "……お前がいてくれて、よかったよ。" },
-				# 特別な夜（最後の花火を球磨と過ごした）を見ていれば、結末に一言そえる（§4）。
-				{ "if_flag": "kuma_last_fireworks", "then": [
-					{ "speaker": "球磨", "text": "最後の花火、お前と見れてよかった。……あれで、十分だ。" },
-				]},
-				{ "speaker": "", "text": "叶わなかった夢も、覚えている限り、消えはしない。" },
-			]
-		"kuma_struggle":
-			return [
-				{ "speaker": "球磨", "text": "なあ。俺たち、最後までかっこ悪かったな。……でも、悪くなかった。" },
-				{ "speaker": "", "text": "青さを、青さのまま終わらせる。それも一つの夏だ。" },
-			]
-		"kuma_bitter":
-			return [
-				{ "speaker": "球磨", "text": "……お前は、俺のこと、分かってくれると思ってた。" },
-				{ "speaker": "", "text": "わだかまりは解けないまま、八月が終わる。" },
-			]
+		KUMA_END_FRIEND, KUMA_END_STRUGGLE, KUMA_END_YUFU:
+			# 球磨ルートの三分岐は本文層（KumaScript）に持つ（葵と対の構造。第11弾 §2-4）。
+			return KumaScript.ending(id)
 		"yufu_cross":
 			return [
 				{ "speaker": "由布", "text": "……幼なじみじゃ、なくなっちゃうね。でも、いい。最後に、あなたと。" },
