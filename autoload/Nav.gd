@@ -43,3 +43,9 @@ func go_to_field(field_id: String, from_id: String = "") -> void:
 
 func go_to_title() -> void:
 	Fader.change_scene("res://scenes/Title.tscn")
+
+
+## 見下ろしマップ（第10弾）＝部屋で「今日はどこへ行こうか」と行き先エリアを選ぶ。
+## 家はエリアではないので載せない。選んだエリアの入口画面へ飛ぶ（枠はエリア選択で確定）。
+func go_to_overworld() -> void:
+	Fader.change_scene("res://scenes/Overworld.tscn")

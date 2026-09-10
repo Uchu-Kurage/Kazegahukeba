@@ -35,13 +35,15 @@ func _build_map() -> void:
 	bg.field_id = String(_field["id"])
 	add_child(bg)
 
-	# 出口（画面端の道の切れ目）。ExploreMap の対象(LocationSpot)を流用して置く。
+	# 出口（画面端の道の切れ目）。第10弾：エリア内の画面へ続く出口だけを残す（エリア間は歩かせない）。
 	for ex in _field.get("exits", []):
-		add_spot(String(ex["id"]), String(ex["label"]), "", ex["pos"])
+		if Areas.same_area(String(_field["id"]), String(ex["to"])):
+			add_spot(String(ex["id"]), String(ex["label"]), "", ex["pos"])
 
-	# 人／一人で過ごす場所（過ごすと枠を消費する）。id は既存の location_id（spend）。
-	for n in FieldMaps.npcs_of(String(_field["id"])):
-		add_spot(String(n["spend"]), String(n["name"]), String(n["who"]), n["pos"])
+	# 人／一人で過ごす場所（過ごす＝半日の本イベント。家は起点なので置かない）。
+	if String(_field["id"]) != Areas.HOME:
+		for n in FieldMaps.npcs_of(String(_field["id"])):
+			add_spot(String(n["spend"]), String(n["name"]), String(n["who"]), n["pos"])
 
 	# 道マップ（第9弾）：基本セットの風物詩を「調べどころ」として置く（枠非消費・常設・再閲覧可）。
 	if Roads.is_road(String(_field["id"])):
@@ -85,6 +87,10 @@ func _ready_done() -> void:
 	_maybe_road_intro()
 	# 風物詩（第10弾）：入場時に環境発見を1回だけ判定（天気・時間帯・期間で出し分け・枠非消費）。
 	_maybe_ambient_fubutsushi()
+	# 第10弾：部屋（家）の午前／午後は「今日はどこへ行こうか」＝見下ろしマップへ。
+	#   予報・風物詩などの会話が出ていれば、それが終わってから開く。夜は就寝（下の _on_interact）。
+	if String(_field["id"]) == Areas.HOME and GameState.phase != GameState.Phase.NIGHT:
+		_leave_room()
 
 
 func _player_start() -> Vector2:
@@ -291,6 +297,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			_walk_overlay.queue_redraw()
 			HUD.set_prompt("歩行領域オーバーレイ: %s（F10）" % ("ON" if _walk_overlay.visible else "OFF"))
 		return
+	# 第10弾：エリア内のどこからでも［Q］一発で家に帰る（道の逆走はさせない）。
+	# 家・夜・会話中は無効（誤操作で帰らない）。
+	if event.is_action_pressed("skip"):
+		if String(_field.get("id", "")) != Areas.HOME and GameState.phase != GameState.Phase.NIGHT and not Dialogue.is_active():
+			_go_home()
+		return
 	super(event)
 
 
@@ -336,9 +348,26 @@ func _spend(spot) -> void:
 func _on_spend_finished(location_id: String) -> void:
 	if Dialogue.option_selected.is_connected(_on_option_selected):
 		Dialogue.option_selected.disconnect(_on_option_selected)
-	GameState.choose_location(location_id)   # 枠を消費（phase を進める）
+	# 第10弾：枠はエリア選択で確定済み。ここでは半日1回だけ関係値を入れ、phase は進めない
+	#   （進むのは「家に帰る」で）。エリア内は続けて歩ける（別の相手・道・風物詩へ）。
+	GameState.spend_in_area(location_id)
 	set_player_can_move(true)
 	_refresh_prompt()
+
+
+## 部屋（家）で見下ろしマップを開く。会話が出ていれば終わってから、無ければすぐに。
+func _leave_room() -> void:
+	if Dialogue.is_active():
+		Dialogue.finished.connect(func() -> void: Nav.go_to_overworld(), CONNECT_ONE_SHOT)
+	else:
+		Nav.go_to_overworld()
+
+
+## 家に帰る＝その半日を終える（phase を進める）→ 部屋へ一発で戻る（道の逆走なし）。
+func _go_home() -> void:
+	AudioManager.play_sfx("cancel")
+	GameState.end_halfday()
+	Nav.go_to_field(Areas.HOME, "")
 
 
 ## 約束（promise）を予定表に記帳する。in_days は今日からの相対日。
@@ -458,9 +487,11 @@ func _refresh_prompt() -> void:
 		return
 	if _current_spot != null:
 		var s = _current_spot
-		if _exit_by_id(s.location_id).is_empty():
-			HUD.set_prompt("［E］で「%s」（この枠を使う）／ WASD・矢印で歩く（移動は無料）" % s.display_name)
+		if not _exit_by_id(s.location_id).is_empty():
+			HUD.set_prompt("［E］で「%s」へ ／［Q］家に帰る" % s.display_name)
+		elif _road_hotspots.has(s.location_id):
+			HUD.set_prompt("［E］で「%s」を眺める ／［Q］家に帰る" % s.display_name)
 		else:
-			HUD.set_prompt("［E］で「%s」へ ／ WASD・矢印で歩く（移動は無料）" % s.display_name)
+			HUD.set_prompt("［E］で「%s」と過ごす ／［Q］家に帰る" % s.display_name)
 	else:
-		HUD.set_prompt("%s。道を歩ける。人と過ごすと枠を使う／端の出口で隣へ（移動は無料）" % String(_field.get("name", "")))
+		HUD.set_prompt("%s。WASD・矢印で歩く（移動は無料）／［Q］で家に帰る（この半日を終える）" % String(_field.get("name", "")))
