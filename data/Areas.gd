@@ -17,13 +17,15 @@ const HOME := "home"
 static func all() -> Array:
 	return [
 		{ "id": "town", "name": "町", "entry": "shops",
-			"fields": ["shops", "school"], "enabled": false,
+			"fields": ["shops", "school"], "enabled": true,
 			"hint": "商店街・学校" },
-		{ "id": "farm", "name": "田園", "entry": "fields",
-			"fields": ["fields", "sunflower", "road_a"], "enabled": false,
+		# 田園：入口＝road_A（畦道の導入を歩いてから田んぼ画面へ。第9弾§3）。
+		{ "id": "farm", "name": "田園", "entry": "road_a",
+			"fields": ["road_a", "fields", "sunflower"], "enabled": true,
 			"hint": "田んぼと畦道・ひまわり畑" },
-		{ "id": "shrine_area", "name": "社", "entry": "shrine",
-			"fields": ["shrine", "hill", "road_b", "road_c"], "enabled": false,
+		# 社：入口＝road_B（参道の導入を歩いてから神社へ）。エリア内に road_C（神社→丘）。
+		{ "id": "shrine_area", "name": "社", "entry": "road_b",
+			"fields": ["road_b", "shrine", "road_c", "hill"], "enabled": true,
 			"hint": "神社・丘" },
 		{ "id": "river", "name": "川", "entry": "riverbank",
 			"fields": ["riverbank", "estuary", "road_d"], "enabled": true,
