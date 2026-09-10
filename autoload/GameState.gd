@@ -76,6 +76,13 @@ var diary := {}
 ## その夏に集めた記録＝プレイスルー単位（周回でリセット）。マスタは Fubutsushi.json。
 var collected_fubutsushi := {}
 
+## 一日の流れ（第10弾＝見下ろしマップ）。半日ごとに1エリアを選び、そのエリアで過ごす。
+##   current_area … いま出かけているエリア id（Areas）。家にいるときは ""。
+##   halfday_event_done … この半日で「人と過ごす」本イベント（関係値+1）を既に消化したか。
+##     ＝半日1回まで関係値。2回目以降は軽い立ち話（関係値なし）。エリア選択でリセット。
+var current_area := ""
+var halfday_event_done := false
+
 
 func _ready() -> void:
 	start_new_run()
@@ -98,6 +105,8 @@ func start_new_run() -> void:
 	promises.clear()
 	diary.clear()
 	collected_fubutsushi.clear()  # 風物詩は「その夏に集めた記録」＝周回でリセット（第10弾 §7）
+	current_area = ""
+	halfday_event_done = false
 	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -141,6 +150,8 @@ func restore(data: Dictionary) -> void:
 	promises = _dict_field(data, "promises", true)
 	diary = _dict_field(data, "diary", true)
 	collected_fubutsushi = _dict_field(data, "fubutsushi", true)
+	current_area = ""            # 半日の途中状態は持ち越さない（保存は phase 境界で行われる）
+	halfday_event_done = false
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
 	day_changed.emit(day_index)
 	phase_changed.emit(phase)
@@ -178,6 +189,33 @@ func skip_slot() -> void:
 
 ## 夜にカレンダーをめくる（翌日へ）。
 func flip_calendar() -> void:
+	_advance_phase()
+
+
+# --- 一日の流れ（第10弾＝見下ろしマップ）--------------------------------
+## エリアを選ぶ＝その半日の行き先を確定する。ここで枠が使われる（phase はまだ進めない）。
+## 半日の「本イベント1回」判定をリセットする。実際に phase が進むのは家に帰るとき（end_halfday）。
+func choose_area(area_id: String) -> void:
+	current_area = area_id
+	halfday_event_done = false
+
+
+## エリア内で「人と過ごす」＝本イベント。半日1回だけ関係値+1（＝従来の1枠=+1 を維持）。
+## 2回目以降は false を返す（＝軽い立ち話。関係値・訪問は増やさない）。phase は進めない。
+## 戻り値：この呼び出しが本イベント（関係値が入った）なら true。
+func spend_in_area(location_id: String) -> bool:
+	if halfday_event_done:
+		return false
+	halfday_event_done = true
+	_record_choice(location_id)  # 記録・訪問・関係値+1・約束の成立（第9弾）をここで一括
+	_autosave()
+	return true
+
+
+## 家に帰る＝その半日を終える。phase を1つ進める（午前→午後→夜→翌日）。
+## どのマップ・どの道にいても一発で呼べる（道の逆走はさせない）。移動自体は枠非消費。
+func end_halfday() -> void:
+	current_area = ""
 	_advance_phase()
 
 
