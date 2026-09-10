@@ -62,74 +62,11 @@ static func for_location(location_id: String) -> Array:
 static func route_script(route_id: String, key: String) -> Array:
 	match route_id:
 		Routes.KUMA:
-			return _kuma_script(key)
+			return KumaScript.scene(key)  # 球磨ルート本文は KumaScript に集約（第11弾。葵と対）
 		Routes.YUFU:
 			return _yufu_script(key)
 		Routes.AOI:
 			return AoiScript.scene(key)  # 葵ルート本文は AoiScript に集約（第8弾 §1）
-	return []
-
-
-# --- 球磨ルート（友情・青さ・未来）----------------------------------
-static func _kuma_script(key: String) -> Array:
-	match key:
-		"dream":
-			return [
-				{ "speaker": "", "text": "いつもの川原。球磨が石に腰かけて、川下のほうを見ている。" },
-				{ "speaker": "球磨", "text": "よう。今年もこの夏が来たな。" },
-				{ "speaker": PLAYER, "text": "……ああ。" },
-				{ "speaker": "球磨", "text": "俺さ、いつか外で、でっかいことをやるんだ。未来なんて、まだいくらでもある。" },
-				{ "speaker": "", "text": "その未来が来ないことを、ぼくだけが知っている。" },
-			]
-		"promise":
-			return [
-				{ "speaker": "球磨", "text": "覚えてるか。ガキの頃、この川の先の海まで行こうって約束したよな。" },
-				{ "speaker": "球磨", "text": "あんときは途中で引き返した。……大人になったら、あの先まで行こうな。" },
-				{ "speaker": "", "text": "川は、河口で海へ出る。球磨の名前と、同じように。" },
-			]
-		"struggle":
-			return [
-				{ "speaker": "球磨", "text": "未来が来ないなら、今のうちに掴めばいい。やりたいこと、全部やる。" },
-				{ "speaker": "", "text": "空回り気味だが、球磨は本気だった。〔仮テキスト〕" },
-			]
-		"hollow":  # 前借りの空しさ（中盤）＝背景フラグを球磨視点で詳しく
-			return [
-				{ "if_flag": Timeline.F_KUMA_DRIFTING, "then": [
-					{ "speaker": "", "text": "球磨は焦るように動き続ける。三人でいる時間は、いつのまにか減っていた。" },
-				]},
-				{ "speaker": "球磨", "text": "……なんか、詰め込んでも、これじゃない気がするんだ。" },
-				{ "speaker": "", "text": "前借りした未来は、どこか空しい。〔仮テキスト〕" },
-			]
-		"river":  # 河口志向が強まる（中盤）
-			return [
-				{ "speaker": "球磨", "text": "河口へ行こう。あの約束の先まで。今しかないだろ。" },
-				{ "speaker": "", "text": "下流へ辿るほど、世界が褪せて見える。〔仮テキスト〕" },
-			]
-		"stance":  # 中盤の選択 A/B/C（球磨への態度）
-			return [
-				{ "speaker": "球磨", "text": "なあ、お前はどうする。俺のあがき、付き合ってくれるか。" },
-				{ "text": "球磨のあがきに、どう向き合う？", "choices": [
-					{ "text": "一緒にあがく", "stance": { Routes.KUMA: GameState.Stance.A },
-						"affinity": { Routes.KUMA: 1 },
-						"then": [ { "speaker": "球磨", "text": "……はは。だよな。行こうぜ。" } ] },
-					{ "text": "気持ちに寄り添う", "stance": { Routes.KUMA: GameState.Stance.B },
-						"affinity": { Routes.KUMA: 1 },
-						"then": [ { "speaker": "球磨", "text": "……お前は、そういうやつだよな。" } ] },
-					{ "text": "諫める／残りを一緒に", "stance": { Routes.KUMA: GameState.Stance.C },
-						"then": [ { "speaker": "球磨", "text": "……なんだよ、それ。" } ] },
-				]},
-			]
-		"broke":  # 折れる瞬間（終盤・河口）
-			return [
-				{ "speaker": "", "text": "河口。道の消えた白い霞の前で、球磨が膝をつく。" },
-				{ "speaker": "球磨", "text": "……本当は、分かってたんだ。終わるのが怖くて、遠くばっか見てた。" },
-				{ "speaker": "", "text": "青さの正体が、ここで剥がれ落ちる。〔仮テキスト〕" },
-			]
-		"realize":  # 気づき（終盤）
-			return [
-				{ "speaker": "球磨", "text": "一番惜しいのが、この、なんてことない場所なんだ。笑えるよな。" },
-				{ "speaker": "", "text": "本当に大切だったのは、今ここにあった。〔仮テキスト〕" },
-			]
 	return []
 
 
