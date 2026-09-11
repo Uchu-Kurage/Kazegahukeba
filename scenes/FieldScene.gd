@@ -12,9 +12,11 @@ extends ExploreMap
 ## FieldScene は「どの画面で誰と会うか」だけを担当し、過ごす時に既存の location_id を choose_location する。
 
 const EXIT_PREFIX := "to_"
+const AOI_SPOT_ID := "aoi_visit"  # 葵の遍在遭遇スポット（相手の会話とは別に、話しかける独立スポット）
 
 var _field := {}
 var _from_id := ""      # どの画面から来たか（入口位置の決定に使う）
+var _aoi_visit_loc := ""  # 今日この画面に葵が来ている「相手の場所」id（空なら不在）
 var _road_hotspots := {}  # 道マップの基本セット風物詩スポット（"look_<id>" → WeatherScenes entry）
 var _walk_overlay: WalkOverlay  # 歩行領域の可視化（F10で切替。調整用）
 var _weather_overlay: ColorRect  # 天気の空色オーバーレイ（第9弾）
@@ -44,6 +46,9 @@ func _build_map() -> void:
 	if String(_field["id"]) != Areas.HOME:
 		for n in FieldMaps.npcs_of(String(_field["id"])):
 			add_spot(String(n["spend"]), String(n["name"]), String(n["who"]), n["pos"])
+		# 葵の遍在遭遇（§3）：今日この画面に葵が来ていれば、独立した話しかけ相手として立たせる。
+		#   ＝球磨・由布と過ごす会話には混ぜない（一キャラ一人分のセリフになるよう分ける）。枠は消費しない。
+		_maybe_place_aoi_visitor()
 
 	# 道マップ（第9弾）：基本セットの風物詩を「調べどころ」として置く（枠非消費・常設・再閲覧可）。
 	if Roads.is_road(String(_field["id"])):
@@ -326,6 +331,8 @@ func _on_interact(spot) -> void:
 		_take_exit(ex)
 	elif _road_hotspots.has(spot.location_id):
 		_inspect_hotspot(spot)  # 道の風物詩を眺める（枠非消費・常設）
+	elif String(spot.location_id) == AOI_SPOT_ID:
+		_aoi_visit(spot)  # 葵の遍在遭遇（枠非消費・一期一会）
 	else:
 		_spend(spot)  # 人／一人で過ごす場所 → 枠を消費して既存の会話・イベントへ
 
@@ -357,6 +364,65 @@ func _on_spend_finished(location_id: String) -> void:
 	# 第10弾：枠はエリア選択で確定済み。ここでは半日1回だけ関係値を入れ、phase は進めない
 	#   （進むのは「家に帰る」で）。エリア内は続けて歩ける（別の相手・道・風物詩へ）。
 	GameState.spend_in_area(location_id)
+	set_player_can_move(true)
+	_refresh_prompt()
+
+
+# --- 葵の遍在遭遇（§3）＝別の人物としてマップに立つ・話しかけると単体で流れる（枠非消費）------
+
+## 今日この画面の「相手の場所」に葵が来ていて、まだ今日ここで会っていなければ、
+## 葵を独立したスポットとして立たせる（話しかけると軽い遭遇。相手の会話には混ざらない）。
+## 夜は葵を出さない（夜は特別な夜／就寝だけ＝_on_interact が spot を見ないため）。
+func _maybe_place_aoi_visitor() -> void:
+	if GameState.phase == GameState.Phase.NIGHT:
+		return
+	if GameState.flags.get(_aoi_visit_flag(), false):
+		return  # 今日はもう会った（再遭遇で関わりの総量を稼がせない＝一期一会）
+	for n in FieldMaps.npcs_of(String(_field["id"])):
+		var who := String(n["who"])
+		if who == "" or who == Timeline.AOI_ROUTE:
+			continue  # 一人で過ごす場所・葵自身の場所は対象外
+		var loc := String(n["spend"])
+		if Story.aoi_visits_at(loc, GameState):
+			_aoi_visit_loc = loc
+			add_spot(AOI_SPOT_ID, "葵", Timeline.AOI_ROUTE, _aoi_visit_pos())
+			return
+
+
+## 「今日この画面で葵に会ったか」フラグ名（画面×日付で一度きり）。
+func _aoi_visit_flag() -> String:
+	return "aoi_visit_%s_%d" % [String(_field.get("id", "")), GameState.day_index]
+
+
+## 葵の立ち位置（相手のドット絵と重ならない道の上）。葵の巡回先は川原／神社のみ（他は既定位置）。
+func _aoi_visit_pos() -> Vector2:
+	match String(_field["id"]):
+		"riverbank": return Vector2(500, 360)
+		"shrine":    return Vector2(250, 560)
+	return FieldMaps.CENTER
+
+
+## 葵に話しかける（遍在遭遇）。枠は消費しない（choose_location を呼ばない）。会ったら葵は去る。
+func _aoi_visit(spot) -> void:
+	var nodes := Story.aoi_visit_script(_aoi_visit_loc, GameState)
+	if nodes.is_empty():
+		return
+	AudioManager.play_sfx("confirm")
+	GameState.set_flag(_aoi_visit_flag(), true)  # 今日はもう会った
+	set_player_can_move(false)
+	Dialogue.option_selected.connect(_on_option_selected)  # 効果ノード（遍在回数・遭遇既読）を反映
+	Dialogue.finished.connect(_on_aoi_visit_finished.bind(spot), CONNECT_ONE_SHOT)
+	Dialogue.start(nodes)
+
+
+func _on_aoi_visit_finished(spot) -> void:
+	if Dialogue.option_selected.is_connected(_on_option_selected):
+		Dialogue.option_selected.disconnect(_on_option_selected)
+	# 会い終わったら葵はマップから去る（一期一会。再遭遇はさせない）。
+	if _current_spot == spot:
+		_current_spot = null
+	if is_instance_valid(spot):
+		spot.queue_free()
 	set_player_can_move(true)
 	_refresh_prompt()
 
@@ -489,6 +555,8 @@ func _refresh_prompt() -> void:
 			HUD.set_prompt("［E］で「%s」へ ／［Q］家に帰る" % s.display_name)
 		elif _road_hotspots.has(s.location_id):
 			HUD.set_prompt("［E］で「%s」を眺める ／［Q］家に帰る" % s.display_name)
+		elif String(s.location_id) == AOI_SPOT_ID:
+			HUD.set_prompt("［E］で「%s」と少し話す ／［Q］家に帰る" % s.display_name)
 		else:
 			HUD.set_prompt("［E］で「%s」と過ごす ／［Q］家に帰る" % s.display_name)
 	else:

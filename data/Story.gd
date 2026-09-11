@@ -29,13 +29,10 @@ static func script_for_location(location_id: String, state) -> Array:
 		out.append_array(finalday)
 		return out  # 最後の日の特別会話に専念（節目・日常には譲らない）
 
-	# 4. 葵の遭遇（§5-1）＝「見つける遊び」。特定の日・場所（・天気）の未見の遭遇が最優先。
-	#    無ければ従来の遍在遭遇。いずれも枠は消費しない（会話の頭に差し込む）。葵の場所では出さない。
-	var aoi_enc := _aoi_encounter(location_id, state)
-	if not aoi_enc.is_empty():
-		out.append_array(aoi_enc)
-	else:
-		out.append_array(_aoi_ambient(location_id, state))
+	# 4. 葵の遭遇（§5-1）は、ここでは会話の頭に差し込まない。
+	#    葵は「別の人物」として FieldScene がマップに立たせ、話しかけたときだけ単体で遭遇が流れる
+	#    （＝相手の会話に混ざらない＝一キャラ一人分のセリフになるよう分ける）。判定・台本は
+	#    aoi_visits_at() / aoi_visit_script() を FieldScene から呼ぶ（実装はこのファイル下部）。
 
 	# その場所に紐づくルート（＝深く過ごせる相手）を引く。
 	var route := Routes.by_location(location_id)
@@ -128,6 +125,22 @@ static func _aoi_ambient(location_id: String, state) -> Array:
 	if Timeline.aoi_spot(state.day_index) != location_id:
 		return []  # 今日はここにいない
 	return flatten(Dialogues.aoi_ambient(), state.flags)
+
+
+# --- 葵を「別の人物」としてマップに立たせるための入口（FieldScene が使う）------
+## 今日この場所（相手の場所）に葵が来ているか＝未見の特別遭遇 or 遍在遭遇が残っているか。
+## 真なら FieldScene が葵を独立した話しかけ相手としてマップに置く（相手の会話には混ぜない）。
+static func aoi_visits_at(location_id: String, state) -> bool:
+	return not aoi_visit_script(location_id, state).is_empty()
+
+
+## 葵の遭遇の会話ノード（特別遭遇があればそれ、無ければ遍在遭遇。枠非消費・フラット化済み・効果ノード付き）。
+## 話しかけたときに単体で流す（Dialogue にそのまま渡せる）。無ければ空配列。
+static func aoi_visit_script(location_id: String, state) -> Array:
+	var enc := _aoi_encounter(location_id, state)
+	if not enc.is_empty():
+		return enc
+	return _aoi_ambient(location_id, state)
 
 
 # --- 8/31 の葵（§5-3）----------------------------------------------
