@@ -59,6 +59,11 @@ var counters := {}
 ## 選択肢の lean タグごとに +1。方向の対応・優先順位・着地の割り当ては Endings に定数化。
 var aoi_lean := {}
 
+## 由布ルートの「傾き」カウンタ。 direction(String) -> int（Endings.YUFU_LEAN_* の三方向）。
+## 葵と同型＝純粋に方向で決める（実装指示 第12弾 §2-2。球磨のような量の下限は設けない）。
+## 選択肢の yufu_lean タグごとに +1。方向の対応・優先順位・着地の割り当ては Endings に定数化。
+var yufu_lean := {}
+
 ## 天気（第9弾）。実際の天気は手組みスケジュール（Weather.SCHEDULE）を day_index で引く。
 ## 予報の「当たり外れ」の揺らぎだけ、この周回固定のシード weather_seed で決める（山場は必ず当てる）。
 var weather_seed := 0
@@ -100,6 +105,7 @@ func start_new_run() -> void:
 	stance.clear()
 	counters.clear()
 	aoi_lean.clear()
+	yufu_lean.clear()
 	weather_seed = randi()  # 予報の揺らぎ用（周回ごとに変わる）
 	last_forecast_day = -1
 	promises.clear()
@@ -124,6 +130,7 @@ func snapshot() -> Dictionary:
 		"stance": stance.duplicate(),
 		"counters": counters.duplicate(),
 		"aoi_lean": aoi_lean.duplicate(),
+		"yufu_lean": yufu_lean.duplicate(),
 		"weather_seed": weather_seed,
 		"last_forecast_day": last_forecast_day,
 		"promises": promises.duplicate(true),
@@ -145,6 +152,7 @@ func restore(data: Dictionary) -> void:
 	stance = _dict_field(data, "stance")
 	counters = _dict_field(data, "counters")
 	aoi_lean = _dict_field(data, "aoi_lean")
+	yufu_lean = _dict_field(data, "yufu_lean")
 	weather_seed = int(data.get("weather_seed", 0)) if _is_num(data.get("weather_seed")) else randi()
 	last_forecast_day = int(data.get("last_forecast_day", -1)) if _is_num(data.get("last_forecast_day")) else -1
 	promises = _dict_field(data, "promises", true)
@@ -260,6 +268,14 @@ func bump_lean(direction: String) -> void:
 		return
 	aoi_lean[direction] = int(aoi_lean.get(direction, 0)) + 1
 	print("[lean] %s = %d" % [direction, aoi_lean[direction]])  # 確認用
+
+
+## 由布ルートの「傾き」を1つ足す（会話の選択肢の yufu_lean タグから呼ぶ）。方向のみを記録する。
+func bump_yufu_lean(direction: String) -> void:
+	if direction == "":
+		return
+	yufu_lean[direction] = int(yufu_lean.get(direction, 0)) + 1
+	print("[yufu_lean] %s = %d" % [direction, yufu_lean[direction]])  # 確認用
 
 
 ## 今日の天気（実際）。手組みスケジュールを day_index で引く。

@@ -162,7 +162,7 @@ static func _aoi_finalday(location_id: String, state) -> Array:
 
 ## この周回が「葵ルート」か＝現時点の状態で選ばれる結末が葵の三分岐のいずれかか。
 static func _is_aoi_route(state) -> bool:
-	var end_id := Endings.pick(state.affinity, state.flags, state.stance, state.visits, state.counters, state.aoi_lean)
+	var end_id := Endings.pick(state.affinity, state.flags, state.stance, state.visits, state.counters, state.aoi_lean, state.yufu_lean)
 	return String(end_id).begins_with("aoi_")
 
 
