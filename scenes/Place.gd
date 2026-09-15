@@ -75,6 +75,9 @@ func _on_option_selected(option: Dictionary) -> void:
 	# 葵ルートの「傾き」（三分岐の布石。方向のみ記録）。
 	if option.has("lean"):
 		GameState.bump_lean(String(option["lean"]))
+	# 由布ルートの「傾き」（三分岐の布石。葵と同型・方向のみ記録。第12弾 §2-2）。
+	if option.has("yufu_lean"):
+		GameState.bump_yufu_lean(String(option["yufu_lean"]))
 	# 約束の記帳（第9弾）。
 	if option.has("promise"):
 		var pr: Dictionary = option["promise"]

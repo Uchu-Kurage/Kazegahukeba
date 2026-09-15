@@ -68,6 +68,28 @@ const KUMA_DIR_TO_END := {
 ## 折れる瞬間・気づきに立ち会えば越える／早い段階で離れると越えない、程よい仮値（後で調整＝§2-3）。
 const KUMA_ENGAGE_MIN := 3
 
+## 由布ルートの三分岐（8/31）。三つは対等＝優劣・正解・失敗はない（実装指示 第12弾 §2-1）。
+## 命名に bad/fail/best 等の色をつけない。着地2（yufu_end_friend＝幼なじみのまま）を失敗エンドと
+## して扱わない（ビターだが、留まりたい子が変化を恐れた切ない帰結として肯定的に締める＝§5）。
+const YUFU_END_CROSS := "yufu_end_cross"    # 一線を越える（王道）
+const YUFU_END_FRIEND := "yufu_end_friend"  # 幼なじみのまま終わる（ビター）
+const YUFU_END_BESIDE := "yufu_end_beside"  # 喪失に寄り添う（名前のないつながり）
+
+## 由布ルートの「傾き」タグ（中立名）。葵と同型＝量ではなく方向で着地を決める（§2-2）。
+## 球磨のような量の下限は設けない（由布はいちばん素直な純方向）。
+const YUFU_LEAN_CROSS := "yufu_cross"    # 一線に踏み込む・触れる・抱きしめる方向 → 着地1
+const YUFU_LEAN_STAY := "yufu_stay"      # 幼なじみの距離を守る・言わせない方向 → 着地2
+const YUFU_LEAN_BESIDE := "yufu_beside"  # 恋より悲しみ・喪失に寄り添う方向 → 着地3
+
+## 同点のときの優先順位（先頭が優先＝§2-3。まず破綻なく1つに決まればよい。理由は後で調整可）。
+const YUFU_LEAN_PRIORITY := [YUFU_LEAN_BESIDE, YUFU_LEAN_STAY, YUFU_LEAN_CROSS]
+## 傾きの方向 → 着地の対応（直書きしない＝§5）。
+const YUFU_LEAN_TO_END := {
+	YUFU_LEAN_CROSS: YUFU_END_CROSS,
+	YUFU_LEAN_STAY: YUFU_END_FRIEND,
+	YUFU_LEAN_BESIDE: YUFU_END_BESIDE,
+}
+
 
 ## 三分岐の着地 → 8/31 に予定表へ載る「場所」id（第9弾 §5-3）。
 ## 予定表の無言の一マスが、着地（＝別れの温度）を可視化する。home は Locations にあるが
@@ -87,7 +109,7 @@ static func aoi_landing_place(end_id: String) -> String:
 ## 葵は三分岐のいずれも "aoi_" 始まり＝裏エンド判定では「葵ルート到達」で1つと数える（§3）。
 const NORMAL_IDS := [
 	KUMA_END_FRIEND, KUMA_END_STRUGGLE, KUMA_END_YUFU,
-	"yufu_cross", "yufu_childhood", "yufu_beside",
+	YUFU_END_CROSS, YUFU_END_FRIEND, YUFU_END_BESIDE,
 	AOI_END_HIMAWARI, AOI_END_HILL, AOI_END_HOME,
 	WITNESS, SOLO,
 ]
@@ -141,7 +163,7 @@ static func ura_seen() -> bool:
 ## この周回の結末を1つ選ぶ。
 ## 深く完結したルートがあればそのエンディング、無ければ「関わりの総量」で記録者エンド二種に分岐。
 ## 葵ルートだけは着地を「傾き（方向）」で決めるので aoi_lean を受け取る（§2-2）。
-static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, visits: Dictionary, counters: Dictionary, aoi_lean: Dictionary = {}) -> String:
+static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, visits: Dictionary, counters: Dictionary, aoi_lean: Dictionary = {}, yufu_lean: Dictionary = {}) -> String:
 	var best_route := ""
 	var best_depth := -1
 	var best_aff := -1
@@ -151,10 +173,10 @@ static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, vi
 		var depth := _route_depth(route_id, flags)
 		if depth < DEEP_MILESTONES:
 			continue  # 節目が浅い＝主軸とは見なさない
-		# 由布は中盤の立場(stance)を選んで初めて主軸とみなす（従来どおり）。
-		# 葵・球磨は着地を“方向”で決めるルート＝深さのみで主軸判定し、立場は問わない
-		#   （葵＝第8弾 §2-2／球磨＝第11弾 §2-2。球磨に stance 節目はない）。
-		if route_id != Routes.AOI and route_id != Routes.KUMA \
+		# 三ルートとも着地を“方向”で決める（葵＝第8弾／球磨＝第11弾／由布＝第12弾）。
+		# ＝深さのみで主軸判定し、中盤の立場(stance)は問わない（各ルートに stance 節目はない）。
+		# ※立場ベースのルートが将来増えたときのため、その分岐だけ従来の stance ゲートを残す。
+		if route_id != Routes.AOI and route_id != Routes.KUMA and route_id != Routes.YUFU \
 				and int(stance.get(route_id, GameState.Stance.NONE)) == GameState.Stance.NONE:
 			continue
 		var aff := int(affinity.get(route_id, 0))
@@ -175,6 +197,11 @@ static func pick(affinity: Dictionary, flags: Dictionary, stance: Dictionary, vi
 	# 球磨ルートが主軸 → 「関わりの量の下限 → 由布／超えたら方向」で三分岐（§2-2。三つは対等）。
 	if best_route == Routes.KUMA:
 		return _kuma_ending(counters)
+
+	# 由布ルートが主軸 → 傾きの方向で三分岐（葵と同型・量ではなく方向。三つは対等。第12弾 §2-2）。
+	# ※由布に入る＝球磨とは疎遠＝球磨着地3（kuma_end_yufu）とは自然に排他（§3-1）。
+	if best_route == Routes.YUFU:
+		return _yufu_ending(yufu_lean)
 
 	var st_best := int(stance.get(best_route, GameState.Stance.NONE))
 	return _route_ending(best_route, st_best, int(affinity.get(best_route, 0)))
@@ -208,6 +235,19 @@ static func _kuma_ending(counters: Dictionary) -> String:
 			best_val = v
 			best_dir = dir
 	return String(KUMA_DIR_TO_END[best_dir])
+
+
+## 由布ルートの三分岐（8/31）。葵と同型＝最も高い“方向”の着地へ。同点は YUFU_LEAN_PRIORITY の先頭。
+## 量の下限は設けない（§2-2）。どの方向にも傾かなくても必ず三つのいずれかに落ちる（§2-3）。
+static func _yufu_ending(yufu_lean: Dictionary) -> String:
+	var best_dir := YUFU_LEAN_PRIORITY[0]
+	var best_val := -1
+	for dir in YUFU_LEAN_PRIORITY:  # 優先順位の高い方から見るので、同点は先頭が残る
+		var v := int(yufu_lean.get(dir, 0))
+		if v > best_val:
+			best_val = v
+			best_dir = dir
+	return String(YUFU_LEAN_TO_END[best_dir])
 
 
 ## 「関わりの総量スコア」＝他者とどれだけ関わったか。一人で過ごす活動は加えない（設計意図）。
@@ -247,16 +287,10 @@ static func _route_depth(route_id: String, flags: Dictionary) -> int:
 	return n
 
 
-## ルート×立場×関係値 → 着地。narrative なので各ルートの対応はここに持つ（数値は定数）。
-## ※葵ルートは「傾き」で _aoi_ending、球磨ルートは「量＋方向」で _kuma_ending が決める（ここには来ない）。
-##   ここに来るのは立場(stance)で決まる由布ルートのみ。
+## ルート×立場×関係値 → 着地（立場ベースのルート専用）。数値は定数。
+## ※三ルート（葵＝傾き／球磨＝量＋方向／由布＝傾き）はいずれも専用の _*_ending が決めるので
+##   ここには来ない。立場ベースのルートを将来増やしたときのための器＋安全弁として残す。
 static func _route_ending(route_id: String, st: int, aff: int) -> String:
-	match route_id:
-		Routes.YUFU:
-			match st:
-				GameState.Stance.A: return "yufu_cross" if aff >= AFF_DEEP else "yufu_childhood"  # 一線を越える
-				GameState.Stance.B: return "yufu_childhood"                                  # 幼なじみのまま
-				GameState.Stance.C: return "yufu_beside"                                     # 喪失に寄り添う
 	return SOLO  # 安全弁（通常ここには来ない）。記録者エンド側へ寄せる
 
 
@@ -265,9 +299,9 @@ static func title_of(id: String) -> String:
 		KUMA_END_FRIEND: return "友を、覚えている"
 		KUMA_END_STRUGGLE: return "あがきの、果てまで"
 		KUMA_END_YUFU: return "遠くから、見送る"
-		"yufu_cross": return "幼なじみの、その先へ"
-		"yufu_childhood": return "言えなかった夏"
-		"yufu_beside": return "そばにいた夏"
+		YUFU_END_CROSS: return "幼なじみの、その先へ"
+		YUFU_END_FRIEND: return "言えなかった夏"
+		YUFU_END_BESIDE: return "そばにいた夏"
 		AOI_END_HIMAWARI: return "夏を、夏のまま"
 		AOI_END_HILL: return "終わりを、この目で"
 		AOI_END_HOME: return "ただ、そばにいて"
@@ -283,21 +317,9 @@ static func script_of(id: String) -> Array:
 		KUMA_END_FRIEND, KUMA_END_STRUGGLE, KUMA_END_YUFU:
 			# 球磨ルートの三分岐は本文層（KumaScript）に持つ（葵と対の構造。第11弾 §2-4）。
 			return KumaScript.ending(id)
-		"yufu_cross":
-			return [
-				{ "speaker": "由布", "text": "……幼なじみじゃ、なくなっちゃうね。でも、いい。最後に、あなたと。" },
-				{ "speaker": "", "text": "喪失の中の、小さな獲得。切ないが、温かい。〔仮テキスト〕" },
-			]
-		"yufu_childhood":
-			return [
-				{ "speaker": "由布", "text": "……幼なじみのままで、よかったのかな。" },
-				{ "speaker": "", "text": "安全な関係を守った。でも、言えなかった後悔が残る。〔仮テキスト〕" },
-			]
-		"yufu_beside":
-			return [
-				{ "speaker": "由布", "text": "……そばにいてくれて、ありがとう。" },
-				{ "speaker": "", "text": "恋の形にはならなかったが、一人じゃなかった。〔仮テキスト〕" },
-			]
+		YUFU_END_CROSS, YUFU_END_FRIEND, YUFU_END_BESIDE:
+			# 由布ルートの三分岐は本文層（YufuScript）に持つ（葵・球磨と対の構造。第12弾 §2-4）。
+			return YufuScript.ending(id)
 		AOI_END_HIMAWARI, AOI_END_HILL, AOI_END_HOME:
 			# 葵ルートの三分岐は本文層（AoiScript）に持つ。場所ごとの骨子＋共通の余韻。
 			return AoiScript.ending(id)

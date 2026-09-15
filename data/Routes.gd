@@ -67,17 +67,14 @@ static func all() -> Array:
 		{
 			"id": YUFU, "character": YUFU, "location": "shrine",
 			"milestones": [
-				# --- 序盤（いつもの三人 → 由布の「好き」→ 留まりたい提示）---
-				_m("daily",   [],          AFF_EARLY_1, Timeline.EARLY_START, Timeline.EARLY_END),
-				_m("likes",   ["daily"],   AFF_EARLY_2, Timeline.EARLY_START, Timeline.EARLY_END),
-				_m("stay",    ["likes"],   AFF_EARLY_3, Timeline.EARLY_START, Timeline.EARLY_END),
-				# --- 中盤（思い出の場所が消える → 一線の接近 → 選択A/B/C）---
-				_m("lost",    ["stay"],    AFF_MID_1,   Timeline.MID_START,   Timeline.MID_END),
-				_m("approach",["lost"],    AFF_MID_2,   Timeline.MID_START,   Timeline.MID_END),
-				_m("stance",  ["approach"],AFF_STANCE,  Timeline.MID_START,   Timeline.MID_END),
-				# --- 終盤（静かな決壊 → 最後の日々）---
-				_m("collapse",["stance"],  AFF_LATE_1,  Timeline.LATE_START,  Timeline.LATE_END),
-				_m("farewell",["collapse"],AFF_LATE_2,  Timeline.LATE_START,  Timeline.LATE_END),
+				# --- 日常（第12弾本文。YufuScript に集約）---
+				_m("azemichi", [],           AFF_EARLY_1, Timeline.EARLY_START, Timeline.EARLY_END),  # 雨上がりの畦道（基準）
+				_m("hanabi",   ["azemichi"], AFF_EARLY_2, Timeline.EARLY_START, Timeline.MID_END),    # 河原・花火（三人・由布視点）
+				_m("machi",    ["hanabi"],   AFF_EARLY_3, Timeline.EARLY_START, Timeline.MID_END),    # 二人きりで町を歩く（近すぎる距離）
+				# --- 節目（留まる場所が奪われる → 一線の接近 → 静かな決壊）---
+				_m("kieru",    ["machi"],    AFF_MID_1,   Timeline.MID_START,   Timeline.MID_END),    # 思い出の場所が消える
+				_m("brake",    ["kieru"],    AFF_MID_2,   Timeline.MID_START,   Timeline.LATE_END),   # 一線の接近と、由布のブレーキ
+				_m("kekkai",   ["brake"],    AFF_LATE_1,  Timeline.LATE_START,  Timeline.LATE_END),   # 静かな決壊（感情ピーク・二段選択）
 			],
 		},
 		{

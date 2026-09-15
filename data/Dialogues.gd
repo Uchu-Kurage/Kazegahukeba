@@ -64,69 +64,9 @@ static func route_script(route_id: String, key: String) -> Array:
 		Routes.KUMA:
 			return KumaScript.scene(key)  # 球磨ルート本文は KumaScript に集約（第11弾。葵と対）
 		Routes.YUFU:
-			return _yufu_script(key)
+			return YufuScript.scene(key)  # 由布ルート本文は YufuScript に集約（第12弾。葵・球磨と対）
 		Routes.AOI:
 			return AoiScript.scene(key)  # 葵ルート本文は AoiScript に集約（第8弾 §1）
-	return []
-
-
-# --- 由布ルート（過去・思い出・一線）--------------------------------
-static func _yufu_script(key: String) -> Array:
-	match key:
-		"daily":
-			return [
-				{ "speaker": "", "text": "石段をのぼると、蝉の声が近い。由布が涼んでいる。" },
-				{ "speaker": "由布", "text": "お参り？　それとも、涼みに来ただけ？" },
-				{ "speaker": PLAYER, "text": "……なんとなく。" },
-				{ "speaker": "由布", "text": "ふふ。じゃあ、隣、座ってけば。" },
-			]
-		"likes":
-			return [
-				{ "speaker": "由布", "text": "わたし、この景色が好き。夕暮れの田んぼも、雨上がりの匂いも。" },
-				{ "speaker": "", "text": "由布にとって風景は、思い出そのものだ。〔仮テキスト〕" },
-			]
-		"stay":
-			return [
-				{ "speaker": "由布", "text": "球磨は外へ、って言うけど。……わたしは、ずっとここにいたい。" },
-				{ "speaker": "", "text": "留まりたい子だと、静かに知る。〔仮テキスト〕" },
-			]
-		"lost":  # 思い出の場所が消える（中盤）＋背景フラグを寂しさの文脈で
-			return [
-				{ "speaker": "由布", "text": "……ここ、無くなっちゃったね。" },
-				{ "speaker": "", "text": "消えた場所の前で、由布は静かに立ち尽くしていた。" },
-				{ "if_flag": Timeline.F_KUMA_DRIFTING, "then": [
-					{ "speaker": "由布", "text": "球磨、最近付き合い悪いね。……三人でいられる時間も、もう。" },
-				]},
-			]
-		"approach":  # 一線の接近（中盤）
-			return [
-				{ "speaker": "", "text": "二人きりになる場面が増えた。由布の距離が、幼なじみのそれではなくなっていく。" },
-				{ "speaker": "由布", "text": "……なんでもない。ごめん。" },
-			]
-		"stance":  # 中盤の選択 A/B/C（一線への向き合い方）
-			return [
-				{ "text": "由布との「一線」に、どう向き合う？", "choices": [
-					{ "text": "一線を越えようとする", "stance": { Routes.YUFU: GameState.Stance.A },
-						"affinity": { Routes.YUFU: 1 },
-						"then": [ { "speaker": "由布", "text": "……ばか。急に、そういうこと言う。" } ] },
-					{ "text": "幼なじみのまま守る", "stance": { Routes.YUFU: GameState.Stance.B },
-						"then": [ { "speaker": "由布", "text": "……うん。このままが、いいよね。" } ] },
-					{ "text": "由布の痛みに寄り添う", "stance": { Routes.YUFU: GameState.Stance.C },
-						"affinity": { Routes.YUFU: 1 },
-						"then": [ { "speaker": "由布", "text": "……そばに、いてくれるんだ。" } ] },
-				]},
-			]
-		"collapse":  # 静かな決壊（終盤頭）＝このルートの核
-			return [
-				{ "speaker": "由布", "text": "……ごめんね。わたし、本当は……ずっと、失いたくなかった。" },
-				{ "speaker": "由布", "text": "この町も、球磨も、あなたも。三人でいられた、この夏も。全部……" },
-				{ "speaker": "", "text": "取り乱さない。ただ、静かに涙がこぼれた。〔仮テキスト〕" },
-			]
-		"farewell":  # 最後の日々（終盤）
-			return [
-				{ "speaker": "由布", "text": "ぜんぶ、無くなっちゃうね。わたしが好きだったもの、ぜんぶ。……でもね、" },
-				{ "speaker": "", "text": "留まれない現実の中で、由布が何を見出すか。〔仮テキスト〕" },
-			]
 	return []
 
 
@@ -261,10 +201,10 @@ static func night_script(key: String) -> Array:
 			return [
 				{ "speaker": "", "text": "河原に三人。手持ち花火の火が、順ぐりに顔を照らす。" },
 				# 進行中ルートに応じて、その相手の“らしさ”がこぼれる（背景の出し分け機構を流用）。
-				{ "if_flag": "kuma_dream", "then": [
+				{ "if_flag": "kuma_kawara", "then": [
 					{ "speaker": "球磨", "text": "来年も、再来年も、こうやってやろうぜ。" },
 				]},
-				{ "if_flag": "yufu_likes", "then": [
+				{ "if_flag": "yufu_azemichi", "then": [
 					{ "speaker": "由布", "text": "……こういう夜が、ずっと続けばいいのにね。" },
 				]},
 				{ "if_flag": "aoi_meet", "then": [
