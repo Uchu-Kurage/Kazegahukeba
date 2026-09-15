@@ -51,7 +51,11 @@ func _activate() -> void:
 		"start":
 			SaveData.clear_run()  # 新規開始：以前の途中セーブを破棄
 			GameState.start_new_run()
-			Nav.go_to_field("home", "")  # 散策（『ぼくのなつやすみ』方式）を本編の入口に。家から朝スタート
+			# 初回はオープニング（歩ける消失の夢・第13弾）→目覚め→本編。既読なら夢を飛ばして家から。
+			if SaveData.opening_seen:
+				Nav.go_to_field("home", "")
+			else:
+				Nav.go_to_opening()
 		"resume":
 			GameState.restore(SaveData.load_run())  # 途中から再開
 			Nav.go_to_field("home", "")  # 再開も家から（保存した日付・時間帯のまま散策へ）

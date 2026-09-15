@@ -10,11 +10,13 @@ const PATH := "user://save.cfg"
 var seen_endings := {}  ## ending_id -> true
 var seen_scenes := {}   ## 風物詩(天気限定風景) id -> true（周回をまたぐ図鑑用）
 var runs := 0           ## クリア（8/31到達）した回数
+var opening_seen := false  ## オープニング（歩ける消失の夢）を一度でも見たか（第13弾。既読スキップ用）
 
 
 func _ready() -> void:
 	var cfg := _open()
 	runs = int(cfg.get_value("progress", "runs", 0))
+	opening_seen = bool(cfg.get_value("progress", "opening_seen", false))
 	for id in cfg.get_value("progress", "seen", []):
 		seen_endings[id] = true
 	for id in cfg.get_value("progress", "scenes", []):
@@ -52,6 +54,14 @@ func record_run() -> void:
 	_save_progress()
 
 
+## オープニングを見た印（第13弾）。以後は既読スキップ（毎周回で強制しない＝§5/§7）。
+func mark_opening_seen() -> void:
+	if opening_seen:
+		return
+	opening_seen = true
+	_save_progress()
+
+
 # --- 風物詩図鑑（周回をまたぐ・天気限定風景の到達記録）--------------
 
 func mark_scene(id: String) -> void:
@@ -78,6 +88,7 @@ func clear() -> void:
 	seen_endings.clear()
 	seen_scenes.clear()
 	runs = 0
+	opening_seen = false
 	_save_progress()
 
 
@@ -117,6 +128,7 @@ func _open() -> ConfigFile:
 func _save_progress() -> void:
 	var cfg := _open()  # [run] を消さないよう、既存を読んでから上書き
 	cfg.set_value("progress", "runs", runs)
+	cfg.set_value("progress", "opening_seen", opening_seen)
 	cfg.set_value("progress", "seen", seen_endings.keys())
 	cfg.set_value("progress", "scenes", seen_scenes.keys())
 	cfg.save(PATH)

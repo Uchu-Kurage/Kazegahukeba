@@ -45,6 +45,12 @@ func go_to_title() -> void:
 	Fader.change_scene("res://scenes/Title.tscn")
 
 
+## オープニング（歩ける消失の夢。第13弾）＝新規開始で、目覚め→本編の前に一度だけ流す一本道。
+## 既読なら Title 側でスキップして直接 go_to_field("home") する（毎周回で強制しない）。
+func go_to_opening() -> void:
+	Fader.change_scene("res://scenes/OpeningDream.tscn")
+
+
 ## 見下ろしマップ（第10弾）＝部屋で「今日はどこへ行こうか」と行き先エリアを選ぶ。
 ## 家はエリアではないので載せない。選んだエリアの入口画面へ飛ぶ（枠はエリア選択で確定）。
 func go_to_overworld() -> void:

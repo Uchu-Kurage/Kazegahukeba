@@ -47,6 +47,16 @@ func is_active() -> bool:
 	return _active
 
 
+## 会話を即座に閉じる（finished は出さない）。オープニングの既読スキップなど、
+## 進行中の会話を「なかったこと」にして別シーンへ抜けるときに使う（第13弾）。
+func dismiss() -> void:
+	_active = false
+	_revealing = false
+	_choosing = false
+	if _root != null:
+		_root.visible = false
+
+
 ## 会話を開始する。nodes はセリフ／選択肢ノードの配列。
 func start(nodes: Array) -> void:
 	if nodes.is_empty():
