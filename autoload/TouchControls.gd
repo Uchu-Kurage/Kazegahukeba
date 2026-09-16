@@ -37,6 +37,9 @@ var _debug_open := false
 
 func _ready() -> void:
 	layer = 128  # HUD より手前に描く（HUD は既定レイヤ）。
+	# 予定表（約束帳）は開くとツリーを一時停止する（get_tree().paused）。停止中でも画面ボタンで
+	# 操作できるよう、タッチUIは常時処理する（＝予定表の開閉・カーソル移動・詳細をスマホで行える）。
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
 	# タッチ端末のときだけ表示（それ以外は邪魔にならないよう隠す）。
 	var touch := DisplayServer.is_touchscreen_available() or OS.has_feature("mobile")
@@ -76,6 +79,7 @@ func _build_ui() -> void:
 
 	_build_dpad()
 	_build_action_buttons()
+	_build_book_button()
 	_build_debug_gear()
 	_build_debug_menu()
 
@@ -122,6 +126,19 @@ func _build_action_buttons() -> void:
 	confirm.position = Vector2(BACK_W + GAP, 0)
 	confirm.pressed.connect(func() -> void: _tap("interact"))
 	wrap.add_child(confirm)
+
+
+## 右上：予定表（約束帳）を開く／閉じる。スマホにはキーボードが無いので画面ボタンで橋渡し。
+##   開いている間は、既存の十字キー＝日付選択／決定＝詳細／戻る＝閉じる がそのまま使える。
+func _build_book_button() -> void:
+	var book := _make_button("予定表", 28)
+	book.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	book.offset_left = -(140 + MARGIN)
+	book.offset_top = 20
+	book.offset_right = -MARGIN
+	book.offset_bottom = 20 + 64
+	book.pressed.connect(func() -> void: _tap("book"))
+	_root.add_child(book)
 
 
 ## 左上：デバッグメニューの開閉ボタン（歯車）。スマホから F3〜F10 相当を呼ぶ入口。
