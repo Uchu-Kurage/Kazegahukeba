@@ -60,34 +60,45 @@ func _ready() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("book"):
+	# キー入力（PC）：該当アクションを act() に委譲。消費したら伝播を止める。
+	for a in ["book", "almanac", "interact", "skip", "walk_left", "walk_right", "walk_up", "walk_down"]:
+		if event.is_action_pressed(a):
+			if act(a):
+				get_viewport().set_input_as_handled()
+			return
+
+
+## 予定帳への1操作を実行する（キーからも、スマホの画面ボタンからも同じ入口を使う）。
+## 予定帳を開くとツリーを一時停止するため、スマホの合成入力（parse_input_event）は届きにくい。
+## そこで TouchControls はこの act() を直接呼ぶ（＝停止中でも確実に開閉・カーソル移動・詳細ができる）。
+## 戻り値：この操作を予定帳が受け取ったら true（＝開いている間はゲーム側へ渡さない）。
+func act(action: String) -> bool:
+	if action == "book":
 		_toggle_tab(TAB_CALENDAR)
-		get_viewport().set_input_as_handled()
-		return
-	if event.is_action_pressed("almanac"):
+		return true
+	if action == "almanac":
 		_toggle_tab(TAB_ALMANAC)
-		get_viewport().set_input_as_handled()
-		return
+		return true
 	if not _open:
-		return
+		return false
 	# 開いている間はゲーム側へ入力を渡さない（枠は消費しない・裏で歩かない）。
 	if _detail_open:
-		if event.is_action_pressed("interact") or event.is_action_pressed("skip"):
+		if action == "interact" or action == "skip":
 			_close_detail()
-	else:
-		if event.is_action_pressed("skip"):
-			close()
-		elif event.is_action_pressed("interact"):
-			_open_detail()
-		elif event.is_action_pressed("walk_left"):
-			_move_cursor(-1)
-		elif event.is_action_pressed("walk_right"):
-			_move_cursor(1)
-		elif event.is_action_pressed("walk_up"):
-			_move_cursor(-_cols())
-		elif event.is_action_pressed("walk_down"):
-			_move_cursor(_cols())
-	get_viewport().set_input_as_handled()
+		return true
+	match action:
+		"skip": close()
+		"interact": _open_detail()
+		"walk_left": _move_cursor(-1)
+		"walk_right": _move_cursor(1)
+		"walk_up": _move_cursor(-_cols())
+		"walk_down": _move_cursor(_cols())
+	return true
+
+
+## 予定帳がいま開いているか（TouchControls が入力の振り分けに使う）。
+func is_open() -> bool:
+	return _open
 
 
 # --- 開閉・タブ -------------------------------------------------------

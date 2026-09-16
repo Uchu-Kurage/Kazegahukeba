@@ -60,11 +60,21 @@ func _emit(action: String, pressed: bool) -> void:
 
 ## 押しっぱなし用（D-pad の移動）。button_down/button_up に対応させる。
 func _hold(action: String, down: bool) -> void:
+	# 予定帳が開いている間は、合成入力ではなく Book を直接操作する（停止中でも確実に効く）。
+	# D-pad はカーソル移動なので、押した瞬間（down）だけ1回動かす。
+	if Book.is_open():
+		if down:
+			Book.act(action)
+		return
 	_emit(action, down)
 
 
 ## 単発用（決定・戻る・メニュー上下・デバッグ）。押して即離す＝1回のエッジ。
 func _tap(action: String) -> void:
+	# 予定帳が開いている間は、合成入力ではなく Book を直接操作する（停止中でも確実に効く）。
+	if Book.is_open():
+		Book.act(action)
+		return
 	_emit(action, true)
 	_emit(action, false)
 
@@ -137,7 +147,8 @@ func _build_book_button() -> void:
 	book.offset_top = 20
 	book.offset_right = -MARGIN
 	book.offset_bottom = 20 + 64
-	book.pressed.connect(func() -> void: _tap("book"))
+	# 開閉とも Book を直接操作する（一時停止中でも確実に開閉できるよう合成入力に頼らない）。
+	book.pressed.connect(func() -> void: Book.act("book"))
 	_root.add_child(book)
 
 
