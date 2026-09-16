@@ -10,6 +10,18 @@ const W := 16
 const H := 24
 const EYE := Color(0.16, 0.13, 0.13)
 
+# --- 主人公の画像差し替え用（スプライトシート）------------------------------------
+## 主人公のスプライトシート（PNG）。この場所に置けば、コード生成より優先して使う。
+## レイアウトは SHEET_COLS × SHEET_ROWS の等間隔グリッド：
+##   行（上→下）＝ 下向き ／ 上向き ／ 横向き（左向きは自動で左右反転）
+##   列（左→右）＝ 待機A ／ 待機B ／ 歩きA ／ 歩きB
+## 画像の幅は SHEET_COLS(=4) の倍数、高さは SHEET_ROWS(=3) の倍数にすること。
+## 1コマは 16×24 相当が基準（別解像度でも背丈は自動で合わせる）。
+const PLAYER_SHEET_PATH := "res://assets/characters/player.png"
+const SHEET_COLS := 4
+const SHEET_ROWS := 3
+const SHEET_ROW_DIRS := ["down", "up", "side"]
+
 
 ## キャラID → 配色。skin/hair/shirt/pants/shoe。
 static func palette_for(id: String) -> Dictionary:
@@ -51,6 +63,44 @@ static func build_frames(pal: Dictionary) -> SpriteFrames:
 	if sf.has_animation("default"):
 		sf.remove_animation("default")
 	return sf
+
+
+## PNGスプライトシートから SpriteFrames を作る（グリッドを等分してコマを切り出す）。
+## build_frames と同じアニメ構成（待機／歩き × 下・上・横、各2コマ）を組む。
+static func build_frames_from_sheet(tex: Texture2D) -> SpriteFrames:
+	if tex == null:
+		return null
+	var fw := float(tex.get_width()) / SHEET_COLS
+	var fh := float(tex.get_height()) / SHEET_ROWS
+	if fw <= 0.0 or fh <= 0.0:
+		return null
+	var sf := SpriteFrames.new()
+	for row in SHEET_ROWS:
+		var dir: String = SHEET_ROW_DIRS[row]
+		var idle := "idle_" + dir
+		sf.add_animation(idle)
+		sf.set_animation_speed(idle, 2.0)
+		sf.set_animation_loop(idle, true)
+		sf.add_frame(idle, _atlas(tex, 0, row, fw, fh))
+		sf.add_frame(idle, _atlas(tex, 1, row, fw, fh))
+
+		var walk := "walk_" + dir
+		sf.add_animation(walk)
+		sf.set_animation_speed(walk, 7.0)
+		sf.set_animation_loop(walk, true)
+		sf.add_frame(walk, _atlas(tex, 2, row, fw, fh))
+		sf.add_frame(walk, _atlas(tex, 3, row, fw, fh))
+	if sf.has_animation("default"):
+		sf.remove_animation("default")
+	return sf
+
+
+## シートから1コマ分（col 列・row 行）の領域を AtlasTexture で切り出す。
+static func _atlas(tex: Texture2D, col: int, row: int, fw: float, fh: float) -> AtlasTexture:
+	var at := AtlasTexture.new()
+	at.atlas = tex
+	at.region = Rect2(col * fw, row * fh, fw, fh)
+	return at
 
 
 ## 1コマ分の画像を作ってテクスチャで返す。

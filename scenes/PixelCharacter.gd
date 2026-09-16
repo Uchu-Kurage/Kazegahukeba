@@ -7,13 +7,40 @@ extends AnimatedSprite2D
 
 var _dir := "down"
 
+## 「24px基準の見た目倍率」への補正。コード生成は 1.0、画像シートは 1コマの高さから求める。
+## Player の奥行きスケールがこの値を掛けるので、どの解像度のシートでも背丈が揃う。
+var unit_scale := 1.0
+
 
 func setup(palette: Dictionary) -> void:
 	sprite_frames = CharacterArt.build_frames(palette)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # ドット絵をくっきり
 	centered = true
+	unit_scale = 1.0
 	scale = Vector2(2.2, 2.2)
 	play("idle_down")
+
+
+## 主人公の画像差し替え用：PNGスプライトシートで見た目を作る。
+## 見つからない／読めないときは false（呼び出し側でコード生成へフォールバックする）。
+func setup_from_sheet(path: String) -> bool:
+	if not ResourceLoader.exists(path):
+		return false
+	var tex := load(path) as Texture2D
+	if tex == null:
+		return false
+	var sf := CharacterArt.build_frames_from_sheet(tex)
+	if sf == null:
+		return false
+	sprite_frames = sf
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # ドット絵をくっきり
+	centered = true
+	# 1コマの高さから「24px基準」への補正を出し、どの解像度でも従来と同じ背丈にする。
+	var fh := float(tex.get_height()) / CharacterArt.SHEET_ROWS
+	unit_scale = (CharacterArt.H / fh) if fh > 0.0 else 1.0
+	scale = Vector2.ONE * 2.2 * unit_scale
+	play("idle_down")
+	return true
 
 
 ## 速度から向きと歩き/待機を決める。静止なら待機、動いていれば歩き。

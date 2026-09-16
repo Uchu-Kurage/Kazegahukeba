@@ -41,9 +41,11 @@ func _ready() -> void:
 	col.shape = shape
 	add_child(col)
 
-	# 見た目：コード生成のドット絵キャラ（歩き／待機アニメ入り）。
+	# 見た目：主人公のスプライトシート（assets/characters/player.png）があればそれを使い、
+	# 無ければ従来のコード生成のドット絵キャラにフォールバックする。
 	_sprite = PixelCharacter.new()
-	_sprite.setup(CharacterArt.palette_for("player"))
+	if not _sprite.setup_from_sheet(CharacterArt.PLAYER_SHEET_PATH):
+		_sprite.setup(CharacterArt.palette_for("player"))
 	add_child(_sprite)
 
 
@@ -91,7 +93,8 @@ func _apply_depth_scale() -> void:
 	if not _depth_on or _sprite == null:
 		return
 	var t := clampf((position.y - _depth_y_far) / (_depth_y_near - _depth_y_far), 0.0, 1.0)
-	var s := _depth_base * lerpf(_depth_far, _depth_near, t)
+	# unit_scale を掛けて、画像シート（別解像度）でも各画面の背丈設定をそのまま活かす。
+	var s := _depth_base * lerpf(_depth_far, _depth_near, t) * _sprite.unit_scale
 	_sprite.scale = Vector2(s, s)
 
 
