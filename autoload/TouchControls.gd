@@ -23,9 +23,12 @@ extends CanvasLayer
 ## デスクトップでも強制的に表示したいとき true（タッチUIの見た目・配置確認用）。
 const FORCE_SHOW := false
 
-const DPAD := 92          # D-pad ボタンの一辺
-const ACT := 128          # 決定ボタンの一辺
-const MARGIN := 40        # 画面端からの余白
+const DPAD := 128         # D-pad ボタンの一辺（指で押しやすいよう大きめに）
+const ACT := 150          # 決定ボタンの一辺
+const BACK_W := 132       # 戻るボタンの横幅（縦は決定と揃える）
+const GAP := 28           # 決定と戻るの間隔
+const MARGIN := 48        # 画面左右端からの余白
+const BOTTOM_MARGIN := 72 # 画面下端からの余白（端末のジェスチャーバーを避けて上げる）
 
 var _root: Control
 var _debug_menu: Panel
@@ -83,9 +86,9 @@ func _build_dpad() -> void:
 	pad.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	var span := DPAD * 3 + 24
 	pad.offset_left = MARGIN
-	pad.offset_top = -(span + MARGIN)
+	pad.offset_top = -(span + BOTTOM_MARGIN)
 	pad.offset_right = MARGIN + span
-	pad.offset_bottom = -MARGIN
+	pad.offset_bottom = -BOTTOM_MARGIN
 	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(pad)
 
@@ -100,32 +103,33 @@ func _build_dpad() -> void:
 func _build_action_buttons() -> void:
 	var wrap := Control.new()
 	wrap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	wrap.offset_left = -(ACT + 130 + MARGIN)
-	wrap.offset_top = -(ACT + MARGIN)
+	wrap.offset_left = -(BACK_W + GAP + ACT + MARGIN)
+	wrap.offset_top = -(ACT + BOTTOM_MARGIN)
 	wrap.offset_right = -MARGIN
-	wrap.offset_bottom = -MARGIN
+	wrap.offset_bottom = -BOTTOM_MARGIN
 	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(wrap)
 
-	var confirm := _make_button("決定", 34)
-	confirm.size = Vector2(ACT, ACT)
-	confirm.position = Vector2(130, 0)
-	confirm.pressed.connect(func() -> void: _tap("interact"))
-	wrap.add_child(confirm)
-
-	var back := _make_button("戻る", 26)
-	back.size = Vector2(110, ACT - 30)
-	back.position = Vector2(0, 30)
+	# 戻る（左）と決定（右）を同じ高さで並べる。決定は右端＝親指が届きやすい位置。
+	var back := _make_button("戻る", 32)
+	back.size = Vector2(BACK_W, ACT)
+	back.position = Vector2(0, 0)
 	back.pressed.connect(func() -> void: _tap("skip"))
 	wrap.add_child(back)
+
+	var confirm := _make_button("決定", 40)
+	confirm.size = Vector2(ACT, ACT)
+	confirm.position = Vector2(BACK_W + GAP, 0)
+	confirm.pressed.connect(func() -> void: _tap("interact"))
+	wrap.add_child(confirm)
 
 
 ## 左上：デバッグメニューの開閉ボタン（歯車）。スマホから F3〜F10 相当を呼ぶ入口。
 func _build_debug_gear() -> void:
-	var gear := _make_button("⚙", 30)
+	var gear := _make_button("⚙", 34)
 	gear.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	gear.size = Vector2(64, 64)
-	gear.position = Vector2(16, 16)
+	gear.size = Vector2(72, 72)
+	gear.position = Vector2(20, 20)
 	gear.pressed.connect(_toggle_debug_menu)
 	_root.add_child(gear)
 
@@ -196,7 +200,7 @@ func _close_debug_menu() -> void:
 
 ## 左下 D-pad 用：押下で action を pressed 保持、離すと release（＝移動が続く）。
 func _add_hold_button(parent: Control, text: String, action: String, pos: Vector2) -> void:
-	var b := _make_button(text, 36)
+	var b := _make_button(text, 44)
 	b.size = Vector2(DPAD, DPAD)
 	b.position = pos
 	b.button_down.connect(func() -> void: _hold(action, true))
