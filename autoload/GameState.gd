@@ -415,10 +415,10 @@ func discover_fubutsushi(id: String) -> bool:
 	return true
 
 
-## 環境発見（ambient）：その場所・時間帯・天気・期間に合う未収集の風物詩を1件だけ拾う。
-## 1回の入場で最大1件（静けさ優先）。複数該当時は cycle="B"（今年かぎり）優先→若いid（並び順）。
-## 見つけた id を返す（無ければ ""）。place は Fubutsushi 側の場所トークン。
-func evaluate_ambient_fubutsushi(place: String) -> String:
+## 環境発見の候補を「覗き見」する（副作用なし＝まだ収集しない）。条件は evaluate と同じ。
+## 話しかけ式で「その場を調べたら初めて発見」させたいので、入場時の判定はこちらを使う。
+## 収集する時は返った id を discover_fubutsushi に渡す（または evaluate_ を使う）。
+func peek_ambient_fubutsushi(place: String) -> String:
 	var best := ""
 	var best_is_b := false
 	for id in Fubutsushi.ordered_ids():
@@ -436,6 +436,14 @@ func evaluate_ambient_fubutsushi(place: String) -> String:
 		elif is_b and not best_is_b:
 			best = id  # B（今年かぎり）を優先的に拾う
 			best_is_b = true
+	return best
+
+
+## 環境発見（ambient）：その場所・時間帯・天気・期間に合う未収集の風物詩を1件だけ拾う。
+## 1回の入場で最大1件（静けさ優先）。複数該当時は cycle="B"（今年かぎり）優先→若いid（並び順）。
+## 見つけた id を返す（無ければ ""）。place は Fubutsushi 側の場所トークン。
+func evaluate_ambient_fubutsushi(place: String) -> String:
+	var best := peek_ambient_fubutsushi(place)
 	if best != "":
 		discover_fubutsushi(best)
 	return best

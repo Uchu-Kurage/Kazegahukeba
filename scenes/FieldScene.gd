@@ -13,6 +13,8 @@ extends ExploreMap
 
 const EXIT_PREFIX := "to_"
 const AOI_SPOT_ID := "aoi_visit"  # 葵の遍在遭遇スポット（相手の会話とは別に、話しかける独立スポット）
+const INTRO_SPOT_ID := "intro_look"  # 入場ナレーション（独白・遭遇・風物詩）を話しかけ式で開く調べどころ
+const LEAVE_SPOT_ID := "go_out"      # 家：見下ろしマップ（お出かけ先選択）へ出るオブジェクト
 
 var _field := {}
 var _from_id := ""      # どの画面から来たか（入口位置の決定に使う）
@@ -21,6 +23,8 @@ var _road_hotspots := {}  # 道マップの基本セット風物詩スポット�
 var _walk_overlay: WalkOverlay  # 歩行領域の可視化（F10で切替。調整用）
 var _weather_overlay: ColorRect  # 天気の空色オーバーレイ（第9弾）
 var _weather_fx: WeatherFX       # 天気の専用ビジュアル（虹・星空・霧・雨）
+var _intro_nodes: Array = []          # 入場ナレーション：話しかけたら流すノード列（空なら調べどころを置かない）
+var _intro_commit_forecast := false   # 閲覧し切ったら「今日の予報は開示済み」を確定するか（朝・一日一回）
 
 
 func _build_map() -> void:
@@ -57,6 +61,9 @@ func _build_map() -> void:
 			add_spot(sid, WeatherScenes.title_of(String(e["id"])), "", e["pos"])
 			_road_hotspots[sid] = e
 
+	# 入場ナレーション（第14弾）：移動時に自動で差し込まず、調べどころに話しかけたら開く。
+	_setup_intro_spots()
+
 
 ## プレイヤー生成後：道の上だけ歩けるよう制限し、来た画面に対応する入口に立たせる。
 func _ready_done() -> void:
@@ -86,46 +93,131 @@ func _ready_done() -> void:
 	GameState.phase_changed.connect(_on_phase_changed.unbind(1))
 	GameState.day_changed.connect(_on_day_changed)
 	GameState.game_ended.connect(_on_game_ended)
-	# 第10弾：部屋（家）の午前／午後は「朝の独白＋予報＋部屋の風物詩」を流してから見下ろしマップへ。
-	#   夜は就寝（下の _on_interact）。それ以外の画面（エリア内）は道・風物詩の演出だけ。
-	if String(_field["id"]) == Areas.HOME:
-		if GameState.phase != GameState.Phase.NIGHT:
-			_home_intro_and_map()
-		else:
-			_maybe_ambient_fubutsushi()  # 夜の家：ヤモリ・網戸ごしの風など
-	else:
-		# 道マップ（第9弾）：入場時に独白・見逃せる一品・遭遇（すべて枠非消費）。
-		_maybe_road_intro()
-		# 風物詩（第10弾）：入場時に環境発見を1回だけ（天気・時間帯・期間で出し分け・枠非消費）。
-		_maybe_ambient_fubutsushi()
+	# 第14弾：入場ナレーション（家の朝の導入・道の独白／遭遇・風物詩）は移動時に自動再生せず、
+	#   _build_map で置いた調べどころ（INTRO_SPOT）に話しかけたときに開く（_setup_intro_spots）。
 
 
 func _player_start() -> Vector2:
 	return _field.get("start", Vector2(576, 365))
 
 
-## 部屋（家）の朝／昼：独白 → 明日の予報（朝・一日一回・山場は的中）→ 部屋の風物詩（環境発見）を
-## ひと続きに流し、終わったら見下ろしマップを開く（＝行き先を選ぶ）。すべて枠非消費。
-func _home_intro_and_map() -> void:
+# --- 入場ナレーション（第14弾）＝移動時に自動再生せず、調べどころに話しかけたら開く ----------
+#   従来は入場（マップ移動）時に「家の朝の導入・道の独白／遭遇／見逃せる一品・風物詩」を強制再生
+#   していた。ここでは「その画面で今日流せるナレーション」をまとめて用意し、調べどころ
+#   （INTRO_SPOT）に話しかけたときに初めて再生する。フラグや風物詩の収集は、再生し切ったときに
+#   だけ確定する（＝入場だけでは消費しない。覗き見 peek → 閲覧で確定）。
+
+## 画面種別に応じて入場ナレーションを用意し、調べどころ／出口オブジェクトを置く。
+func _setup_intro_spots() -> void:
+	var fid := String(_field.get("id", ""))
+	if fid == Areas.HOME:
+		if GameState.phase == GameState.Phase.NIGHT:
+			# 夜の家：部屋の風物詩は「調べる」で。就寝／特別な夜は［E］（_on_interact の夜処理）。
+			_intro_nodes = _build_ambient_fubutsushi_nodes("home")
+			if not _intro_nodes.is_empty():
+				add_spot(INTRO_SPOT_ID, "部屋を見まわす", "", Vector2(360, 560))
+		else:
+			# 朝／昼の家：朝の導入は「窓の外を眺める」で。出発は「出かける」で見下ろしマップへ。
+			_intro_nodes = _build_home_intro_nodes()
+			if not _intro_nodes.is_empty():
+				add_spot(INTRO_SPOT_ID, "窓の外を眺める", "", Vector2(300, 570))
+			add_spot(LEAVE_SPOT_ID, "出かける", "", Vector2(880, 560))
+		return
+	# エリア内の画面：道は道の演出（独白・遭遇・見逃せる一品）、それ以外は環境発見（風物詩）。
+	if Roads.is_road(fid):
+		_intro_nodes = _build_road_intro_nodes()
+	else:
+		_intro_nodes = _build_ambient_fubutsushi_nodes(_place_token(fid))
+	if not _intro_nodes.is_empty():
+		add_spot(INTRO_SPOT_ID, "あたりを見わたす", "", _field.get("start", FieldMaps.CENTER))
+
+
+## 朝／昼の家の導入ノード（独白＋明日の予報＋部屋の風物詩）。純粋＝副作用なし（確定は閲覧後）。
+func _build_home_intro_nodes() -> Array:
+	_intro_commit_forecast = false
 	var nodes: Array = RoomLines.intro(GameState)  # 朝の独白（天気・時期・約束で出し分け）
-	# 明日の予報（世界に溶けた開示）＝朝だけ・一日一回・最終日は出さない。
+	# 明日の予報（世界に溶けた開示）＝朝だけ・一日一回・最終日は出さない。開示済みは閲覧後に確定。
 	if GameState.phase == GameState.Phase.MORNING \
 			and GameState.last_forecast_day != GameState.day_index \
 			and GameState.day_index + 1 < GameState.TOTAL_DAYS:
 		var fc := _forecast_nodes()
 		if not fc.is_empty():
-			GameState.last_forecast_day = GameState.day_index
 			nodes.append_array(fc)
+			_intro_commit_forecast = true
 	# 部屋の風物詩（朝顔・扇風機・ヤモリ等）を環境発見（枠非消費・一期一会）。
-	var aid := GameState.evaluate_ambient_fubutsushi("home")
-	if aid != "":
-		nodes.append({ "speaker": "", "text": String(Fubutsushi.entry_of(aid).get("record_text", "")) })
-	if nodes.is_empty():
-		Nav.go_to_overworld()
+	nodes.append_array(_build_ambient_fubutsushi_nodes("home"))
+	return nodes
+
+
+## 道マップの入場ナレーション（見逃せる一品＋遭遇＋独白／すべて枠非消費）。純粋＝閲覧で確定。
+##   フラグは効果ノードとして列に挟むので、再生し切ったときにだけ立つ（入場だけでは消費しない）。
+func _build_road_intro_nodes() -> Array:
+	var rid := String(_field.get("id", ""))
+	if not Roads.is_road(rid) or GameState.phase == GameState.Phase.NIGHT:
+		return []
+	var day := GameState.day_index
+	var seq: Array = []
+	# 見逃せる一品（天気/日付限定・一度きり）。閲覧で図鑑に記録（効果ノードで確定）。
+	var scene := WeatherScenes.match(day, rid, GameState.weather_today(), GameState.flags)
+	if not scene.is_empty():
+		seq.append_array(Story.flatten(scene["script"], GameState.flags))
+		seq.append({ "effect": { "set": { WeatherScenes.flag_of(String(scene["id"])): true } } })
+	# 遭遇（1日1回。葵は喪失後に現れない＝Roads 側で空を返す）。
+	var enc_key := "road_enc_%s_%d" % [rid, day]
+	if not GameState.flags.get(enc_key, false):
+		var enc := Story.flatten(Roads.encounter(rid, GameState), GameState.flags, GameState)
+		if not enc.is_empty():
+			seq.append_array(enc)
+			seq.append({ "effect": { "set": { enc_key: true } } })
+	# 独白（1日1回。他に何も無くても、道の性格を一言）。
+	var mono_key := "road_mono_%s_%d" % [rid, day]
+	if not GameState.flags.get(mono_key, false):
+		var mono := Roads.monologue(rid, GameState)
+		if not mono.is_empty():
+			seq.append_array(mono)
+			seq.append({ "effect": { "set": { mono_key: true } } })
+	return seq
+
+
+## その場所の環境発見（風物詩）を1件。覗き見で候補を得て、閲覧し切ったら discover で確定する。
+func _build_ambient_fubutsushi_nodes(place: String) -> Array:
+	if place == "":
+		return []
+	var id := GameState.peek_ambient_fubutsushi(place)
+	if id == "":
+		return []
+	var e := Fubutsushi.entry_of(id)
+	return [
+		{ "speaker": "", "text": String(e.get("record_text", "")) },
+		{ "effect": { "discover": id } },  # 閲覧し切ったら収集を確定（_on_option_selected が処理）
+	]
+
+
+## 調べどころに話しかけたとき：用意した入場ナレーションを流す（枠非消費）。
+func _play_intro(spot) -> void:
+	if _intro_nodes.is_empty():
 		return
+	AudioManager.play_sfx("page")  # 風鈴一つ程度の控えめな合図
 	set_player_can_move(false)
-	Dialogue.finished.connect(func() -> void: Nav.go_to_overworld(), CONNECT_ONE_SHOT)
-	Dialogue.start(nodes)
+	Dialogue.option_selected.connect(_on_option_selected)  # 遭遇の約束・風物詩の収集などを反映
+	Dialogue.finished.connect(_on_intro_finished.bind(spot), CONNECT_ONE_SHOT)
+	Dialogue.start(_intro_nodes)
+
+
+## 入場ナレーションを見終えたとき。予報の開示を確定し、調べどころは消す（一度きり）。枠は消費しない。
+func _on_intro_finished(spot) -> void:
+	if Dialogue.option_selected.is_connected(_on_option_selected):
+		Dialogue.option_selected.disconnect(_on_option_selected)
+	if _intro_commit_forecast:
+		GameState.last_forecast_day = GameState.day_index
+		_intro_commit_forecast = false
+	_intro_nodes = []
+	if _current_spot == spot:
+		_current_spot = null
+	if is_instance_valid(spot):
+		spot.queue_free()
+	set_player_can_move(true)
+	_refresh_prompt()
 
 
 ## 明日の予報セリフ（1行）。予報は weather_forecast（山場は的中／通常は揺らぎ有）。
@@ -156,64 +248,7 @@ func _forecast_nodes() -> Array:
 			return [{ "speaker": "", "text": "朝刊の予報欄に目をやる。あすは%s、とある。" % phrase }]
 
 
-# --- 道マップ（第9弾）＝通路シーンの独白・風物詩・遭遇（すべて枠非消費）------------
-
-## 入場時に一度だけ流す：見逃せる一品（一期一会）＋遭遇（1日1回）＋独白（1日1回）。
-## 枠は消費しない（choose_location を呼ばない）。約束が絡む遭遇は promise 効果で予定表に記帳される。
-func _maybe_road_intro() -> void:
-	var rid := String(_field.get("id", ""))
-	if not Roads.is_road(rid):
-		return
-	if GameState.phase == GameState.Phase.NIGHT:
-		return
-	var day := GameState.day_index
-	var seq: Array = []
-	# 見逃せる一品（天気/日付限定・一度きり）。図鑑に記録し、以後は出ない。
-	var scene := WeatherScenes.match(day, rid, GameState.weather_today(), GameState.flags)
-	if not scene.is_empty():
-		seq.append_array(Story.flatten(scene["script"], GameState.flags))
-		seq.append({ "effect": { "set": { WeatherScenes.flag_of(String(scene["id"])): true } } })
-	# 遭遇（1日1回。葵は喪失後に現れない＝Roads 側で空を返す）。
-	var enc_key := "road_enc_%s_%d" % [rid, day]
-	if not GameState.flags.get(enc_key, false):
-		var enc := Story.flatten(Roads.encounter(rid, GameState), GameState.flags, GameState)
-		if not enc.is_empty():
-			seq.append_array(enc)
-			GameState.set_flag(enc_key, true)
-	# 独白（1日1回。他に何も無くても、道の性格を一言）。
-	var mono_key := "road_mono_%s_%d" % [rid, day]
-	if not GameState.flags.get(mono_key, false):
-		var mono := Roads.monologue(rid, GameState)
-		if not mono.is_empty():
-			seq.append_array(mono)
-			GameState.set_flag(mono_key, true)
-	if seq.is_empty():
-		return
-	set_player_can_move(false)
-	Dialogue.option_selected.connect(_on_option_selected)
-	Dialogue.finished.connect(_on_road_seq_finished, CONNECT_ONE_SHOT)
-	Dialogue.start(seq)
-
-
 # --- 夏の風物詩コレクション（第10弾）＝環境発見（枠非消費）------------------
-
-## 入場時に一度だけ、この画面で見つかる風物詩を判定する。既に別の会話中なら見送る（一期一会）。
-## 発見時は既存メッセージウィンドウで record_text を静かに出すだけ（達成音・トーストは無し）。
-func _maybe_ambient_fubutsushi() -> void:
-	if Dialogue.is_active():
-		return  # 予報・道の会話などを優先（この入場では見送る＝取りこぼしは咎めない）
-	var fid := String(_field.get("id", ""))
-	if Roads.is_road(fid):
-		return  # 道は道の風物詩（別系統）に任せる
-	var id := GameState.evaluate_ambient_fubutsushi(_place_token(fid))
-	if id == "":
-		return
-	var e := Fubutsushi.entry_of(id)
-	set_player_can_move(false)
-	AudioManager.play_sfx("page")  # 風鈴一つ程度の控えめな合図（達成音は鳴らさない）
-	Dialogue.finished.connect(_on_road_seq_finished, CONNECT_ONE_SHOT)  # 後片付け（枠は消費しない）
-	Dialogue.start([{ "speaker": "", "text": String(e.get("record_text", "")) }])
-
 
 ## 画面ID → 風物詩マスタの場所トークン（設計書の命名に合わせる）。
 func _place_token(field_id: String) -> String:
@@ -320,15 +355,22 @@ func _unhandled_input(event: InputEvent) -> void:
 func _on_interact(spot) -> void:
 	if Dialogue.is_active():
 		return
-	# 夜：出口・人ではなく「特別な夜 or 就寝」だけができる（§Q1：2枠で夜→翌日）。
+	# 夜：調べどころ（部屋の風物詩）に立っていればそれを開く。それ以外は「特別な夜 or 就寝」だけ
+	#     ができる（§Q1：2枠で夜→翌日）。
 	if GameState.phase == GameState.Phase.NIGHT:
-		_night_action()
+		if spot != null and String(spot.location_id) == INTRO_SPOT_ID:
+			_play_intro(spot)
+		else:
+			_night_action()
 		return
 	if spot == null:
 		return
-	var ex := _exit_by_id(spot.location_id)
-	if not ex.is_empty():
-		_take_exit(ex)
+	if String(spot.location_id) == INTRO_SPOT_ID:
+		_play_intro(spot)      # 入場ナレーション（独白・遭遇・風物詩）を話しかけ式で開く
+	elif String(spot.location_id) == LEAVE_SPOT_ID:
+		Nav.go_to_overworld()  # 家：出かける → 見下ろしマップ（お出かけ先選択）へ
+	elif not _exit_by_id(spot.location_id).is_empty():
+		_take_exit(_exit_by_id(spot.location_id))
 	elif _road_hotspots.has(spot.location_id):
 		_inspect_hotspot(spot)  # 道の風物詩を眺める（枠非消費・常設）
 	elif String(spot.location_id) == AOI_SPOT_ID:
@@ -545,7 +587,12 @@ func _exit_by_id(exit_id: String) -> Dictionary:
 
 
 func _refresh_prompt() -> void:
+	var at_home := String(_field.get("id", "")) == Areas.HOME
 	if GameState.phase == GameState.Phase.NIGHT:
+		# 夜：調べどころに立っていれば「見まわす」、それ以外は就寝／特別な夜。
+		if _current_spot != null and String(_current_spot.location_id) == INTRO_SPOT_ID:
+			HUD.set_prompt("［E］で「%s」" % _current_spot.display_name)
+			return
 		var night := Nights.for_day(GameState.day_index)
 		if night.is_empty():
 			HUD.set_prompt("夜。［E］で今日を終える（眠って翌朝へ）")
@@ -554,13 +601,21 @@ func _refresh_prompt() -> void:
 		return
 	if _current_spot != null:
 		var s = _current_spot
-		if not _exit_by_id(s.location_id).is_empty():
-			HUD.set_prompt("［E］で「%s」へ ／［Q］家に帰る" % s.display_name)
+		var tail := "" if at_home else " ／［Q］家に帰る"
+		if String(s.location_id) == INTRO_SPOT_ID:
+			HUD.set_prompt("［E］で「%s」%s" % [s.display_name, tail])
+		elif String(s.location_id) == LEAVE_SPOT_ID:
+			HUD.set_prompt("［E］で「%s」（お出かけ先をえらぶ）" % s.display_name)
+		elif not _exit_by_id(s.location_id).is_empty():
+			HUD.set_prompt("［E］で「%s」へ%s" % [s.display_name, tail])
 		elif _road_hotspots.has(s.location_id):
-			HUD.set_prompt("［E］で「%s」を眺める ／［Q］家に帰る" % s.display_name)
+			HUD.set_prompt("［E］で「%s」を眺める%s" % [s.display_name, tail])
 		elif String(s.location_id) == AOI_SPOT_ID:
-			HUD.set_prompt("［E］で「%s」と少し話す ／［Q］家に帰る" % s.display_name)
+			HUD.set_prompt("［E］で「%s」と少し話す%s" % [s.display_name, tail])
 		else:
-			HUD.set_prompt("［E］で「%s」と過ごす ／［Q］家に帰る" % s.display_name)
+			HUD.set_prompt("［E］で「%s」と過ごす%s" % [s.display_name, tail])
 	else:
-		HUD.set_prompt("%s。WASD・矢印で歩く（移動は無料）／［Q］で家に帰る（この半日を終える）" % String(_field.get("name", "")))
+		if at_home:
+			HUD.set_prompt("家。WASD・矢印で歩く。オブジェクトに［E］で調べる／「出かける」で外へ")
+		else:
+			HUD.set_prompt("%s。WASD・矢印で歩く（移動は無料）／［Q］で家に帰る（この半日を終える）" % String(_field.get("name", "")))
