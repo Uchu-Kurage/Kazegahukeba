@@ -13,6 +13,9 @@ var current_location_id := ""  ## これから入る場所。Place シーンが�
 var current_field_id := "riverbank"
 var field_from_id := ""
 
+## オープニングの夢をタイトルの「オープニングを見る」から再生したか（見終わったらタイトルへ戻す）。
+var opening_replay := false
+
 
 func go_to_place(id: String) -> void:
 	current_location_id = id
@@ -47,7 +50,9 @@ func go_to_title() -> void:
 
 ## オープニング（歩ける消失の夢。第13弾）＝新規開始で、目覚め→本編の前に一度だけ流す一本道。
 ## 既読なら Title 側でスキップして直接 go_to_field("home") する（毎周回で強制しない）。
-func go_to_opening() -> void:
+## replay=true（タイトルの「オープニングを見る」）のときは、見終わったら本編ではなくタイトルへ戻す。
+func go_to_opening(replay: bool = false) -> void:
+	opening_replay = replay
 	Fader.change_scene("res://scenes/OpeningDream.tscn")
 
 
