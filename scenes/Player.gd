@@ -6,6 +6,13 @@ extends CharacterBody2D
 ## 操作キーの登録は Controls（Autoload）に集約してある。
 
 @export var speed := 230.0
+## 加減速（操作感）。押した瞬間に最高速だと硬いので、ごく短く加速・減速させて滑らかにする。
+##   accel が大きいほどキビキビ。約0.1秒で最高速／離すと約0.09秒で停止する既定値。
+@export var accel := 2300.0
+@export var decel := 2600.0
+
+## 道判定のあそび（px）。中心1点＋矩形の和集合だとつなぎ目で引っかかるので、少し広げて滑らかに。
+const WALK_MARGIN := 5.0
 
 ## Place 側から動きを止めるためのフラグ（今は常に歩ける）。
 var can_move := true
@@ -34,6 +41,9 @@ var _sprite: PixelCharacter
 
 
 func _ready() -> void:
+	# タッチUI（TouchControls）が「フィールド＝仮想スティック／メニュー＝方向キー」を出し分けるための目印。
+	add_to_group("player")
+
 	# アタリ判定。
 	var shape := RectangleShape2D.new()
 	shape.size = Vector2(22, 22)
@@ -49,11 +59,20 @@ func _ready() -> void:
 	add_child(_sprite)
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+	# 入力方向：キーボード（get_vector）を優先し、無ければスマホの仮想スティック（アナログ）。
+	var dir := Vector2.ZERO
 	if can_move:
-		var dir := Input.get_vector("walk_left", "walk_right", "walk_up", "walk_down")
+		dir = Input.get_vector("walk_left", "walk_right", "walk_up", "walk_down")
+		if dir == Vector2.ZERO:
+			dir = TouchControls.move_vec  # 仮想スティックの傾き（長さ≤1＝速度の強弱）
+		dir = dir.limit_length(1.0)
+	# 目標速度へ滑らかに寄せる（加速／減速）。硬さを取りつつキビキビ感は残す。
+	var target := dir * speed
+	var rate := accel if dir != Vector2.ZERO else decel
+	velocity = velocity.move_toward(target, rate * delta)
+	if velocity != Vector2.ZERO:
 		var before := position
-		velocity = dir * speed
 		move_and_slide()
 		# 画面外へ出ないように位置をクランプ。
 		position.x = clampf(position.x, bounds.position.x, bounds.end.x)
@@ -69,8 +88,6 @@ func _physics_process(_delta: float) -> void:
 				position = try_y
 			else:
 				position = before
-	else:
-		velocity = Vector2.ZERO
 	if _sprite:
 		_sprite.set_moving(velocity)
 		_apply_depth_scale()
@@ -99,9 +116,10 @@ func _apply_depth_scale() -> void:
 
 
 ## いまの位置が「道」の上か（walkable_rects のどれかに入っているか）。
+## WALK_MARGIN だけ矩形を広げて判定し、矩形のつなぎ目・縁でのひっかかりを減らす。
 func _in_walkable(p: Vector2) -> bool:
 	for r in walkable_rects:
-		if r.has_point(p):
+		if r.grow(WALK_MARGIN).has_point(p):
 			return true
 	return false
 
