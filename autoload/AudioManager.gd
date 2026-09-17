@@ -41,12 +41,14 @@ func _ready() -> void:
 
 # --- 再生 API --------------------------------------------------------
 
-func play_sfx(sfx_name: String) -> void:
+## 効果音を1回鳴らす。pitch で音程を散らせる（足音を1歩ごとに少し変えて単調さを避ける等）。
+func play_sfx(sfx_name: String, pitch: float = 1.0) -> void:
 	if not _sfx.has(sfx_name):
 		return
 	var p: AudioStreamPlayer = _sfx_players[_next]
 	_next = (_next + 1) % _sfx_players.size()
 	p.stream = _sfx[sfx_name]
+	p.pitch_scale = pitch
 	p.play()
 
 
@@ -77,6 +79,18 @@ func play_ambient(amb_name: String) -> void:
 func stop_ambient() -> void:
 	_cur_amb = ""
 	_amb.stop()
+
+
+## 画面（フィールド）IDに合った足音の種類。地面に合わせて踏み音を出し分ける。
+func footstep_for_field(field_id: String) -> String:
+	match field_id:
+		"home": return "step_wood"                    # 家＝板の間
+		"shops": return "step_stone"                  # 商店街＝石畳・舗装
+		"shrine": return "step_stone"                 # 参道＝石畳
+		"school": return "step_stone"                 # 校庭・校舎＝コンクリート
+		"riverbank", "estuary": return "step_gravel"  # 河原・河口＝砂利
+		"hill", "sunflower", "fields": return "step_grass"  # 丘・畑・田＝草地
+	return "step_dirt"                                # 畦道・土の道など
 
 
 ## 場所IDに対応する環境音名。
@@ -110,6 +124,14 @@ func _build_sfx() -> void:
 	_sfx["cancel"] = _load_or("res://assets/audio/cancel.wav", _sweep(440.0, 300.0, 0.12, 0.40))
 	_sfx["talk"] = _load_or("res://assets/audio/talk.wav", _tone(720.0, 0.025, 0.20))
 	_sfx["page"] = _load_or("res://assets/audio/page.wav", _noise(0.14, 0.30))
+	# カーソル移動（見下ろしマップ・予定表の選択移動）。短く高いコツッという合図。
+	_sfx["move"] = _load_or("res://assets/audio/move.wav", _tone(880.0, 0.03, 0.26))
+	# 足音（フィールドの地面ごと）。短いノイズの踏み音。歩くたびにピッチを少し散らす。
+	_sfx["step_grass"]  = _load_or("res://assets/audio/step_grass.wav",  _step(0.5,    0.0, 0.09, 0.22))
+	_sfx["step_dirt"]   = _load_or("res://assets/audio/step_dirt.wav",   _step(0.33,   0.0, 0.10, 0.26))
+	_sfx["step_stone"]  = _load_or("res://assets/audio/step_stone.wav",  _step(0.85,   0.0, 0.07, 0.22))
+	_sfx["step_wood"]   = _load_or("res://assets/audio/step_wood.wav",   _step(0.5,  180.0, 0.10, 0.24))
+	_sfx["step_gravel"] = _load_or("res://assets/audio/step_gravel.wav", _step(0.6,    0.0, 0.11, 0.24))
 
 
 func _build_bgms() -> void:
@@ -173,6 +195,26 @@ func _noise(dur: float, amp: float) -> AudioStreamWAV:
 		var t := float(i) / MIX_RATE
 		var env := 1.0 - t / dur
 		s[i] = randf_range(-1.0, 1.0) * amp * env * env
+	return _wav(s, false)
+
+
+## 足音1歩ぶんの波形。地面の質感を数値で出し分ける。
+##   bright : ノイズのローパス係数（大きいほど硬く明るい＝石畳、小さいほど鈍い＝土）
+##   body   : 低い胴鳴りの周波数（0で無し／板の間などは 180 前後で「コッ」と響かせる）
+func _step(bright: float, body: float, dur: float, amp: float) -> AudioStreamWAV:
+	var n := int(dur * MIX_RATE)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	var prev := 0.0
+	for i in n:
+		var t := float(i) / MIX_RATE
+		prev += bright * (randf_range(-1.0, 1.0) - prev)  # 1極ローパスノイズ
+		var env := 1.0 - t / dur
+		env = env * env  # すばやく減衰（踏み込み）
+		var v := prev * 3.0 * amp * env
+		if body > 0.0:
+			v += sin(TAU * body * t) * amp * 0.6 * env
+		s[i] = clampf(v, -1.0, 1.0)
 	return _wav(s, false)
 
 

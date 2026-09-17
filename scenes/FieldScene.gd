@@ -71,6 +71,7 @@ func _ready_done() -> void:
 	for r in _field.get("roads", []):
 		roads.append(r)
 	_player.walkable_rects = roads
+	_player.footstep_sfx = AudioManager.footstep_for_field(String(_field["id"]))  # 地面に合った足音
 	_player.position = FieldMaps.entry_position(_field, _from_id)
 	# 奥行きスケールは画面ごとの設定（FieldMaps の depth）で。手前で最大・奥で最小、base で背丈調整。
 	var d: Dictionary = _field.get("depth", {})
