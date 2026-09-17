@@ -76,9 +76,12 @@ func _process(_dt: float) -> void:
 			_reset_stick()
 
 
-## メニュー操作モードか（＝方向キーを出す）。予定帳を開いている間、または主人公がいない画面。
+## メニュー操作モードか（＝方向キーを出す）。予定帳を開いている間、会話中（選択肢を上下で選ぶ）、
+## または主人公がいない画面（タイトル・見下ろしマップ等）。
 func _in_menu_mode() -> bool:
 	if Book.is_open():
+		return true
+	if Dialogue.is_active():  # 会話中は選択肢を方向キーで選ぶ（フィールドでもスティックにしない）
 		return true
 	return get_tree().get_first_node_in_group("player") == null
 
