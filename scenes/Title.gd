@@ -66,6 +66,8 @@ func _activate() -> void:
 			_go(Screen.RECORDS)
 		"almanac":
 			_go(Screen.ALMANAC)
+		"opening":
+			Nav.go_to_opening(true)  # オープニングの夢を再生（見終わったらタイトルへ戻る）
 		"clear":
 			_go(Screen.CONFIRM)
 		"quit":
@@ -94,6 +96,7 @@ func _go(screen: Screen) -> void:
 				_items.append({ "id": "ura", "label": "９月１日" })
 			_items.append({ "id": "records", "label": "エンディング記録" })
 			_items.append({ "id": "almanac", "label": "風物詩図鑑" })
+			_items.append({ "id": "opening", "label": "オープニングを見る" })
 			_items.append({ "id": "clear", "label": "記録を消す" })
 			_items.append({ "id": "quit", "label": "おわる" })
 		Screen.RECORDS:

@@ -350,5 +350,10 @@ func _finish() -> void:
 		return
 	_done = true
 	SaveData.mark_opening_seen()
+	# タイトルの「オープニングを見る」からの再生なら、本編には入らずタイトルへ戻す。
+	if Nav.opening_replay:
+		Nav.opening_replay = false
+		Nav.go_to_title()
+		return
 	HUD.set_shown(true)
 	Nav.go_to_field("home", "")  # 目覚め → 本編（第10弾の流れ：部屋→見下ろしマップ）へ
