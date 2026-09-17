@@ -30,9 +30,26 @@ const GAP := 28           # 決定と戻るの間隔
 const MARGIN := 48        # 画面左右端からの余白
 const BOTTOM_MARGIN := 72 # 画面下端からの余白（端末のジェスチャーバーを避けて上げる）
 
+# --- フィールド移動＝フローティング仮想スティック ------------------------------------
+const STICK_RADIUS := 95.0    # 最大傾き（この距離で最高速）
+const STICK_KNOB := 46.0      # つまみ（内円）の半径
+const STICK_DEADZONE := 0.12  # これ未満の傾きは無視（指のわずかな揺れで動かないように）
+const STICK_AREA_RIGHT := 0.6 # 画面左側のこの割合を反応エリアに（右側の決定/戻る等と干渉させない）
+
 var _root: Control
 var _debug_menu: Panel
 var _debug_open := false
+
+## フィールド移動：仮想スティックの傾き（長さ≤1＝速度の強弱）。Player が毎フレーム読む。
+var move_vec := Vector2.ZERO
+
+var _dpad: Control          # メニュー用の方向キー（項目選択。フィールドでは隠す）
+var _stick_area: Control    # フィールド用スティックの反応エリア（画面左側）
+var _stick_base: Panel      # スティックの外円（触れた位置に出す）
+var _stick_knob: Panel      # スティックのつまみ（内円）
+var _stick_active := false
+var _stick_touch := -1      # 追従中のタッチ指の index（マウスは -1）
+var _stick_origin := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -44,6 +61,26 @@ func _ready() -> void:
 	# タッチ端末のときだけ表示（それ以外は邪魔にならないよう隠す）。
 	var touch := DisplayServer.is_touchscreen_available() or OS.has_feature("mobile")
 	_root.visible = touch or FORCE_SHOW
+
+
+## フィールド（主人公を歩かせる画面）ではスティック、メニューでは方向キー、と毎フレーム出し分ける。
+func _process(_dt: float) -> void:
+	if _root == null or not _root.visible:
+		return
+	var menu := _in_menu_mode()
+	if _dpad != null:
+		_dpad.visible = menu
+	if _stick_area != null:
+		_stick_area.visible = not menu
+		if menu and _stick_active:
+			_reset_stick()
+
+
+## メニュー操作モードか（＝方向キーを出す）。予定帳を開いている間、または主人公がいない画面。
+func _in_menu_mode() -> bool:
+	if Book.is_open():
+		return true
+	return get_tree().get_first_node_in_group("player") == null
 
 
 # --- 入力の橋渡し ----------------------------------------------------
@@ -87,7 +124,8 @@ func _build_ui() -> void:
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE  # 空きスペースは背後（ゲーム）へ素通し
 	add_child(_root)
 
-	_build_dpad()
+	_build_joystick()  # フィールド用スティック（左側）。ボタン類より先に置いて背面にする。
+	_build_dpad()      # メニュー用の方向キー（フィールドでは隠す）
 	_build_action_buttons()
 	_build_book_button()
 	_build_debug_gear()
@@ -105,12 +143,100 @@ func _build_dpad() -> void:
 	pad.offset_bottom = -BOTTOM_MARGIN
 	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(pad)
+	_dpad = pad
 
 	var mid := DPAD + 12
 	_add_hold_button(pad, "▲", "walk_up",    Vector2(mid, 0))
 	_add_hold_button(pad, "◀", "walk_left",  Vector2(0, mid))
 	_add_hold_button(pad, "▶", "walk_right", Vector2(mid * 2, mid))
 	_add_hold_button(pad, "▼", "walk_down",  Vector2(mid, mid * 2))
+
+
+## フィールド用のフローティング仮想スティック。画面左側の触れた場所に出て、なぞった方向へ移動。
+## 傾き（引っ張り具合）で速度も変わる。指を離すと停止。反応エリアは決定/戻ると干渉しない左側だけ。
+func _build_joystick() -> void:
+	_stick_area = Control.new()
+	_stick_area.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_stick_area.anchor_right = STICK_AREA_RIGHT  # 左側だけを反応エリアにする
+	_stick_area.offset_right = 0
+	_stick_area.mouse_filter = Control.MOUSE_FILTER_STOP
+	_stick_area.visible = false
+	_stick_area.gui_input.connect(_on_stick_input)
+	_root.add_child(_stick_area)
+
+	_stick_base = _make_ring(STICK_RADIUS, UITheme.washi(16, 0.32))
+	_stick_area.add_child(_stick_base)
+	_stick_knob = _make_ring(STICK_KNOB, UITheme.accent(16))
+	_stick_area.add_child(_stick_knob)
+
+
+## 円形のパネル（スティックの外円・つまみ）を作る。角丸を半径いっぱいにして円に見せる。
+func _make_ring(radius: float, sb: StyleBoxFlat) -> Panel:
+	var p := Panel.new()
+	p.size = Vector2(radius * 2.0, radius * 2.0)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sb.set_corner_radius_all(int(radius))
+	p.add_theme_stylebox_override("panel", sb)
+	p.visible = false
+	return p
+
+
+## スティック反応エリアのタッチ／ドラッグ／（確認用に）マウスを処理する。
+func _on_stick_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		var t := event as InputEventScreenTouch
+		if t.pressed:
+			if not _stick_active:
+				_stick_active = true
+				_stick_touch = t.index
+				_begin_stick(t.position)
+		elif t.index == _stick_touch:
+			_reset_stick()
+	elif event is InputEventScreenDrag:
+		var d := event as InputEventScreenDrag
+		if _stick_active and d.index == _stick_touch:
+			_update_stick(d.position)
+	elif event is InputEventMouseButton:  # デスクトップ確認用（FORCE_SHOW）
+		var mb := event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				_stick_active = true
+				_stick_touch = -1
+				_begin_stick(mb.position)
+			else:
+				_reset_stick()
+	elif event is InputEventMouseMotion:
+		var mm := event as InputEventMouseMotion
+		if _stick_active and _stick_touch == -1:
+			_update_stick(mm.position)
+
+
+## 触れた場所を中心にスティックを表示して追従を開始する（座標はエリア内ローカル）。
+func _begin_stick(pos: Vector2) -> void:
+	_stick_origin = pos
+	_stick_base.position = pos - Vector2(STICK_RADIUS, STICK_RADIUS)
+	_stick_base.visible = true
+	_stick_knob.visible = true
+	_update_stick(pos)
+
+
+## つまみ位置と move_vec を更新する。中心からの距離を最大半径で正規化し、速度の強弱にする。
+func _update_stick(pos: Vector2) -> void:
+	var clamped := (pos - _stick_origin).limit_length(STICK_RADIUS)
+	_stick_knob.position = _stick_origin + clamped - Vector2(STICK_KNOB, STICK_KNOB)
+	var v := clamped / STICK_RADIUS
+	move_vec = Vector2.ZERO if v.length() < STICK_DEADZONE else v
+
+
+## スティックを離した／メニューへ切り替わったとき：移動を止めて隠す。
+func _reset_stick() -> void:
+	_stick_active = false
+	_stick_touch = -1
+	move_vec = Vector2.ZERO
+	if _stick_base != null:
+		_stick_base.visible = false
+	if _stick_knob != null:
+		_stick_knob.visible = false
 
 
 ## 右下：決定（E）と戻る（Q）。会話送り・入る・話す・戻る・スキップに対応。
