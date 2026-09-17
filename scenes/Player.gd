@@ -14,6 +14,13 @@ extends CharacterBody2D
 ## 道判定のあそび（px）。中心1点＋矩形の和集合だとつなぎ目で引っかかるので、少し広げて滑らかに。
 const WALK_MARGIN := 5.0
 
+## 足音：この距離（px）歩くごとに1歩鳴らす。速度が遅ければ間隔も自然に広がる（アナログ）。
+const STEP_DISTANCE := 90.0
+
+## 足音の種類（AudioManager の step_* キー）。画面ごとに FieldScene が地面に合わせて差し替える。
+var footstep_sfx := "step_grass"
+var _step_accum := STEP_DISTANCE  # 歩き出しの一歩がすぐ鳴るよう、初期値は満タンにしておく。
+
 ## Place 側から動きを止めるためのフラグ（今は常に歩ける）。
 var can_move := true
 
@@ -71,8 +78,8 @@ func _physics_process(delta: float) -> void:
 	var target := dir * speed
 	var rate := accel if dir != Vector2.ZERO else decel
 	velocity = velocity.move_toward(target, rate * delta)
+	var start_pos := position
 	if velocity != Vector2.ZERO:
-		var before := position
 		move_and_slide()
 		# 画面外へ出ないように位置をクランプ。
 		position.x = clampf(position.x, bounds.position.x, bounds.end.x)
@@ -80,17 +87,29 @@ func _physics_process(delta: float) -> void:
 		# 道（歩ける帯）が定義されていれば、その上だけに制限する。
 		# 軸ごとに判定して、道の縁に沿ってスライド・角を曲がれるようにする。
 		if not walkable_rects.is_empty() and not _in_walkable(position):
-			var try_x := Vector2(position.x, before.y)
-			var try_y := Vector2(before.x, position.y)
+			var try_x := Vector2(position.x, start_pos.y)
+			var try_y := Vector2(start_pos.x, position.y)
 			if _in_walkable(try_x):
 				position = try_x
 			elif _in_walkable(try_y):
 				position = try_y
 			else:
-				position = before
+				position = start_pos
+	_update_footsteps(position.distance_to(start_pos))
 	if _sprite:
 		_sprite.set_moving(velocity)
 		_apply_depth_scale()
+
+
+## 実際に動いた距離をためて、一定距離ごとに地面に合った足音を鳴らす（壁際で動けない時は鳴らさない）。
+func _update_footsteps(moved: float) -> void:
+	if moved <= 0.5:
+		_step_accum = STEP_DISTANCE  # 止まったら、次に歩き出した最初の一歩をすぐ鳴らす。
+		return
+	_step_accum += moved
+	if _step_accum >= STEP_DISTANCE:
+		_step_accum = 0.0
+		AudioManager.play_sfx(footstep_sfx, randf_range(0.9, 1.1))
 
 
 ## 奥行きスケールを有効化する（FieldScene から呼ぶ）。base は手前に立ったときの絶対倍率。
