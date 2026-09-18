@@ -267,15 +267,16 @@ func _build_action_buttons() -> void:
 	wrap.add_child(confirm)
 
 
-## 右上：予定表（約束帳）を開く／閉じる。スマホにはキーボードが無いので画面ボタンで橋渡し。
+## 右下：予定表（約束帳）を開く／閉じる。決定／戻るのすぐ上に置き、親指で押しやすくする。
 ##   開いている間は、既存の十字キー＝日付選択／決定＝詳細／戻る＝閉じる がそのまま使える。
 func _build_book_button() -> void:
 	var book := _make_button("予定表", 28)
-	book.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	book.offset_left = -(140 + MARGIN)
-	book.offset_top = 20
+	book.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	# 決定／戻るの行（高さ ACT）の 16px 上に、右端をそろえて置く。
 	book.offset_right = -MARGIN
-	book.offset_bottom = 20 + 64
+	book.offset_bottom = -(BOTTOM_MARGIN + ACT + 16)
+	book.offset_left = -(140 + MARGIN)
+	book.offset_top = -(BOTTOM_MARGIN + ACT + 16 + 64)
 	# 開閉とも Book を直接操作する（一時停止中でも確実に開閉できるよう合成入力に頼らない）。
 	book.pressed.connect(func() -> void: Book.act("book"))
 	_root.add_child(book)
