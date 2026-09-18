@@ -30,6 +30,8 @@ Fader="*res://autoload/Fader.gd"
 HUD="*res://scenes/HUD.tscn"
 ; 予定表＝約束帳（いつでも開ける常設ビュー）。GameState のシグナルを購読するので後に置く。
 Book="*res://scenes/Book.tscn"
+; かばん＝所持品（夏の道具）の専用UI。予定帳とは別立て。GameState のシグナルを購読するので後に置く。
+Bag="*res://scenes/Bag.tscn"
 ; 会話ウィンドウ。全シーンから Dialogue.start([...]) で呼べる。
 Dialogue="*res://autoload/Dialogue.gd"
 ; スマホ（タッチ端末）向けの画面上コントローラ。移動/決定/戻る/デバッグメニューを

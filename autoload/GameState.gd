@@ -29,6 +29,7 @@ signal phase_changed(phase: Phase)   ## 時間帯が変わった
 signal game_ended()                  ## 最終日を越えた（＝世界の終わり）
 signal schedule_changed()            ## 予定表（約束・日記）が変わった（予定表UIが購読して再描画）
 signal fubutsushi_discovered(id: String)  ## 風物詩を新しく見つけた（第10弾。絵日記帳が購読して再描画）
+signal inventory_changed()                ## 所持品（夏の道具）が変わった（かばんUIが購読して再描画）
 
 ## --- 実行時の状態 ---
 var day_index := 0                   ## 0 = 7/23、1 = 7/24 ...、39 = 8/31
@@ -81,6 +82,12 @@ var diary := {}
 ## その夏に集めた記録＝プレイスルー単位（周回でリセット）。マスタは Fubutsushi.json。
 var collected_fubutsushi := {}
 
+## 所持品（夏の道具・所持品システム §1）。 id(String) -> 実体辞書（Items マスタのコピー＋count）。
+##   実体 = { id, name, desc, origin, consumable, fubutsushi_id, count }。
+## 風物詩（眺める記録）とは別立て。手に入れて・持ち運んで・特定の場面で使う実務的な道具箱。
+## その夏に集めるもの＝周回でリセット（start_new_run）。葵絡みは喪失後も消さない（周回内では保持）。
+var inventory := {}
+
 ## 一日の流れ（第10弾＝見下ろしマップ）。半日ごとに1エリアを選び、そのエリアで過ごす。
 ##   current_area … いま出かけているエリア id（Areas）。家にいるときは ""。
 ##   halfday_event_done … この半日で「人と過ごす」本イベント（関係値+1）を既に消化したか。
@@ -111,6 +118,7 @@ func start_new_run() -> void:
 	promises.clear()
 	diary.clear()
 	collected_fubutsushi.clear()  # 風物詩は「その夏に集めた記録」＝周回でリセット（第10弾 §7）
+	inventory.clear()             # 所持品も「その夏の道具」＝周回でリセット
 	current_area = ""
 	halfday_event_done = false
 	Timeline.apply_background(self)  # 1日目の背景状態を反映（この時点では何も立たない）
@@ -136,6 +144,7 @@ func snapshot() -> Dictionary:
 		"promises": promises.duplicate(true),
 		"diary": diary.duplicate(true),
 		"fubutsushi": collected_fubutsushi.duplicate(true),
+		"inventory": inventory.duplicate(true),
 	}
 
 
@@ -158,6 +167,7 @@ func restore(data: Dictionary) -> void:
 	promises = _dict_field(data, "promises", true)
 	diary = _dict_field(data, "diary", true)
 	collected_fubutsushi = _dict_field(data, "fubutsushi", true)
+	inventory = _dict_field(data, "inventory", true)
 	current_area = ""            # 半日の途中状態は持ち越さない（保存は phase 境界で行われる）
 	halfday_event_done = false
 	Timeline.apply_background(self)  # 再開時も現在日の背景状態に整える
@@ -413,6 +423,67 @@ func discover_fubutsushi(id: String) -> bool:
 	fubutsushi_discovered.emit(id)
 	_autosave()
 	return true
+
+
+# --- 所持品（夏の道具）――手に入れる・持ち運ぶ・使う（所持品システム）--------
+
+## 道具を所持しているか（消費品は残数>0）。使用ゲート（has_item AND 日/場所/天気）に使う。
+func has_item(id: String) -> bool:
+	var e: Dictionary = inventory.get(id, {})
+	return int(e.get("count", 0)) > 0
+
+
+## 道具を1つ手に入れる。イベント入手（会話の効果）・探索入手（フィールド到達）の共通API。
+## 非消費品は重複所持しない（既にあれば何もしない）。消費品は count を増やす。
+## 風物詩と重なるモチーフ（Items の fubutsushi_id）は、入手時に絵日記帳にも静かに灯す（橋。§4）。
+## ★葵絡み（origin 空）もこの同じ経路で入る。喪失後も消さない（周回内は保持）。由来の空白は
+##   UIで強調しない（§5）。戻り値：この呼び出しで新しく手に入れた（または残数が増えた）なら true。
+func add_item(id: String) -> bool:
+	var master := Items.by_id(id)
+	if master.is_empty():
+		return false
+	if inventory.has(id):
+		if not bool(master.get("consumable", false)):
+			return false  # 非消費品は一つだけ（重複入手はしない）
+		inventory[id]["count"] = int(inventory[id].get("count", 0)) + 1
+	else:
+		var entry := master.duplicate(true)
+		entry["count"] = 1
+		inventory[id] = entry
+	print("[item+] %s (x%d)" % [id, int(inventory[id]["count"])])
+	# 風物詩の橋：重なるモチーフだけ、入手で対応する風物詩を灯す（無ければ ""＝何もしない）。
+	var fid := String(master.get("fubutsushi_id", ""))
+	if fid != "":
+		discover_fubutsushi(fid)
+	inventory_changed.emit()
+	_autosave()
+	return true
+
+
+## 道具を1つ消費する（花火など。使用イベントの結果から呼ぶ）。
+## 残数が2以上なら減らし、1なら取り除く。戻り値：実際に消費できたら true。
+## ⚠️ 葵絡みアイテムは「使う」道具ではない＝これで消さない（喪失後も残す設計＝§5-2）。
+func consume_item(id: String) -> bool:
+	if not has_item(id):
+		return false
+	var n := int(inventory[id].get("count", 0))
+	if n > 1:
+		inventory[id]["count"] = n - 1
+	else:
+		inventory.erase(id)
+	inventory_changed.emit()
+	_autosave()
+	return true
+
+
+## 所持中の道具を「マスタ順」で並べて返す（かばんUIの表示用。実体辞書の配列）。
+func item_list() -> Array:
+	var out: Array = []
+	for m in Items.all():
+		var id := String(m["id"])
+		if has_item(id):
+			out.append(inventory[id])
+	return out
 
 
 ## 環境発見の候補を「覗き見」する（副作用なし＝まだ収集しない）。条件は evaluate と同じ。

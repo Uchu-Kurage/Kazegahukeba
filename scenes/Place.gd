@@ -95,6 +95,11 @@ func _on_option_selected(option: Dictionary) -> void:
 				GameState.discover_fubutsushi(String(x))
 		else:
 			GameState.discover_fubutsushi(String(d))
+	# 所持品（夏の道具）：イベント入手／使用イベントの消費（所持品システム §2-A/§3）。
+	if option.has("item"):
+		GameState.add_item(String(option["item"]))
+	if option.has("consume_item"):
+		GameState.consume_item(String(option["consume_item"]))
 
 
 func _on_talk_finished() -> void:

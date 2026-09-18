@@ -25,6 +25,7 @@ var _weather_overlay: ColorRect  # 天気の空色オーバーレイ（第9弾�
 var _weather_fx: WeatherFX       # 天気の専用ビジュアル（虹・星空・霧・雨）
 var _intro_nodes: Array = []          # 入場ナレーション：話しかけたら流すノード列（空なら調べどころを置かない）
 var _intro_commit_forecast := false   # 閲覧し切ったら「今日の予報は開示済み」を確定するか（朝・一日一回）
+var _item_spots := {}                 # 所持品：探索入手／使用ゲートの調べどころ（spot_id → 配置データ）
 
 
 func _build_map() -> void:
@@ -53,6 +54,9 @@ func _build_map() -> void:
 		# 葵の遍在遭遇（§3）：今日この画面に葵が来ていれば、独立した話しかけ相手として立たせる。
 		#   ＝球磨・由布と過ごす会話には混ぜない（一キャラ一人分のセリフになるよう分ける）。枠は消費しない。
 		_maybe_place_aoi_visitor()
+		# 所持品（夏の道具）：探索入手（落ちている道具）と、所持していれば開く使用ゲートを置く。
+		#   どちらも枠は消費しない。見逃しても再発生させない（一期一会）が、失敗ではない（§2-B/§3）。
+		_setup_item_spots()
 
 	# 道マップ（第9弾）：基本セットの風物詩を「調べどころ」として置く（枠非消費・常設・再閲覧可）。
 	if Roads.is_road(String(_field["id"])):
@@ -280,6 +284,71 @@ func _on_road_seq_finished() -> void:
 	_refresh_prompt()
 
 
+# --- 所持品（夏の道具）＝探索入手／使用ゲート（すべて枠非消費・一期一会）----------
+
+## この画面の道具の調べどころを置く。探索入手（未入手の落とし物）と、所持していれば開く使用ゲート。
+func _setup_item_spots() -> void:
+	var fid := String(_field["id"])
+	# 探索入手：まだ拾っていない道具を落としておく（一度きり）。
+	for pk in Items.pickups_of(fid):
+		if GameState.flags.get(_item_pickup_flag(String(pk["item"])), false):
+			continue
+		add_spot(String(pk["spot"]), String(pk["label"]), "", pk["pos"])
+		_item_spots[String(pk["spot"])] = { "kind": "pickup", "data": pk }
+	# 使用ゲート：その道具を所持し、時間帯条件を満たし、まだ使っていなければ「できること」が開く。
+	for us in Items.usages_of(fid):
+		if not GameState.has_item(String(us["item"])):
+			continue
+		if int(us.get("phase", -1)) >= 0 and int(GameState.phase) != int(us["phase"]):
+			continue
+		if GameState.flags.get(_item_use_flag(fid, String(us["item"])), false):
+			continue
+		add_spot(String(us["spot"]), String(us["label"]), "", us["pos"])
+		_item_spots[String(us["spot"])] = { "kind": "use", "data": us }
+
+
+func _item_pickup_flag(item_id: String) -> String:
+	return "item_got_%s" % item_id
+
+
+func _item_use_flag(field_id: String, item_id: String) -> String:
+	return "item_used_%s_%s" % [field_id, item_id]
+
+
+## 道具の調べどころに話しかけたとき。枠は消費しない。使い終えたら調べどころを消す（再発生させない）。
+func _use_item_spot(spot) -> void:
+	var s: Dictionary = _item_spots.get(spot.location_id, {})
+	if s.is_empty():
+		return
+	var data: Dictionary = s["data"]
+	AudioManager.play_sfx("confirm")
+	var nodes: Array = []
+	if String(s["kind"]) == "pickup":
+		# 探索入手：到達で手に入れる（add_item が風物詩の橋も面倒を見る。§4）。
+		GameState.add_item(String(data["item"]))
+		GameState.set_flag(_item_pickup_flag(String(data["item"])), true)
+		nodes.append({ "speaker": "", "text": String(data.get("get_text", "")) })
+	else:
+		# 使用ゲート：体験を流し、対応する風物詩を灯し（橋）、消費品なら減らす（効果ノード経由）。
+		GameState.set_flag(_item_use_flag(String(_field["id"]), String(data["item"])), true)
+		nodes.append_array(data.get("script", []))
+		var fub := String(data.get("fubutsushi", ""))
+		if fub != "":
+			nodes.append({ "effect": { "discover": fub } })
+		if bool(data.get("consume", false)):
+			nodes.append({ "effect": { "consume_item": String(data["item"]) } })
+	# 使い終えた調べどころは消す（一期一会。見逃しは咎めないが、再発生もさせない）。
+	_item_spots.erase(spot.location_id)
+	if _current_spot == spot:
+		_current_spot = null
+	if is_instance_valid(spot):
+		spot.queue_free()
+	set_player_can_move(false)
+	Dialogue.option_selected.connect(_on_option_selected)
+	Dialogue.finished.connect(_on_road_seq_finished, CONNECT_ONE_SHOT)
+	Dialogue.start(nodes)
+
+
 ## 今日の天気を反映：画面全体に薄い色を重ね（雰囲気）、環境音を切り替える。
 ## 空色シェーダの本格版は後日。まずは色オーバーレイ＋音で「その天気の日の一枚」を出す。
 func _apply_weather(weather_id: String) -> void:
@@ -374,6 +443,8 @@ func _on_interact(spot) -> void:
 		_take_exit(_exit_by_id(spot.location_id))
 	elif _road_hotspots.has(spot.location_id):
 		_inspect_hotspot(spot)  # 道の風物詩を眺める（枠非消費・常設）
+	elif _item_spots.has(spot.location_id):
+		_use_item_spot(spot)  # 所持品：探索入手／使用ゲート（枠非消費・一期一会）
 	elif String(spot.location_id) == AOI_SPOT_ID:
 		_aoi_visit(spot)  # 葵の遍在遭遇（枠非消費・一期一会）
 	else:
@@ -514,6 +585,12 @@ func _on_option_selected(option: Dictionary) -> void:
 				GameState.discover_fubutsushi(String(x))
 		else:
 			GameState.discover_fubutsushi(String(d))
+	# 所持品（夏の道具）：イベント入手＝会話の結果もらう／見つける（所持品システム §2-A）。
+	if option.has("item"):
+		GameState.add_item(String(option["item"]))
+	# 所持品の消費：花火など「使うと無くなる」道具を使用イベントの結果で減らす（§3）。
+	if option.has("consume_item"):
+		GameState.consume_item(String(option["consume_item"]))
 
 
 # --- 夜（§Q1：特別な夜があれば発生／無ければ就寝で翌朝）------------------
@@ -611,6 +688,10 @@ func _refresh_prompt() -> void:
 			HUD.set_prompt("［E］で「%s」へ%s" % [s.display_name, tail])
 		elif _road_hotspots.has(s.location_id):
 			HUD.set_prompt("［E］で「%s」を眺める%s" % [s.display_name, tail])
+		elif _item_spots.has(s.location_id):
+			var kind := String(_item_spots[s.location_id].get("kind", ""))
+			var verb := "手に取る" if kind == "pickup" else "使う"
+			HUD.set_prompt("［E］で「%s」を%s%s" % [s.display_name, verb, tail])
 		elif String(s.location_id) == AOI_SPOT_ID:
 			HUD.set_prompt("［E］で「%s」と少し話す%s" % [s.display_name, tail])
 		else:
