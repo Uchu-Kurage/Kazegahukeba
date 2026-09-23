@@ -225,7 +225,7 @@ static func night_partner_script(event_id: String, who: String) -> Array:
 	match event_id:
 		"festival":
 			match who:
-				Routes.KUMA: return [ { "speaker": "球磨", "text": "祭りも、来年はもう無いんだよな。……今のうちに全部見とくか。" } ]
+				Routes.KUMA: return [ { "speaker": "球磨", "text": "祭りも、あの夢が本当なら、来年はもう無いのかもな。……今のうちに全部見とくか。" } ]
 				Routes.YUFU: return [ { "speaker": "由布", "text": "……こういうお祭り、あなたと来られてよかった。" } ]
 				Routes.AOI:  return AoiScript.festival()  # 葵の祭りの夜は本文（AoiScript）へ（第8弾 節目2）
 				"trio":      return [ { "speaker": "", "text": "三人で屋台を巡った。こういう夜が、まだ続くような気がした。" } ]
