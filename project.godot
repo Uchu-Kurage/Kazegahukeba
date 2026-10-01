@@ -53,5 +53,9 @@ theme/custom_font="res://assets/fonts/ui_font.tres"
 
 [rendering]
 
+; ゲーム画面の外（縦持ちのスマホで画面の下にできる余白など）の色。既定の灰色だと壊れて見えるので、
+; タイトルの夜の田んぼに近い濃い藍にする。画面ボタンはこの余白（ゲーム画面のすぐ下）に並ぶ。
+environment/defaults/default_clear_color=Color(0.105, 0.118, 0.137, 1)
+
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
