@@ -222,8 +222,8 @@ UIをボタン→1画面探索→2階層マップと変えても、**日付や�
 
 > **BGM／効果音**：音源ファイルが無くても、`AudioManager` がコードで合成して鳴らします。
 > 本物に差し替えるときは `assets/audio/` に置くだけ（`bgm.ogg`、`blip/confirm/cancel/talk/page.wav`、
-> 入手ファンファーレ `fanfare_item.wav`／`fanfare_fubutsushi.wav`）。
-> あればそちらを優先します。
+> 入手ファンファーレ `fanfare_item.wav`／`fanfare_fubutsushi.wav`、足音 `step_grass/dirt/stone/wood/gravel.wav`）。
+> あればそちらを優先します。いまは足音（木の床以外）に Kenney の素材を使用（出典は `assets/audio/CREDITS.md`）。
 
 > **エンディングを手早く試すには**：`autoload/GameState.gd` の `TOTAL_DAYS` を一時的に
 > 小さく（例：2）すると、数日で終幕に到達してエンディングを確認できます

@@ -6,6 +6,7 @@ extends Node
 ##   BGM : bgm.ogg（あれば title/day 共通で使う）
 ##   SE  : blip / confirm / cancel / talk / page .wav
 ##   入手ジングル : fanfare_item / fanfare_fubutsushi .wav（道具／風物詩を手に入れたとき）
+##   足音 : step_grass / step_dirt / step_stone / step_wood / step_gravel .wav（出典は assets/audio/CREDITS.md）
 ## どこからでも AudioManager.play_bgm("day") / play_ambient("water") / play_sfx("confirm")。
 
 const MIX_RATE := 22050
