@@ -158,6 +158,7 @@ data/
   Endings.gd               三ルート対応のエンディング判定（立場×関係値×到達節目数）と結末台本＋裏エンド解放判定
   UraStory.gd              裏エンド（9月1日）の場面データ（一本道。枠・関係値・ルート判定を使わない）
   FieldMaps.gd             散策画面の定義とマップ接続表（9画面・双方向接続。画面ID/背景/道/出口→接続先。データ駆動。第6弾）
+  FieldAmbience.gd         散策画面の「背景の上の動き」の配置（水面のきらめき・雲の影・トンボ・チョウ・舞う葉・木漏れ日・夜の蛍。範囲は画面座標。背景を差し替えたら合わせて直す）
   UITheme.gd               UIの見た目テーマ（和紙・すりガラス／丸ゴシック／ダークグレー文字／夏空の青）。色・不透明度・角丸・フォントを一括管理。第7弾
 scenes/
   ExploreMap.gd            歩き回れるマップの共通土台（Place の親クラス）
@@ -173,6 +174,7 @@ scenes/
   AcquireFanfare.gd        入手演出（GameState の入手シグナルを購読→会話を一時停止→正面を向いて頭上にアイコン＋ファンファーレ）
   AcquireIcon.gd           入手演出のアイコン（assets/icons/<id>.png があれば優先／無ければ道具ごと・風物詩ジャンルごとに _draw）
   FieldBackground.gd       散策画面の背景（背景PNGをパスで貼る／無ければ画面ごとのプレースホルダ描画。差し替え可）
+  AmbientFX.gd             背景の上の動きを手続き描画（地面の層＝キャラの後ろ／空の層＝キャラの手前）。雨の日は出さず、曇りでは日差しの演出を消し、夜は蛍だけ
   Player.tscn / Player.gd  2D操作キャラ（CharacterBody2D）。場所の中で使う
   LocationSpot.tscn / .gd  対象（Area2D）。中のNPC（ドット絵キャラ）・出口を兼ねる
   CharacterArt.gd          ドット絵スプライトをコード生成（配色から SpriteFrames を作る）
