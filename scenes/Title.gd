@@ -231,15 +231,17 @@ func _build_ui() -> void:
 	_unsel_sb.content_margin_left = 22
 
 	# 項目の列：画面左、地平線をまたいで縦に並べる。
+	# スマホ（画面ボタンあり）は左下の方向キーに重ならないよう、画面中央寄りへずらす。
+	var menu_x := 480.0 if touch else 96.0
 	_vbox = VBoxContainer.new()
-	_vbox.position = Vector2(96, 0)
-	_vbox.size = Vector2(640, 648)
+	_vbox.position = Vector2(menu_x, 0)
+	_vbox.size = Vector2(420.0 if touch else 640.0, 648)
 	_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	_vbox.add_theme_constant_override("separation", 6)
 	add_child(_vbox)
 
 	_footer = _make_label("", 16, Color(UITheme.WASHI, 0.5))
-	_footer.position = Vector2(118, 600)
+	_footer.position = Vector2(menu_x + 22.0, 600)
 	add_child(_footer)
 
 
