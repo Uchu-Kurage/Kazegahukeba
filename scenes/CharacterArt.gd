@@ -14,13 +14,18 @@ const EYE := Color(0.16, 0.13, 0.13)
 ## 主人公のスプライトシート（PNG）。この場所に置けば、コード生成より優先して使う。
 ## レイアウトは SHEET_COLS × SHEET_ROWS の等間隔グリッド：
 ##   行（上→下）＝ 下向き ／ 上向き ／ 横向き（左向きは自動で左右反転）
-##   列（左→右）＝ 待機A ／ 待機B ／ 歩きA ／ 歩きB
-## 画像の幅は SHEET_COLS(=4) の倍数、高さは SHEET_ROWS(=3) の倍数にすること。
+##   列（左→右）＝ 待機 SHEET_IDLE_FRAMES コマ → 残りの列はすべて歩きの1周期
+## 画像の幅は SHEET_COLS の倍数、高さは SHEET_ROWS(=3) の倍数にすること。
 ## 1コマは 16×24 相当が基準（別解像度でも背丈は自動で合わせる）。
+## いまの player.png は LPC 素材（歩き8コマ）なので 待機2＋歩き8＝10列。
 const PLAYER_SHEET_PATH := "res://assets/characters/player.png"
-const SHEET_COLS := 4
+const SHEET_COLS := 10
 const SHEET_ROWS := 3
 const SHEET_ROW_DIRS := ["down", "up", "side"]
+## 各行の先頭から何コマが待機か。残り（SHEET_COLS - これ）が歩きのコマ。
+const SHEET_IDLE_FRAMES := 2
+## シートの歩き1周期（＝2歩）の秒数。足音（Player.STEP_DISTANCE / speed ≒ 0.39秒/歩）と足並みをそろえる。
+const SHEET_WALK_CYCLE_SEC := 0.78
 
 
 ## キャラID → 配色。skin/hair/shirt/pants/shoe。
@@ -66,7 +71,7 @@ static func build_frames(pal: Dictionary) -> SpriteFrames:
 
 
 ## PNGスプライトシートから SpriteFrames を作る（グリッドを等分してコマを切り出す）。
-## build_frames と同じアニメ構成（待機／歩き × 下・上・横、各2コマ）を組む。
+## build_frames と同じアニメ構成（待機／歩き × 下・上・横）を組む。コマ数は SHEET_* の定数に従う。
 static func build_frames_from_sheet(tex: Texture2D) -> SpriteFrames:
 	if tex == null:
 		return null
@@ -81,15 +86,16 @@ static func build_frames_from_sheet(tex: Texture2D) -> SpriteFrames:
 		sf.add_animation(idle)
 		sf.set_animation_speed(idle, 2.0)
 		sf.set_animation_loop(idle, true)
-		sf.add_frame(idle, _atlas(tex, 0, row, fw, fh))
-		sf.add_frame(idle, _atlas(tex, 1, row, fw, fh))
+		for col in SHEET_IDLE_FRAMES:
+			sf.add_frame(idle, _atlas(tex, col, row, fw, fh))
 
 		var walk := "walk_" + dir
 		sf.add_animation(walk)
-		sf.set_animation_speed(walk, 7.0)
+		var walk_frames := SHEET_COLS - SHEET_IDLE_FRAMES
+		sf.set_animation_speed(walk, walk_frames / SHEET_WALK_CYCLE_SEC)
 		sf.set_animation_loop(walk, true)
-		sf.add_frame(walk, _atlas(tex, 2, row, fw, fh))
-		sf.add_frame(walk, _atlas(tex, 3, row, fw, fh))
+		for col in range(SHEET_IDLE_FRAMES, SHEET_COLS):
+			sf.add_frame(walk, _atlas(tex, col, row, fw, fh))
 	if sf.has_animation("default"):
 		sf.remove_animation("default")
 	return sf
