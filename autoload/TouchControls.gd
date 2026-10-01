@@ -104,19 +104,27 @@ func _process(_dt: float) -> void:
 const GAME_H := 648.0
 ## 縦持ちでボタン類に使う高さ（方向キー3段＋下余白がおさまる大きさ）。
 const PAD_ZONE_H := DPAD * 3 + 24 + BOTTOM_MARGIN + 24
+## 縦持ちで、ゲーム画面の下に残る余白のうち、ボタン帯をどこまで下げるか（0＝ゲーム画面の直下／1＝画面の一番下）。
+## 親指が自然に届く高さにするため中ほどへ下げる。一番下まで下げるとジェスチャーバーやブラウザの下部UIに近づくので避ける。
+const PORTRAIT_LOWER := 0.5
 
 
 ## 画面の大きさに合わせてボタンの置き場所（_root の範囲）を決める。
 ##   横持ち：画面いっぱい（従来どおり、ゲーム画面の右下・左下に重ねる）。
-##   縦持ち：ゲーム画面の下に余白があるので、_root を「ゲーム画面＋その下のボタン帯」までに縮める。
-##          下寄せのボタンがゲーム画面のすぐ下に並び、画面の一番下（ジェスチャーバー付近）から離れる。
+##   縦持ち：ゲーム画面の下に余白があるので、_root を「ゲーム画面＋ボタン帯＋余白の一部」までに縮める。
+##          下寄せのボタンが余白の中ほど（親指の届く高さ）に並び、画面の一番下（ジェスチャーバー付近）からは離れる。
 func _fit_to_screen() -> void:
 	if _root == null:
 		return
 	var vp := get_viewport().get_visible_rect().size
 	_root.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_root.position = Vector2.ZERO
-	_root.size = Vector2(vp.x, minf(vp.y, GAME_H + PAD_ZONE_H) if vp.y > GAME_H + 120.0 else vp.y)
+	var h := vp.y
+	if vp.y > GAME_H + 120.0:
+		# 縦持ち：ゲーム画面＋ボタン帯に、残りの余白の PORTRAIT_LOWER 分を足した高さまで（＝ボタン帯を下げる）。
+		var base := minf(vp.y, GAME_H + PAD_ZONE_H)
+		h = base + maxf(0.0, vp.y - base) * PORTRAIT_LOWER
+	_root.size = Vector2(vp.x, h)
 
 
 ## メニュー操作モードか（＝方向キーを出す）。予定帳を開いている間、会話中（選択肢を上下で選ぶ）、
