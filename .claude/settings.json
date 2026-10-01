@@ -1,0 +1,8 @@
+{
+    "permissions": {
+        "allow": [
+            "Bash(npm install -g ui-ux-pro-max-cli*)",
+            "Bash(uipro init --ai claude*)"
+        ]
+    }
+}
