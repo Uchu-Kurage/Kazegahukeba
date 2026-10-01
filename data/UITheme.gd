@@ -23,15 +23,16 @@ const RULE := Color("dcd2bd")         # 帳面の罫線（鉛筆で引いたく�
 
 # --- 文字（本文・話者名・選択肢・日めくり 共通）---
 const TEXT := Color("33302b")             # 暖かいダークグレー（墨。純黒は避ける）
-const TEXT_SOFT := Color("7a7266")        # 補足（操作説明・過ぎた日・注記）
+const TEXT_SOFT := Color("6b6357")        # 補足（操作説明・過ぎた日・注記）。和紙の上で 5.2:1
 const TEXT_OUTLINE := Color(1, 1, 1, 0.6) # 世界の上に直接置く文字だけの、明るい薄い縁取り
 const OUTLINE_SIZE := 4
 
 # --- 差し色（夏空の青。選択中・強調に絞って使う）---
 const ACCENT := Color("5ba3d0")
 const ACCENT_ALPHA := 0.80
-const ACCENT_INK := Color("2f78a8")       # 紙の上に「文字」として置く青（読める濃さ）
-const SUNDAY := Color("c4433a")           # 日めくり・暦の日曜（朱）
+const ACCENT_LINE := Color("3a82b3")      # 選択の縁・送りの▼など「線や記号」の青。和紙の上で 3.7:1（非テキストの基準 3:1）
+const ACCENT_INK := Color("2a6d99")       # 紙の上に「文字」として置く青。和紙の上で 4.9:1（本文の基準 4.5:1）
+const SUNDAY := Color("b23a31")           # 日めくり・暦の日曜（朱）。和紙の上で 5.2:1
 
 # --- 文字サイズ（サイズで階層をつける。フォントは統一）---
 const SIZE_DATE := 52   # 日めくりの日付数字（画面でいちばん大きい文字）
@@ -88,7 +89,7 @@ static func ruled_cursor() -> StyleBoxFlat:
 	var c := ACCENT
 	c.a = 0.14
 	sb.bg_color = c
-	sb.border_color = ACCENT
+	sb.border_color = ACCENT_LINE
 	sb.set_border_width_all(2)
 	sb.set_corner_radius_all(6)
 	return sb
@@ -110,7 +111,7 @@ static func accent(corner: int = 10) -> StyleBoxFlat:
 ## 選択肢の「選んでいる」下地。和紙はそのまま、縁を夏空の青で太く囲む（文字は墨のまま読める）。
 static func chip_selected(corner: int = 10) -> StyleBoxFlat:
 	var sb := washi(corner, 0.97)
-	sb.border_color = ACCENT
+	sb.border_color = ACCENT_LINE
 	sb.set_border_width_all(3)
 	sb.set_content_margin_all(6)
 	sb.content_margin_left = 14

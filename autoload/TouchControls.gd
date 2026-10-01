@@ -44,6 +44,9 @@ var _debug_open := false
 var move_vec := Vector2.ZERO
 
 var _dpad: Control          # メニュー用の方向キー（項目選択。フィールドでは隠す）
+var _actions: Control       # 右下の決定／戻る
+var _book_btn: Button       # 右下の予定表
+var _gear: Button           # 左上のデバッグ歯車
 var _stick_area: Control    # フィールド用スティックの反応エリア（画面左側）
 var _stick_base: Panel      # スティックの外円（触れた位置に出す）
 var _stick_knob: Panel      # スティックのつまみ（内円）
@@ -68,8 +71,21 @@ func _process(_dt: float) -> void:
 	if _root == null or not _root.visible:
 		return
 	var menu := _in_menu_mode()
+	# 項目を直接タップできる画面では、方向キーなど重なる操作を隠して中身を見せる：
+	#   タイトル＝項目を直接タップ。決定／戻る／予定表も不要（「戻る」は項目にある）。
+	#   会話中＝選択肢を直接タップ。予定表は選択肢に重なるので隠す。
+	#   予定帳＝日付・タブ・閉じるを直接タップ。画面ボタンは帳面に重なるので全部隠す。
+	var title := _on_title()
+	var talking := Dialogue.is_active()
+	var book := Book.is_open()
 	if _dpad != null:
-		_dpad.visible = menu
+		_dpad.visible = menu and not title and not talking and not book
+	if _actions != null:
+		_actions.visible = not title and not book
+	if _book_btn != null:
+		_book_btn.visible = not title and not talking and not book
+	if _gear != null:
+		_gear.visible = not book
 	if _stick_area != null:
 		_stick_area.visible = not menu
 		if menu and _stick_active:
@@ -84,6 +100,17 @@ func _in_menu_mode() -> bool:
 	if Dialogue.is_active():  # 会話中は選択肢を方向キーで選ぶ（フィールドでもスティックにしない）
 		return true
 	return get_tree().get_first_node_in_group("player") == null
+
+
+## タイトル画面か（項目を直接タップできるので、画面ボタンを出さない）。
+func _on_title() -> bool:
+	var scene := get_tree().current_scene
+	return scene != null and scene.scene_file_path == "res://scenes/Title.tscn"
+
+
+## タッチUIを表示しているか（会話枠がボタンを避けて幅を詰めるのに使う）。
+func is_shown() -> bool:
+	return _root != null and _root.visible
 
 
 # --- 入力の橋渡し ----------------------------------------------------
@@ -252,6 +279,7 @@ func _build_action_buttons() -> void:
 	wrap.offset_bottom = -BOTTOM_MARGIN
 	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(wrap)
+	_actions = wrap
 
 	# 戻る（左）と決定（右）を同じ高さで並べる。決定は右端＝親指が届きやすい位置。
 	var back := _make_button("戻る", 32)
@@ -276,10 +304,11 @@ func _build_book_button() -> void:
 	book.offset_right = -MARGIN
 	book.offset_bottom = -(BOTTOM_MARGIN + ACT + 16)
 	book.offset_left = -(140 + MARGIN)
-	book.offset_top = -(BOTTOM_MARGIN + ACT + 16 + 64)
+	book.offset_top = -(BOTTOM_MARGIN + ACT + 16 + 76)  # 高さ 76＝スマホで約 46pt
 	# 開閉とも Book を直接操作する（一時停止中でも確実に開閉できるよう合成入力に頼らない）。
 	book.pressed.connect(func() -> void: Book.act("book"))
 	_root.add_child(book)
+	_book_btn = book
 
 
 ## 左上：デバッグメニューの開閉ボタン（歯車）。スマホから F3〜F10 相当を呼ぶ入口。
@@ -290,6 +319,7 @@ func _build_debug_gear() -> void:
 	gear.position = Vector2(20, 20)
 	gear.pressed.connect(_toggle_debug_menu)
 	_root.add_child(gear)
+	_gear = gear
 
 
 ## 中央：デバッグ操作の一覧（既定は非表示）。各ボタンは F3〜F10 と同じアクションを流す。
@@ -297,15 +327,15 @@ func _build_debug_menu() -> void:
 	_debug_menu = Panel.new()
 	_debug_menu.add_theme_stylebox_override("panel", UITheme.washi(16, 0.94))
 	_debug_menu.set_anchors_preset(Control.PRESET_CENTER)
-	_debug_menu.size = Vector2(420, 560)
-	_debug_menu.position = Vector2(-210, -280)
+	_debug_menu.size = Vector2(700, 520)
+	_debug_menu.position = Vector2(-350, -260)
 	_debug_menu.visible = false
 	_root.add_child(_debug_menu)
 
 	var box := VBoxContainer.new()
 	box.position = Vector2(20, 20)
-	box.size = Vector2(380, 520)
-	box.add_theme_constant_override("separation", 10)
+	box.size = Vector2(660, 480)
+	box.add_theme_constant_override("separation", 12)
 	_debug_menu.add_child(box)
 
 	var title := Label.new()
@@ -325,15 +355,21 @@ func _build_debug_menu() -> void:
 		["葵→家エンド (F9)", "debug_aoi_closeness"],
 		["歩行領域オーバーレイ (F10)", "debug_walk"],
 	]
+	# 二列に並べ、一つずつを大きくする（スマホでは画面が約 0.6 倍に縮むので、72 で約 44pt）。
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 12)
+	box.add_child(grid)
 	for it in items:
 		var b := _make_button(String(it[0]), 20)
-		b.custom_minimum_size = Vector2(0, 44)
+		b.custom_minimum_size = Vector2(324, 72)
 		# 押したら該当アクションを1回流し、メニューは閉じる（画面遷移を伴うものが邪魔にならない）。
 		b.pressed.connect(_on_debug_item.bind(String(it[1])))
-		box.add_child(b)
+		grid.add_child(b)
 
 	var close := _make_button("閉じる", 22)
-	close.custom_minimum_size = Vector2(0, 44)
+	close.custom_minimum_size = Vector2(0, 72)
 	close.pressed.connect(_close_debug_menu)
 	box.add_child(close)
 
