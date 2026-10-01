@@ -106,19 +106,19 @@ static func _invite_chain(route_id: String) -> Array:
 		Routes.KUMA:
 			# 球磨：勢い・短射程（当日〜翌日）。果たすほど、次の遊びへ転がっていく。
 			return [
-				_invite("球磨", "kuma", 1, "riverside", "afternoon", "球磨と川で釣り",
+				_invite("球磨", "kuma", 1, "riverside", "afternoon", "球磨と川で釣り", "kuma_fishing",
 					"なあ、明日の午後、川いこうぜ。ひさびさに釣りでもさ。",
 					"「行く」", "よし、決まりな！　明日、川で待ってるわ。",
 					"なんだよ、はっきりしろって。……ま、気が向いたらな。",
 					"おう。……また誘うわ。",
 					"明日はもう、予定あるんだろ？　……そっか。また今度な。"),
-				_invite("球磨", "kuma", 1, "riverside", "evening", "球磨と夜釣り",
+				_invite("球磨", "kuma", 1, "riverside", "evening", "球磨と夜釣り", "kuma_night_fishing",
 					"この前の釣り、楽しかったよな。今度は夜だ。夜釣り、明日どうよ？",
 					"「乗った」", "だろ？　夜の川、すげえぞ。明日な！",
 					"迷うなよ〜。……ま、いつでも言えよ。",
 					"りょーかい。また今度な。",
 					"明日は埋まってんのか。……じゃ、また空いてる日にな。"),
-				_invite("球磨", "kuma", 2, "riverside", "morning", "球磨と、海まで",
+				_invite("球磨", "kuma", 2, "riverside", "morning", "球磨と、海まで", "kuma_to_sea",
 					"なあ、ガキの頃さ、この川の先の海まで行こうって言ってたろ。……明後日、ほんとに行ってみねえか。",
 					"「行こう」", "……おう。じゃあ、明後日。ちゃんと、行こうな。",
 					"おいおい、ここで濁すのかよ。……ま、待ってるわ。",
@@ -128,13 +128,13 @@ static func _invite_chain(route_id: String) -> Array:
 		Routes.YUFU:
 			# 由布：計画・先の日付・低頻度。守ることに意味が宿る。
 			return [
-				_invite("由布", "yufu", 3, "shrine", "evening", "由布と、見せたい場所へ",
+				_invite("由布", "yufu", 3, "shrine", "evening", "由布と、見せたい場所へ", "yufu_show_place",
 					"……ねえ。三日後の夕方、少し歩かない？　見せたい場所があるの。",
 					"うなずく", "……うん。じゃあ、約束、ね。",
 					"……そう。気が向いたら、でいいから。",
 					"ううん、いいの。忘れて。……ごめんね、急に。",
 					"三日後は……もう、約束があるみたいね。ふふ、また別の日に。"),
-				_invite("由布", "yufu", 3, "shrine", "evening", "由布と、約束の続き",
+				_invite("由布", "yufu", 3, "shrine", "evening", "由布と、約束の続き", "yufu_continuation",
 					"この前の場所、覚えてる？　……あの続きを、見せたいの。三日後、また夕方に。",
 					"「約束する」", "うん。……ちゃんと、待ってるから。",
 					"……いいの、無理はしないで。気が向いたら、ね。",
@@ -145,13 +145,14 @@ static func _invite_chain(route_id: String) -> Array:
 
 
 ## 誘い1件（if_day_free ノード）を組み立てる。応じる選択だけが promise を持ち記帳する（§2）。
-static func _invite(who: String, char_id: String, in_days: int, place: String, tod: String, flavor: String,
+## event_id＝予定どおりに会えた日に流す約束イベント（PromiseEvents の ID）。
+static func _invite(who: String, char_id: String, in_days: int, place: String, tod: String, flavor: String, event_id: String,
 		ask: String, yes_label: String, yes_reply: String, vague_reply: String, no_reply: String, busy_reply: String) -> Dictionary:
 	return { "if_day_free": in_days, "then": [
 		{ "speaker": who, "text": ask },
 		{ "text": "", "choices": [
 			{ "text": yes_label, "then": [ { "speaker": who, "text": yes_reply } ],
-				"promise": { "in_days": in_days, "character": char_id, "place": place, "time_of_day": tod, "flavor": flavor } },
+				"promise": { "in_days": in_days, "character": char_id, "place": place, "time_of_day": tod, "flavor": flavor, "event": event_id } },
 			{ "text": "「考えとく」", "then": [ { "speaker": who, "text": vague_reply } ] },
 			{ "text": "「今日はごめん」", "then": [ { "speaker": who, "text": no_reply } ] },
 		] },

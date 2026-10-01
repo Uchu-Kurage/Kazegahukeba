@@ -9,6 +9,7 @@ extends RefCounted
 ##   2. 選択中ルートの節目イベント（前提フラグ＋関係値＋時期＋その相手を選んだ枠）。
 ##   3. 節目が無ければ、関係値に応じた日常会話（filler）。
 ##   4. 葵の遍在遭遇（枠を消費せず、日替わりの居場所で軽く差し込む。§3）。
+## ただし「予定どおりの約束」（約束した日・場所・時間帯に来た）は 2・3 より優先し、その約束のイベントを流す。
 ##
 ## ルートごとにハードコードで分岐しない。すべて Routes（データ）を回して解決する。
 ## → ルート追加＝Routes にデータを足す＋Dialogues に台本を足す、だけで済む。
@@ -28,6 +29,13 @@ static func script_for_location(location_id: String, state) -> Array:
 	if not finalday.is_empty():
 		out.append_array(finalday)
 		return out  # 最後の日の特別会話に専念（節目・日常には譲らない）
+
+	# 1.5 予定どおりの約束＝約束した日・場所・時間帯にその相手を訪ねたら、約束のイベントを流す。
+	#     その枠は約束に専念する（節目・日常には譲らない。節目は時期の幅があるので次の機会に起きる）。
+	var promised := _promise_event(location_id, state)
+	if not promised.is_empty():
+		out.append_array(promised)
+		return out
 
 	# 4. 葵の遭遇（§5-1）は、ここでは会話の頭に差し込まない。
 	#    葵は「別の人物」として FieldScene がマップに立たせ、話しかけたときだけ単体で遭遇が流れる
@@ -164,6 +172,19 @@ static func _aoi_finalday(location_id: String, state) -> Array:
 static func _is_aoi_route(state) -> bool:
 	var end_id := Endings.pick(state.affinity, state.flags, state.stance, state.visits, state.counters, state.aoi_lean, state.yufu_lean)
 	return String(end_id).begins_with("aoi_")
+
+
+# --- 予定どおりの約束イベント --------------------------------------
+## 今日・この枠・この場所が約束どおりなら、その約束のイベント台本（フラット化済み）を返す。無ければ空配列。
+## 末尾の効果ノード fulfill_promise で約束を「果たした」にする（＝会えた瞬間に予定表の印が変わる）。
+static func _promise_event(location_id: String, state) -> Array:
+	var p: Dictionary = state.promise_due(location_id)
+	if p.is_empty():
+		return []
+	var nodes := PromiseEvents.script_for(String(p.get("event", "")), String(p.get("character", "")))
+	var out := flatten(nodes, state.flags, state)
+	out.append({ "effect": { "fulfill_promise": location_id } })
+	return out
 
 
 # --- 約束の誘い（第9弾 §6・§7）--------------------------------------

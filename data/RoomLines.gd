@@ -31,7 +31,8 @@ static func _mood(state) -> String:
 	if not p.is_empty() and String(p.get("status", "")) == "planned":
 		var who: String = state.char_display(String(p.get("character", "")))
 		var place: String = state.place_name(String(p.get("place", "")))
-		return "そうだ、今日は%sと%sで会う約束だった。忘れないようにしないと。" % [who, place]
+		var tod: String = state.promise_time_text(String(p.get("time_of_day", "")))
+		return "そうだ、今日は%sと、%s%sで会う約束だった。遅れないようにしないと。" % [who, tod, place]
 	# 2) 今夜の特別な夜（祭り・花火）。
 	if Nights.is_special(d):
 		return "今夜は、%s。……なんだか、朝からそわそわする。" % Nights.name_of(d)

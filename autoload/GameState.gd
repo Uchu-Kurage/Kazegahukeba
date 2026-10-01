@@ -73,7 +73,8 @@ var weather_seed := 0
 var last_forecast_day := -1
 
 ## 予定表＝約束帳（第9弾）。 day_index(int) -> Promise 辞書。一日一予定・先埋め優先（§3）。
-##   Promise = { character, place, time_of_day, status("planned"/"fulfilled"/"missed"), flavor_text }
+##   Promise = { character, place, time_of_day, status("planned"/"fulfilled"/"missed"), flavor_text, event }
+##   event＝予定どおりに会えたとき流す約束イベントの ID（PromiseEvents。空なら汎用の台本）。
 ##   葵は載らない（§5。8/31 の一度だけ例外）。
 var promises := {}
 ## 過去マス用の絵日記。 day_index(int) -> { weather, note }。日送り時に確定する（§4）。
@@ -249,13 +250,9 @@ func _record_choice(location_id: String) -> void:
 		var who := Locations.character_of(location_id)
 		if who != "":
 			affinity[who] = int(affinity.get(who, 0)) + 1
-			# 今日その相手と過ごしたら、planned の約束を「果たした」にする（§4）。
-			var p: Dictionary = promises.get(day_index, {})
-			if not p.is_empty() and String(p.get("status", "")) == "planned" and String(p.get("character", "")) == who:
-				p["status"] = "fulfilled"
-				# §7 連鎖：果たした数を段階として、次の“種”の誘いを解放する（果たさなければ進まない）。
-				bump(who + "_chain", 1)
-				schedule_changed.emit()
+			# 予定どおり（約束の日・場所・時間帯）に過ごしたら、約束を「果たした」にする（§4）。
+			# 通常は約束イベントの効果ノードで先に果たされているので、ここは取りこぼし防止（旧 Place 経路など）。
+			fulfill_promise(location_id)
 
 
 ## 関係値を増減する（会話の選択肢などから呼ぶ）。
@@ -313,12 +310,13 @@ func day_free(day: int) -> bool:
 
 ## 約束を記帳する（会話の「応じる」選択などから）。既に埋まっていれば成立しない（先約優先）。
 ## 葵は原則ここに載せない（§5。8/31 の会話約束のみ例外的に呼ぶ）。
-func make_promise(day: int, character: String, place: String, time_of_day: String, flavor: String) -> bool:
+## event は予定どおりに会えたとき流す約束イベントの ID（PromiseEvents）。
+func make_promise(day: int, character: String, place: String, time_of_day: String, flavor: String, event: String = "") -> bool:
 	if day < 0 or day >= TOTAL_DAYS or promises.has(day):
 		return false
 	promises[day] = {
 		"character": character, "place": place, "time_of_day": time_of_day,
-		"status": "planned", "flavor_text": flavor,
+		"status": "planned", "flavor_text": flavor, "event": event,
 	}
 	print("[promise] d%d %s @ %s (%s)" % [day, character, place, time_of_day])
 	schedule_changed.emit()
@@ -328,6 +326,56 @@ func make_promise(day: int, character: String, place: String, time_of_day: Strin
 
 func promise_of(day: int) -> Dictionary:
 	return promises.get(day, {})
+
+
+## 約束の時間帯 → その約束を果たせる枠（Phase）。夜は出歩けない（就寝・特別な夜だけ）ので、
+## 「夕方」の約束は午後の枠で会う＝午後の終わりが夕方、という扱い。
+const PROMISE_PHASE := {
+	"morning": Phase.MORNING,
+	"afternoon": Phase.AFTERNOON,
+	"evening": Phase.AFTERNOON,
+	"night": Phase.AFTERNOON,
+}
+
+
+## いま（今日・この枠）この場所へ来たことが「予定どおり」なら、その約束を返す（無ければ {}）。
+## 予定どおり＝今日の planned の約束で、場所と相手が一致し、時間帯の枠も一致していること。
+## 時間帯の無い約束（空文字など）は、その日のどの枠でもよい。
+func promise_due(location_id: String) -> Dictionary:
+	var p: Dictionary = promises.get(day_index, {})
+	if p.is_empty() or String(p.get("status", "")) != "planned":
+		return {}
+	if String(p.get("place", "")) != location_id:
+		return {}
+	if Locations.character_of(location_id) != String(p.get("character", "")):
+		return {}
+	var tod := String(p.get("time_of_day", ""))
+	if PROMISE_PHASE.has(tod) and int(PROMISE_PHASE[tod]) != int(phase):
+		return {}
+	return p
+
+
+## 予定どおりなら約束を「果たした」にする（約束イベントの効果ノード fulfill_promise から呼ぶ）。
+## §7 連鎖：果たした数を段階として、次の“種”の誘いを解放する（果たさなければ進まない）。
+## 二重に呼ばれても一度しか数えない（果たした時点で planned でなくなるため）。
+func fulfill_promise(location_id: String) -> bool:
+	var p := promise_due(location_id)
+	if p.is_empty():
+		return false
+	p["status"] = "fulfilled"
+	bump(String(p.get("character", "")) + "_chain", 1)
+	schedule_changed.emit()
+	_autosave()
+	return true
+
+
+## 約束の時間帯 → 表示（「午後に」など）。予定表・朝の独白で使う。
+func promise_time_text(tod: String) -> String:
+	match tod:
+		"morning": return "午前に"
+		"afternoon": return "午後に"
+		"evening", "night": return "夕方に"
+	return ""
 
 
 ## 8/31 の葵の約束を記帳する（§5-3。予定表に葵が載る唯一の例外）。

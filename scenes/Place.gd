@@ -83,7 +83,10 @@ func _on_option_selected(option: Dictionary) -> void:
 		var pr: Dictionary = option["promise"]
 		GameState.make_promise(GameState.day_index + int(pr.get("in_days", 0)),
 			String(pr.get("character", "")), String(pr.get("place", "")),
-			String(pr.get("time_of_day", "")), String(pr.get("flavor", "")))
+			String(pr.get("time_of_day", "")), String(pr.get("flavor", "")), String(pr.get("event", "")))
+	# 予定どおりに会えた約束を「果たした」にする（約束イベントの末尾の効果ノード）。
+	if option.has("fulfill_promise"):
+		GameState.fulfill_promise(String(option["fulfill_promise"]))
 	# 8/31 の葵の約束（§5-3）：場所は傾きの着地から動的に決まる。
 	if option.get("promise_aoi_final", false):
 		GameState.make_aoi_final_promise()
