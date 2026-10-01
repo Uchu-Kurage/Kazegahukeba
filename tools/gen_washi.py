@@ -13,6 +13,7 @@ SEED = 7
 WASHI = np.array([0xF5, 0xF0, 0xE6], float)   # UITheme.WASHI
 FIBER = np.array([0xE2, 0xD8, 0xC2], float)   # 繊維の濃いところ（WASHI を少し土色に）
 EDGE = np.array([0xCB, 0xBF, 0xA6], float)    # UITheme.BORDER
+ACCENT_LINE = np.array([0x3A, 0x82, 0xB3], float)  # UITheme.ACCENT_LINE（選択中の縁）
 SHADOW = np.array([0x29, 0x21, 0x14], float)  # UITheme.SHADOW の色味
 
 
@@ -63,7 +64,7 @@ def rounded_rect_sdf(h, w, x0, y0, x1, y1, r):
 	return d
 
 
-def build(name, size, pad, corner, shadow_blur, shadow_dy, period):
+def build(name, size, pad, corner, shadow_blur, shadow_dy, period, accent=False):
 	rng = np.random.default_rng(SEED)
 	h = w = size
 	x0, y0, x1, y1 = pad, pad, w - pad, h - pad
@@ -82,6 +83,10 @@ def build(name, size, pad, corner, shadow_blur, shadow_dy, period):
 	# 縁ぞいにうっすら濃い帯（紙の厚み）。くっきりした線にはしない。
 	rim = np.clip(1 - np.abs(d + 2.0) / 2.5, 0, 1) * 0.55
 	rgb = rgb * (1 - rim[..., None]) + EDGE * rim[..., None]
+	if accent:
+		# 選択中：縁の内側に夏空の青の線（幅 3px）。ちぎった縁の揺れに沿わせ、手で引いた線に見せる。
+		line = np.clip(1.6 - np.abs(d + 2.0) / 1.0, 0, 1)
+		rgb = rgb * (1 - line[..., None]) + ACCENT_LINE * line[..., None]
 
 	# 落ち影（土の色・ふわっと）。紙の外側だけに出す。
 	sd = rounded_rect_sdf(h, w, x0, y0 + shadow_dy, x1, y1 + shadow_dy, corner)
@@ -100,3 +105,5 @@ if __name__ == "__main__":
 	build("washi_panel", 192, 12, 16, 12, 3, 192 - 2 * 28)
 	# 小さい札（話者名・操作プロンプト）：角丸 10、影の余白 6 → 余白 16。
 	build("washi_tag", 96, 6, 10, 6, 2, 96 - 2 * 16)
+	# 選択中の札（選択肢）：小さい札の縁に夏空の青の線を入れたもの。
+	build("washi_tag_selected", 96, 6, 10, 6, 2, 96 - 2 * 16, accent=True)

@@ -260,11 +260,8 @@ func _build_ui() -> void:
 	_detail = Panel.new()
 	_detail.position = Vector2(540, LIST_TOP)
 	_detail.size = Vector2(504, 420)
-	# 詳細は帳面に貼った一枚の紙片：地を少しだけ濃くし、影は付けない（帳面の上の紙）。
-	var dsb := UITheme.washi(14, 1.0)
-	dsb.bg_color = UITheme.WASHI.darkened(0.04)
-	dsb.shadow_size = 0
-	_detail.add_theme_stylebox_override("panel", dsb)
+	# 詳細は帳面に貼った一枚の紙片：地を少しだけ濃くした和紙（帳面の上の紙）。
+	_detail.add_theme_stylebox_override("panel", UITheme.slip())
 	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail.visible = false
 	_panel.add_child(_detail)

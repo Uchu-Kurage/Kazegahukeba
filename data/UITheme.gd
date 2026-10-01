@@ -57,6 +57,9 @@ const PAPER_PANEL_MARGIN := 28  # 9-slice の余白（影の余白＋角丸）
 const PAPER_TAG_PATH := "res://assets/ui/washi_tag.png"      # 小さい札用（角丸 10）
 const PAPER_TAG_PAD := 6
 const PAPER_TAG_MARGIN := 16
+const PAPER_TAG_SELECTED_PATH := "res://assets/ui/washi_tag_selected.png"  # 小さい札＋夏空の青の縁（選択中）
+## 帳面の詳細に貼る紙片の色の掛け具合（帳面よりわずかに濃く＝紙の上の紙に見せる）。
+const SLIP_TINT := Color(0.96, 0.96, 0.95)
 ## 和紙テクスチャの角丸（大きい枠）。上に重ねる帯などはこの丸みに合わせる。
 const PAPER_CORNER := 16
 
@@ -67,6 +70,11 @@ static func washi_paper(small: bool = false, alpha: float = WASHI_ALPHA) -> Styl
 	var path := PAPER_TAG_PATH if small else PAPER_PANEL_PATH
 	if not ResourceLoader.exists(path):
 		return washi(10 if small else PAPER_CORNER, alpha)
+	return _paper_texture(path, small, Color(1, 1, 1, alpha))
+
+
+## 9-slice の和紙テクスチャ下地を組む（washi_paper / chip / chip_selected / page / slip の共通部）。
+static func _paper_texture(path: String, small: bool, modulate: Color) -> StyleBoxTexture:
 	var sb := StyleBoxTexture.new()
 	sb.texture = load(path)
 	sb.set_texture_margin_all(PAPER_TAG_MARGIN if small else PAPER_PANEL_MARGIN)
@@ -74,7 +82,17 @@ static func washi_paper(small: bool = false, alpha: float = WASHI_ALPHA) -> Styl
 	# 中央と辺は伸ばさずにタイル張り（繊維が引き伸ばされないように。画像は継ぎ目なしで作ってある）。
 	sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
 	sb.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
-	sb.modulate_color = Color(1, 1, 1, alpha)
+	sb.modulate_color = modulate
+	return sb
+
+
+## 帳面の詳細に貼る紙片（かばんの説明など）。帳面より少しだけ濃い和紙。画像が無ければ単色で同じ見た目。
+static func slip(corner: int = 14) -> StyleBox:
+	if ResourceLoader.exists(PAPER_PANEL_PATH):
+		return _paper_texture(PAPER_PANEL_PATH, false, SLIP_TINT)
+	var sb := washi(corner, 1.0)
+	sb.bg_color = WASHI.darkened(0.04)
+	sb.shadow_size = 0
 	return sb
 
 
@@ -96,7 +114,10 @@ static func washi(corner: int = CORNER, alpha: float = WASHI_ALPHA) -> StyleBoxF
 
 
 ## 帳面の下地（予定表・風物詩・かばん）。中身を読ませるため、ほぼ不透明。
-static func page(corner: int = 20) -> StyleBoxFlat:
+## 和紙テクスチャがあればそれを（角丸は画像側の PAPER_CORNER）、無ければ単色の帳面。
+static func page(corner: int = 20) -> StyleBox:
+	if ResourceLoader.exists(PAPER_PANEL_PATH):
+		return _paper_texture(PAPER_PANEL_PATH, false, Color(1, 1, 1, PAGE_ALPHA))
 	var sb := washi(corner, PAGE_ALPHA)
 	sb.shadow_size = 18
 	sb.shadow_offset = Vector2(0, 6)
@@ -139,23 +160,36 @@ static func accent(corner: int = 10) -> StyleBoxFlat:
 
 
 ## 選択肢の「選んでいる」下地。和紙はそのまま、縁を夏空の青で太く囲む（文字は墨のまま読める）。
-static func chip_selected(corner: int = 10) -> StyleBoxFlat:
-	var sb := washi(corner, 0.97)
-	sb.border_color = ACCENT_LINE
-	sb.set_border_width_all(3)
-	sb.set_content_margin_all(6)
-	sb.content_margin_left = 14
-	sb.content_margin_right = 14
+## 和紙テクスチャ版は、縁に青の線を焼き込んだ小さい札（washi_tag_selected.png）を使う。
+static func chip_selected(corner: int = 10) -> StyleBox:
+	var sb: StyleBox
+	if ResourceLoader.exists(PAPER_TAG_SELECTED_PATH):
+		sb = _paper_texture(PAPER_TAG_SELECTED_PATH, true, Color(1, 1, 1, 0.97))
+	else:
+		var flat := washi(corner, 0.97)
+		flat.border_color = ACCENT_LINE
+		flat.set_border_width_all(3)
+		sb = flat
+	_chip_margins(sb)
 	return sb
 
 
 ## 未選択の選択肢の下地（和紙。世界の上でも文字が読める濃さ）。
-static func chip(corner: int = 10) -> StyleBoxFlat:
-	var sb := washi(corner, 0.82)
+static func chip(corner: int = 10) -> StyleBox:
+	var sb: StyleBox
+	if ResourceLoader.exists(PAPER_TAG_PATH):
+		sb = _paper_texture(PAPER_TAG_PATH, true, Color(1, 1, 1, 0.82))
+	else:
+		sb = washi(corner, 0.82)
+	_chip_margins(sb)
+	return sb
+
+
+## 選択肢の札の内側余白（選択中・未選択で同じにして、選んでも文字が動かないように）。
+static func _chip_margins(sb: StyleBox) -> void:
 	sb.set_content_margin_all(6)
 	sb.content_margin_left = 14
 	sb.content_margin_right = 14
-	return sb
 
 
 ## 丸ゴシックのフォント（未設置なら null＝プロジェクト既定フォントのまま）。

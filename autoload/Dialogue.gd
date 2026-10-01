@@ -34,8 +34,8 @@ var _text: Label
 var _hint: Label
 var _choice_box: VBoxContainer
 var _name_sb: StyleBox
-var _choice_sel_sb: StyleBoxFlat
-var _choice_unsel_sb: StyleBoxFlat
+var _choice_sel_sb: StyleBox
+var _choice_unsel_sb: StyleBox
 
 ## 一時停止（入手演出など）の数。0 より大きい間は枠を隠し、次のノードへ進まない。
 ## 効果ノードで道具や風物詩を手に入れた瞬間に演出を割り込ませ、終わってから続きを流すため。
