@@ -38,12 +38,12 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## 項目を直接タップ／クリック：その項目を選んで実行する。
 func _on_item_input(event: InputEvent, i: int) -> void:
+	# タッチは Godot がマウスのクリックに変換して届ける（emulate_mouse_from_touch）。
+	# ScreenTouch も拾うと1回のタップが2回に数えられるので、マウスのクリックだけを見る。
 	var tapped := false
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		tapped = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
-	elif event is InputEventScreenTouch:
-		tapped = (event as InputEventScreenTouch).pressed
 	if tapped and i < _items.size():
 		get_viewport().set_input_as_handled()
 		_index = i
@@ -208,12 +208,14 @@ func _build_ui() -> void:
 
 	# 表題は縦書き（夏休みの絵日記の表紙のように）。画面右に大きく一行、その左に副題を細く。
 	# 縦書きは「一字ずつ改行」で組む（題も副題も縦中横・小書き仮名を含まない文字列に限る）。
-	var title := _make_vertical("風が吹けば", 76, UITheme.WASHI, -22)
+	# スマホ（画面ボタンあり）は右下の決定／戻るに重ならないよう、表題を少し小さく上に詰める。
+	var touch := TouchControls.is_shown()
+	var title := _make_vertical("風が吹けば", 62 if touch else 76, UITheme.WASHI, -20 if touch else -22)
 	title.add_theme_font_override("font", _display_font())
-	title.position = Vector2(952, 56)
+	title.position = Vector2(960 if touch else 952, 40 if touch else 56)
 	add_child(title)
 	var sub := _make_vertical("終わりゆく世界の最後の夏", 20, Color(UITheme.WASHI, 0.78), -4)
-	sub.position = Vector2(900, 70)
+	sub.position = Vector2(910 if touch else 900, 52 if touch else 70)
 	add_child(sub)
 
 	# 選択中の項目：左に夏空の青の短い縦線（ボーダーの左辺だけ）。未選択は同じ余白の透明。

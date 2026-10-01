@@ -203,12 +203,12 @@ func _update_choice_highlight() -> void:
 func _on_choice_input(event: InputEvent, i: int) -> void:
 	if not _choosing:
 		return
+	# タッチは Godot がマウスのクリックに変換して届ける（emulate_mouse_from_touch）。
+	# ScreenTouch も拾うと1回のタップが2回に数えられるので、マウスのクリックだけを見る。
 	var tapped := false
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		tapped = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
-	elif event is InputEventScreenTouch:
-		tapped = (event as InputEventScreenTouch).pressed
 	if tapped:
 		get_viewport().set_input_as_handled()
 		_choice_index = i
@@ -267,12 +267,12 @@ func _fit_to_touch_ui() -> void:
 func _on_box_input(event: InputEvent) -> void:
 	if not _active or _choosing:
 		return
+	# タッチは Godot がマウスのクリックに変換して届ける（emulate_mouse_from_touch）。
+	# ScreenTouch も拾うと1回のタップが2回に数えられるので、マウスのクリックだけを見る。
 	var tapped := false
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		tapped = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
-	elif event is InputEventScreenTouch:
-		tapped = (event as InputEventScreenTouch).pressed
 	if tapped:
 		get_viewport().set_input_as_handled()
 		_advance_line()

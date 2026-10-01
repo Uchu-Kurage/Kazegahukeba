@@ -512,11 +512,11 @@ func _on_detail_input(event: InputEvent) -> void:
 
 
 func _tapped(event: InputEvent) -> bool:
+	# タッチは Godot がマウスのクリックに変換して届ける（emulate_mouse_from_touch）。
+	# ScreenTouch も拾うと1回のタップが2回に数えられるので、マウスのクリックだけを見る。
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		return mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
-	if event is InputEventScreenTouch:
-		return (event as InputEventScreenTouch).pressed
 	return false
 
 

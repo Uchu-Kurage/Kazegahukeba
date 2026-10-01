@@ -73,7 +73,8 @@ func _process(_dt: float) -> void:
 		return
 	var menu := _in_menu_mode()
 	# 項目を直接タップできる画面では、方向キーなど重なる操作を隠して中身を見せる：
-	#   タイトル＝項目を直接タップ。決定／戻る／予定表も不要（「戻る」は項目にある）。
+	#   タイトル＝項目を直接タップ。方向キーは項目に重なるので隠すが、決定／戻るは残す
+	#            （画面ボタンが全部消えると「操作できない」ように見えるため）。予定表・かばんは本編のみ。
 	#   会話中＝選択肢を直接タップ。予定表は選択肢に重なるので隠す。
 	#   予定帳・かばん＝中身と「閉じる」を直接タップ。画面ボタンは帳面に重なるので全部隠す。
 	var title := _on_title()
@@ -82,7 +83,7 @@ func _process(_dt: float) -> void:
 	if _dpad != null:
 		_dpad.visible = menu and not title and not talking and not book
 	if _actions != null:
-		_actions.visible = not title and not book
+		_actions.visible = not book
 	if _book_btn != null:
 		_book_btn.visible = not title and not talking and not book
 	if _bag_btn != null:
