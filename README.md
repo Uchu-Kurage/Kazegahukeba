@@ -33,6 +33,9 @@
 - 予定なしのスキップ（街で［Q］。枠は消費する）
 - 場所に紐づくキャラの関係値を +1 する仮ロジック（`GameState.affinity`）
 - 40日を越えると「世界の終わり」→ もう一度夏を始める（周回）
+- 道具・風物詩を手に入れると入手演出：主人公が正面を向き、頭上にアイコンが浮かんでファンファーレが鳴る
+  （会話中なら会話を止めて割り込み、終わると続きへ。［E］／タップで早送り。同時に灯った風物詩は一度にまとめる。
+  葵絡みの道具は「いつのまにか手元にある」ので演出しない）
 
 ## 操作
 
@@ -165,6 +168,8 @@ scenes/
   UraEnding.tscn / .gd     裏エンド（9月1日）＝独立した一本道シーン。全エンド到達で解放
   UraBackground.gd         裏エンドの背景（秋の高い空。トーンを場面ごとに切替）
   FieldScene.tscn / .gd    散策画面（第6弾『ぼくのなつやすみ』方式）。全9画面を歩き、人と過ごすと枠消費→既存の会話/イベントへ。2枠で夜→就寝で翌朝（家スタート）。移動は無料
+  AcquireFanfare.gd        入手演出（GameState の入手シグナルを購読→会話を一時停止→正面を向いて頭上にアイコン＋ファンファーレ）
+  AcquireIcon.gd           入手演出のアイコン（assets/icons/<id>.png があれば優先／無ければ道具ごと・風物詩ジャンルごとに _draw）
   FieldBackground.gd       散策画面の背景（背景PNGをパスで貼る／無ければ画面ごとのプレースホルダ描画。差し替え可）
   Player.tscn / Player.gd  2D操作キャラ（CharacterBody2D）。場所の中で使う
   LocationSpot.tscn / .gd  対象（Area2D）。中のNPC（ドット絵キャラ）・出口を兼ねる
@@ -214,7 +219,8 @@ UIをボタン→1画面探索→2階層マップと変えても、**日付や�
 - [ ] カメラ追従（`Camera2D`）と各場所マップの作り込み（今は1画面・仮配置）
 
 > **BGM／効果音**：音源ファイルが無くても、`AudioManager` がコードで合成して鳴らします。
-> 本物に差し替えるときは `assets/audio/` に置くだけ（`bgm.ogg`、`blip/confirm/cancel/talk/page.wav`）。
+> 本物に差し替えるときは `assets/audio/` に置くだけ（`bgm.ogg`、`blip/confirm/cancel/talk/page.wav`、
+> 入手ファンファーレ `fanfare_item.wav`／`fanfare_fubutsushi.wav`）。
 > あればそちらを優先します。
 
 > **エンディングを手早く試すには**：`autoload/GameState.gd` の `TOTAL_DAYS` を一時的に

@@ -30,6 +30,7 @@ signal game_ended()                  ## 最終日を越えた（＝世界の終�
 signal schedule_changed()            ## 予定表（約束・日記）が変わった（予定表UIが購読して再描画）
 signal fubutsushi_discovered(id: String)  ## 風物詩を新しく見つけた（第10弾。絵日記帳が購読して再描画）
 signal inventory_changed()                ## 所持品（夏の道具）が変わった（かばんUIが購読して再描画）
+signal item_acquired(id: String)          ## 道具を手に入れた（入手演出 AcquireFanfare が購読）
 
 ## --- 実行時の状態 ---
 var day_index := 0                   ## 0 = 7/23、1 = 7/24 ...、39 = 8/31
@@ -451,6 +452,8 @@ func add_item(id: String) -> bool:
 		entry["count"] = 1
 		inventory[id] = entry
 	print("[item+] %s (x%d)" % [id, int(inventory[id]["count"])])
+	# 入手の合図は橋（風物詩）より先に出す：演出側が「同じモチーフの風物詩」を道具の演出にまとめられるように。
+	item_acquired.emit(id)
 	# 風物詩の橋：重なるモチーフだけ、入手で対応する風物詩を灯す（無ければ ""＝何もしない）。
 	var fid := String(master.get("fubutsushi_id", ""))
 	if fid != "":

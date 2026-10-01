@@ -26,6 +26,7 @@ var _weather_fx: WeatherFX       # 天気の専用ビジュアル（虹・星空
 var _intro_nodes: Array = []          # 入場ナレーション：話しかけたら流すノード列（空なら調べどころを置かない）
 var _intro_commit_forecast := false   # 閲覧し切ったら「今日の予報は開示済み」を確定するか（朝・一日一回）
 var _item_spots := {}                 # 所持品：探索入手／使用ゲートの調べどころ（spot_id → 配置データ）
+var _fanfare: AcquireFanfare          # 入手演出（正面を向き、頭上にアイコン＋ファンファーレ）
 
 
 func _build_map() -> void:
@@ -91,6 +92,10 @@ func _ready_done() -> void:
 	_walk_overlay.z_index = 50
 	_walk_overlay.visible = false
 	add_child(_walk_overlay)
+	# 入手演出：道具・風物詩を手に入れたら、会話を止めて頭上に掲げる（GameState のシグナルで自動）。
+	_fanfare = AcquireFanfare.new()
+	_fanfare.setup(_player)
+	add_child(_fanfare)
 	# 天気（第9弾）：空色オーバーレイと環境音を今日の天気で切替。
 	_apply_weather(GameState.weather_today())
 	HUD.set_shown(true)
@@ -325,8 +330,9 @@ func _use_item_spot(spot) -> void:
 	var nodes: Array = []
 	if String(s["kind"]) == "pickup":
 		# 探索入手：到達で手に入れる（add_item が風物詩の橋も面倒を見る。§4）。
-		GameState.add_item(String(data["item"]))
+		#   入手は効果ノードにして会話の頭で起こす＝入手演出（掲げる＋ファンファーレ）→ 一言、の順に流れる。
 		GameState.set_flag(_item_pickup_flag(String(data["item"])), true)
+		nodes.append({ "effect": { "item": String(data["item"]) } })
 		nodes.append({ "speaker": "", "text": String(data.get("get_text", "")) })
 	else:
 		# 使用ゲート：体験を流し、対応する風物詩を灯し（橋）、消費品なら減らす（効果ノード経由）。
@@ -416,14 +422,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	# 第10弾：エリア内のどこからでも［Q］一発で家に帰る（道の逆走はさせない）。
 	# 家・夜・会話中は無効（誤操作で帰らない）。
 	if event.is_action_pressed("skip"):
-		if String(_field.get("id", "")) != Areas.HOME and GameState.phase != GameState.Phase.NIGHT and not Dialogue.is_active():
+		if String(_field.get("id", "")) != Areas.HOME and GameState.phase != GameState.Phase.NIGHT and not Dialogue.is_active() and not _fanfare.is_busy():
 			_go_home()
 		return
 	super(event)
 
 
 func _on_interact(spot) -> void:
-	if Dialogue.is_active():
+	if Dialogue.is_active() or _fanfare.is_busy():
 		return
 	# 夜：調べどころ（部屋の風物詩）に立っていればそれを開く。それ以外は「特別な夜 or 就寝」だけ
 	#     ができる（§Q1：2枠で夜→翌日）。
