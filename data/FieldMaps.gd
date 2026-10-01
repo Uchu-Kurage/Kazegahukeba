@@ -37,6 +37,9 @@ const DEPTH_SCALE_FAR := 0.72
 ## 実効スケール = base × lerp(far, near, t)。base は「手前に立ったときの絶対倍率」。
 ## 既定は 1.0（＝従来挙動を維持）。画面ごとに "depth_override" で上書きする（直書きしない）。
 const DEPTH_SCALE_BASE := 1.0
+## タイルで組んだ見下ろしの道（road_*）の縮尺。奥行きで縮めず、キャラのスプライトをタイル（32px）と
+## 同じ等倍で描く：主人公シートの1コマの高さ 52px ÷ 基準の背丈 24px ≒ 2.17。
+const TILE_ROAD_DEPTH := { "y_near": 600.0, "y_far": 150.0, "near": 1.0, "far": 1.0, "base": 52.0 / 24.0 }
 
 ## 9場所の接続（辺の向こう＝出口。side は画面のどの辺に置くか）。
 ## side: "left"/"right"/"up"/"down"。双方向なので相手側にも対応する出口がある。
@@ -151,12 +154,17 @@ static func _screens_def() -> Array:
 				"depth_override": { "y_near": 560.0, "y_far": 400.0, "near": 1.0, "far": 0.78, "base": 5.0 },
 			},
 			# --- 通路シーン（道マップ。第9弾）＝目的地の“あいだ”を歩く。移動は枠非消費。--------
-			# 背景PNG（road_*.png）が無ければプレースホルダ描画。横スクロール/見下ろしの作り込みは
-			# 実背景の差し替え時に。ここでは歩ける帯・両端の出口・接続だけを通す（双方向）。
-			{ "id": "road_a", "name": "畦道への道", "exits": [["shops", "left"], ["fields", "right"]] },
-			{ "id": "road_b", "name": "祭りへの参道", "exits": [["fields", "down"], ["shrine", "up"]] },
-			{ "id": "road_c", "name": "丘への坂道", "exits": [["shrine", "down"], ["hill", "up"]] },
-			{ "id": "road_d", "name": "川沿いの道", "exits": [["riverbank", "left"], ["estuary", "right"]] },
+			# 背景PNG（road_*.png）は LPC のタイル素材から tools/gen_road_tiles.py で組んだ見下ろしの絵
+			# （土の道＝歩ける帯 ROAD_H / ROAD_V に合わせてある）。無ければプレースホルダ描画。
+			# 見下ろしなので奥行きで縮めず（near＝far）、キャラをタイルと同じ縮尺（1:1）で描く。
+			{ "id": "road_a", "name": "畦道への道", "exits": [["shops", "left"], ["fields", "right"]],
+				"depth_override": TILE_ROAD_DEPTH },
+			{ "id": "road_b", "name": "祭りへの参道", "exits": [["fields", "down"], ["shrine", "up"]],
+				"depth_override": TILE_ROAD_DEPTH },
+			{ "id": "road_c", "name": "丘への坂道", "exits": [["shrine", "down"], ["hill", "up"]],
+				"depth_override": TILE_ROAD_DEPTH },
+			{ "id": "road_d", "name": "川沿いの道", "exits": [["riverbank", "left"], ["estuary", "right"]],
+				"depth_override": TILE_ROAD_DEPTH },
 	]
 
 

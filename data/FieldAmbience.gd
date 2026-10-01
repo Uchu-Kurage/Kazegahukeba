@@ -84,8 +84,30 @@ static func of(field_id: String) -> Array:
 			return [
 				{ "kind": "cloud_shadow", "rect": Rect2(0, 190, 1152, 458) },  # 空は避け、家並みと通りに
 			]
-		"road_a", "road_b", "road_c", "road_d":
+		# 道（road_*）：タイルで組んだ見下ろしの絵（tools/gen_road_tiles.py）に合わせた範囲。
+		"road_a":
 			return [
+				{ "kind": "cloud_shadow", "rect": Rect2(0, 0, 1152, 648) },
 				{ "kind": "dragonfly", "rect": Rect2(100, 120, 950, 360), "count": 2 },
+				{ "kind": "butterfly", "rect": Rect2(440, 440, 680, 180), "count": 2 },
+			]
+		"road_b":
+			return [
+				{ "kind": "leaves", "rect": Rect2(0, 0, 1152, 200), "floor": 640.0, "count": 8 },
+				{ "kind": "dragonfly", "rect": Rect2(380, 100, 400, 420), "count": 1 },
+			]
+		"road_c":
+			return [
+				{ "kind": "cloud_shadow", "rect": Rect2(0, 0, 1152, 648) },
+				{ "kind": "leaves", "rect": Rect2(30, 0, 420, 300), "floor": 640.0, "count": 5 },
+				{ "kind": "butterfly", "rect": Rect2(700, 60, 420, 520), "count": 2 },
+				{ "kind": "dragonfly", "rect": Rect2(420, 80, 600, 400), "count": 2 },
+			]
+		"road_d":
+			return [
+				{ "kind": "glint", "rects": [Rect2(0, 530, 1152, 118)], "density": 2.0 },
+				{ "kind": "cloud_shadow", "rect": Rect2(0, 0, 1152, 648) },
+				{ "kind": "dragonfly", "rect": Rect2(60, 260, 1020, 280), "count": 3 },
+				{ "kind": "fireflies", "rect": Rect2(0, 420, 1152, 200), "count": 20 },
 			]
 	return []

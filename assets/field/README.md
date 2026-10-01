@@ -8,3 +8,11 @@ FieldScene（第6弾）の背景PNGを置く場所です。
 - 差し替えの約束：**同じ画面ID・同じ表示サイズ（1152×648にフィット）・同じ道の位置**で入れ替えれば、
   コードを触らず絵だけ差し替えられます（当たり判定＝道は `FieldMaps.roads` 側で持っているため）。
 - いまは仮：Nano Banana Pro 出力の 16:9 PNG をそのまま置いてOK。後日 320×180 のドット絵へ。
+
+## 途中の道（road_a〜road_d）
+
+- `road_a.png`〜`road_d.png` は、LPC のタイル素材（ElizaWy/LPC「LPC Revised」夏の地形）を
+  `tools/gen_road_tiles.py` で組み立てた見下ろしの絵（素材は `tools/lpc_terrain/` に同梱）。
+- 土の道は `FieldMaps` の歩ける帯（`ROAD_H` / `ROAD_V`）に合わせてある。帯を変えたらスクリプトも直して作り直す。
+- 見下ろしなので、キャラはタイルと同じ縮尺で描く（`FieldMaps.TILE_ROAD_DEPTH`）。
+- 出典・作者は `CREDITS.md`。
