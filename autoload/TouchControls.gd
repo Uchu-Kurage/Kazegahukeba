@@ -62,6 +62,10 @@ func _ready() -> void:
 	# 操作できるよう、タッチUIは常時処理する（＝予定表の開閉・カーソル移動・詳細をスマホで行える）。
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_ui()
+	# 縦持ち（画面が縦長）では、ゲーム画面の下に余白ができる。ボタンをその余白の上の方
+	# （ゲーム画面のすぐ下）へ寄せるため、画面サイズが変わるたびに置き場所を合わせる。
+	get_viewport().size_changed.connect(_fit_to_screen)
+	_fit_to_screen()
 	# タッチ端末のときだけ表示（それ以外は邪魔にならないよう隠す）。
 	var touch := DisplayServer.is_touchscreen_available() or OS.has_feature("mobile")
 	_root.visible = touch or FORCE_SHOW
@@ -94,6 +98,25 @@ func _process(_dt: float) -> void:
 		_stick_area.visible = not menu
 		if menu and _stick_active:
 			_reset_stick()
+
+
+## ゲーム画面の基準の高さ（project.godot の viewport_height）。
+const GAME_H := 648.0
+## 縦持ちでボタン類に使う高さ（方向キー3段＋下余白がおさまる大きさ）。
+const PAD_ZONE_H := DPAD * 3 + 24 + BOTTOM_MARGIN + 24
+
+
+## 画面の大きさに合わせてボタンの置き場所（_root の範囲）を決める。
+##   横持ち：画面いっぱい（従来どおり、ゲーム画面の右下・左下に重ねる）。
+##   縦持ち：ゲーム画面の下に余白があるので、_root を「ゲーム画面＋その下のボタン帯」までに縮める。
+##          下寄せのボタンがゲーム画面のすぐ下に並び、画面の一番下（ジェスチャーバー付近）から離れる。
+func _fit_to_screen() -> void:
+	if _root == null:
+		return
+	var vp := get_viewport().get_visible_rect().size
+	_root.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_root.position = Vector2.ZERO
+	_root.size = Vector2(vp.x, minf(vp.y, GAME_H + PAD_ZONE_H) if vp.y > GAME_H + 120.0 else vp.y)
 
 
 ## メニュー操作モードか（＝方向キーを出す）。予定帳を開いている間、会話中（選択肢を上下で選ぶ）、
