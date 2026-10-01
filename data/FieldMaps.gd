@@ -11,7 +11,8 @@ extends RefCounted
 ##   home↔shops / shops↔school / shops↔fields / shops↔riverbank /
 ##   fields↔shrine / fields↔sunflower / shrine↔hill / riverbank↔estuary / riverbank↔fields
 ##
-## 各画面：id / name / bg（背景PNGパス。無ければプレースホルダ描画）/ roads（歩ける帯 Rect2）/
+## 各画面：id / name / bg（背景PNGパス。無ければプレースホルダ描画）/ bg_night（夜用の絵。あれば夜はこちら）/
+##         roads（歩ける帯 Rect2）/
 ##         start（新規入場時の位置）/ exits（出口：id / label / pos / to（接続先画面ID））。
 ## 遷移先での出現位置は「to が“来た画面”に一致する出口」に立たせる（entry_position）。双方向なので必ず対応が在る。
 
@@ -22,6 +23,11 @@ const VIEW_H := 648
 const ROAD_H := Rect2(120, 300, 912, 130)   # 横帯（左↔右）
 const ROAD_V := Rect2(500, 130, 152, 460)   # 縦帯（奥↔手前）
 const CENTER := Vector2(576, 365)
+
+# --- 自室（home）の調べどころ。背景（tools/gen_room.py の家具配置）に合わせた位置 ---
+const HOME_WINDOW_POS := Vector2(576, 250)  # 窓の前（朝の導入「窓の外を眺める」）
+const HOME_DOOR_POS := Vector2(876, 236)    # ドアの前（「出かける」→ 見下ろしマップ）
+const HOME_LOOK_POS := Vector2(576, 330)    # 部屋の真ん中（夜「部屋を見まわす」）
 
 # --- 画面端の出口位置（辺ごと）---
 const POS_LEFT := Vector2(160, 365)
@@ -37,21 +43,37 @@ const DEPTH_SCALE_FAR := 0.72
 ## 実効スケール = base × lerp(far, near, t)。base は「手前に立ったときの絶対倍率」。
 ## 既定は 1.0（＝従来挙動を維持）。画面ごとに "depth_override" で上書きする（直書きしない）。
 const DEPTH_SCALE_BASE := 1.0
-## タイルで組んだ見下ろしの道（road_*）の縮尺。奥行きで縮めず、キャラのスプライトをタイル（32px）と
-## 同じ等倍で描く：主人公シートの1コマの高さ 52px ÷ 基準の背丈 24px ≒ 2.17。
-const TILE_ROAD_DEPTH := { "y_near": 600.0, "y_far": 150.0, "near": 1.0, "far": 1.0, "base": 52.0 / 24.0 }
+## タイルで組んだ見下ろしの画面（自室 home・道 road_*）の縮尺。奥行きで縮めず、キャラのスプライトを
+## タイル（32px）と同じ等倍で描く：主人公シートの1コマの高さ 52px ÷ 基準の背丈 24px ≒ 2.17。
+const TILE_DEPTH := { "y_near": 600.0, "y_far": 150.0, "near": 1.0, "far": 1.0, "base": 52.0 / 24.0 }
 
 ## 9場所の接続（辺の向こう＝出口。side は画面のどの辺に置くか）。
 ## side: "left"/"right"/"up"/"down"。双方向なので相手側にも対応する出口がある。
 static func _screens_def() -> Array:
 	return [
+		# 家＝自室：LPC の室内タイルで組んだ見下ろしの一部屋（tools/gen_room.py）。歩けるのは家具の無い床。
+		# 出かけるのはドア前の調べどころ（HOME_DOOR_POS）から見下ろしマップへ（エリア外なので出口は置かれない）。
 		{ "id": "home",      "name": "家",           "exits": [["shops", "right"]],
+				"roads_override": [
+					Rect2(482, 214, 210, 82),    # 窓の前（本棚と机のあいだ）
+					Rect2(836, 200, 80, 96),     # ドアの前
+					Rect2(236, 296, 680, 96),    # 部屋の中ほど（全幅）
+					Rect2(236, 392, 292, 60),    # 低いテーブルの左
+					Rect2(624, 392, 292, 60),    # 低いテーブルの右
+					Rect2(236, 452, 600, 160),   # 手前（鉢植えの左まで）
+					Rect2(836, 452, 80, 80),     # 鉢植えの上
+				],
+				"start_override": Vector2(576, 540),
+				"pos_override": { "shops": HOME_DOOR_POS },
+				"depth_override": TILE_DEPTH,
+			},
+		# 家の前（オープニングの夢だけで使う外観。どこからも出口がつながらないので散策には出てこない）。
+		{ "id": "home_front", "name": "家の前",       "exits": [],
 				"roads_override": [
 					Rect2(60, 500, 1030, 148),   # 手前の芝生・アプローチ（ほぼ全幅）
 					Rect2(560, 468, 560, 132),   # 右へ続く土の小道（→商店街）
 				],
 				"start_override": Vector2(480, 585),
-				"pos_override": { "shops": Vector2(1060, 500) },
 				"depth_override": { "y_near": 620.0, "y_far": 468.0, "near": 1.0, "far": 0.85, "base": 6.0 },
 			},
 		# 商店街：背景に合わせ、歩けるのは「手前の石畳〜奥へ続く通り」だけ（斜め見下ろしの台形を
@@ -158,13 +180,13 @@ static func _screens_def() -> Array:
 			# （土の道＝歩ける帯 ROAD_H / ROAD_V に合わせてある）。無ければプレースホルダ描画。
 			# 見下ろしなので奥行きで縮めず（near＝far）、キャラをタイルと同じ縮尺（1:1）で描く。
 			{ "id": "road_a", "name": "畦道への道", "exits": [["shops", "left"], ["fields", "right"]],
-				"depth_override": TILE_ROAD_DEPTH },
+				"depth_override": TILE_DEPTH },
 			{ "id": "road_b", "name": "祭りへの参道", "exits": [["fields", "down"], ["shrine", "up"]],
-				"depth_override": TILE_ROAD_DEPTH },
+				"depth_override": TILE_DEPTH },
 			{ "id": "road_c", "name": "丘への坂道", "exits": [["shrine", "down"], ["hill", "up"]],
-				"depth_override": TILE_ROAD_DEPTH },
+				"depth_override": TILE_DEPTH },
 			{ "id": "road_d", "name": "川沿いの道", "exits": [["riverbank", "left"], ["estuary", "right"]],
-				"depth_override": TILE_ROAD_DEPTH },
+				"depth_override": TILE_DEPTH },
 	]
 
 
@@ -212,6 +234,7 @@ static func _build(s: Dictionary) -> Dictionary:
 		"base": float(dov.get("base", DEPTH_SCALE_BASE)),
 	}
 	return { "id": s["id"], "name": s["name"], "bg": "res://assets/field/%s.png" % s["id"],
+		"bg_night": "res://assets/field/%s_night.png" % s["id"],  # 夜用の絵（あれば夜はこちら）
 		"roads": roads, "start": start, "exits": exits, "depth": depth }
 
 

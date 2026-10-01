@@ -101,8 +101,8 @@ func _start_segment(i: int) -> void:
 
 ## 家の前：夢の始まり。空は白く、音がない。
 func _build_home() -> void:
-	_lay_background("home")
-	_spawn_player("home", Vector2(480, 585))
+	_lay_background("home_front")  # 家は自室になったので、夢では外観（家の前）を使う
+	_spawn_player("home_front", Vector2(480, 585))
 	_narrate([
 		"——夢を、見ていた。",
 		"八月の、最後の日の夢。",

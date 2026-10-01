@@ -71,9 +71,10 @@ static func of(field_id: String) -> Array:
 				{ "kind": "light", "rect": Rect2(140, 0, 700, 600) },
 				{ "kind": "leaves", "rect": Rect2(0, 0, 1152, 160), "floor": 640.0, "count": 8 },
 			]
+		# 家＝自室：窓から差しこむ光の筋と、その中を漂う塵（晴れの日だけ）。
 		"home":
 			return [
-				{ "kind": "butterfly", "rect": Rect2(560, 300, 420, 280), "count": 2 },
+				{ "kind": "light", "rect": Rect2(500, 168, 240, 300) },
 			]
 		"school":
 			return [

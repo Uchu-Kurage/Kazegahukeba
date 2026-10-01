@@ -16,3 +16,11 @@ FieldScene（第6弾）の背景PNGを置く場所です。
 - 土の道は `FieldMaps` の歩ける帯（`ROAD_H` / `ROAD_V`）に合わせてある。帯を変えたらスクリプトも直して作り直す。
 - 見下ろしなので、キャラはタイルと同じ縮尺で描く（`FieldMaps.TILE_ROAD_DEPTH`）。
 - 出典・作者は `CREDITS.md`。
+
+## 家＝自室（home）
+
+- `home.png`（昼）／`home_night.png`（夜）は、LPC の室内素材を `tools/gen_room.py` で組み立てた見下ろしの一部屋
+  （素材は `tools/lpc_interior/` に同梱）。夜は `<画面ID>_night.png` があれば自動でそちらを使う。
+- 歩ける床（`FieldMaps` の home の `roads_override`）と調べどころ（`FieldMaps.HOME_*_POS`）は家具の配置に合わせてある。
+  配置を変えたら両方そろえて直す。
+- 以前の家の外観は `home_front.png`（オープニングの夢「家の前」でだけ使う）。
