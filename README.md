@@ -192,6 +192,8 @@ tools/
   gen_washi.py              上の和紙画像を生成する Python スクリプト（numpy・Pillow。色を変えたら作り直す）
   gen_road_tiles.py         途中の道（assets/field/road_a〜d.png）を LPC タイルから組み立てる（Pillow。道の帯を変えたら作り直す）
   lpc_terrain/              上で使う LPC Revised の夏の地形タイル（OGA-BY 3.0。出典は assets/field/CREDITS.md）
+  gen_room.py               家＝自室（assets/field/home.png・home_night.png）を LPC の室内素材から組み立てる（Pillow）
+  lpc_interior/             上で使う LPC Revised の床・壁・家具（OGA-BY 3.0。出典は assets/field/CREDITS.md）
   .gdignore                 tools/ を Godot に取り込ませない（素材の元画像をゲームに含めない）
 ```
 

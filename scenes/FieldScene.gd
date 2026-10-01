@@ -41,6 +41,10 @@ func _build_map() -> void:
 	# 背景（PNG or プレースホルダ）。
 	var bg := FieldBackground.new()
 	bg.bg_path = String(_field.get("bg", ""))
+	# 夜用の絵（<画面ID>_night.png）があれば夜はそちら（自室：窓の外が夜空・部屋の明かりを落とす）。
+	var night_bg := String(_field.get("bg_night", ""))
+	if GameState.phase == GameState.Phase.NIGHT and ResourceLoader.exists(night_bg):
+		bg.bg_path = night_bg
 	bg.roads = _field.get("roads", [])
 	bg.field_id = String(_field["id"])
 	add_child(bg)
@@ -132,13 +136,13 @@ func _setup_intro_spots() -> void:
 			# 夜の家：部屋の風物詩は「調べる」で。就寝／特別な夜は［E］（_on_interact の夜処理）。
 			_intro_nodes = _build_ambient_fubutsushi_nodes("home")
 			if not _intro_nodes.is_empty():
-				add_spot(INTRO_SPOT_ID, "部屋を見まわす", "", Vector2(360, 560))
+				add_spot(INTRO_SPOT_ID, "部屋を見まわす", "", FieldMaps.HOME_LOOK_POS)
 		else:
 			# 朝／昼の家：朝の導入は「窓の外を眺める」で。出発は「出かける」で見下ろしマップへ。
 			_intro_nodes = _build_home_intro_nodes()
 			if not _intro_nodes.is_empty():
-				add_spot(INTRO_SPOT_ID, "窓の外を眺める", "", Vector2(300, 570))
-			add_spot(LEAVE_SPOT_ID, "出かける", "", Vector2(880, 560))
+				add_spot(INTRO_SPOT_ID, "窓の外を眺める", "", FieldMaps.HOME_WINDOW_POS)
+			add_spot(LEAVE_SPOT_ID, "出かける", "", FieldMaps.HOME_DOOR_POS)
 		return
 	# エリア内の画面：道は道の演出（独白・遭遇・見逃せる一品）、それ以外は環境発見（風物詩）。
 	if Roads.is_road(fid):
@@ -376,7 +380,9 @@ func _apply_weather(weather_id: String) -> void:
 	_weather_overlay.color = info["tint"]
 	# 天気の専用ビジュアル（霧の帯・雨脚・雨上がりの虹）を色の上に重ねる。
 	_ensure_weather_fx()
-	_weather_fx.setup(_fx_mode_for(weather_id))
+	# 自室（家）は室内なので、雨脚・霧・虹は描かない（空の色味と環境音だけで天気を伝える）。
+	var indoor := String(_field.get("id", "")) == Areas.HOME
+	_weather_fx.setup("none" if indoor else _fx_mode_for(weather_id))
 	_apply_ambient(weather_id, GameState.phase == GameState.Phase.NIGHT)
 	# 環境音："silence"=無音に近づける／""=屋外の既定（蝉）／それ以外はそのキー。
 	var amb := String(info["ambient"])
@@ -417,6 +423,11 @@ func _fx_mode_for(weather_id: String) -> String:
 ## 暗幕をかけ、快晴なら星空／天の川、荒天なら雨。
 func _apply_night_fx() -> void:
 	_ensure_weather_fx()
+	if String(_field.get("id", "")) == Areas.HOME:
+		# 自室は夜用の絵（暗い部屋・窓の夜空）がすでに夜。室内に暗幕や星空・雨脚を重ねない。
+		_weather_fx.setup("none")
+		_apply_ambient(GameState.weather_today(), true)
+		return
 	if _weather_overlay != null:
 		_weather_overlay.color = Color(0.05, 0.07, 0.16, 0.35)  # 夜の暗幕
 	var w := GameState.weather_today()
