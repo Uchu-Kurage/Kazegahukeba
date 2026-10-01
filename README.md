@@ -183,6 +183,10 @@ assets/fonts/
   rounded.ttf               丸ゴシック（M PLUS Rounded 1c Medium / OFL 1.1。UIの主フォント）
   NotoSansJP-Regular.ttf    日本語フォント（OFL 1.1。丸ゴシックに無い字の補い）
   ui_font.tres              上の二つを束ねた既定フォント（FontVariation＋fallbacks）
+assets/ui/
+  washi_panel.png / washi_tag.png  会話枠・日めくり／話者名・操作プロンプトの和紙（9-slice。UITheme.washi_paper が読む。無ければ単色）
+tools/
+  gen_washi.py              上の和紙画像を生成する Python スクリプト（numpy・Pillow。色を変えたら作り直す）
 ```
 
 ## 設計の考え方（初心者向けメモ）

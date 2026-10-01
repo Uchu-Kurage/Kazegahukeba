@@ -48,6 +48,36 @@ const SIZE_SMALL := 18
 const ROUNDED_FONT_PATH := "res://assets/fonts/ui_font.tres"
 
 
+# --- 和紙テクスチャ（会話枠・話者名・日めくり・操作プロンプトの紙）---
+## 繊維の入った和紙の 9-slice 画像（tools/gen_washi.py で生成）。無ければ washi() の単色にフォールバック。
+## 画像には紙の外側に落ち影の余白（*_PAD）を含むので、その分だけ外へ広げて描き、紙の縁を Control の縁に合わせる。
+const PAPER_PANEL_PATH := "res://assets/ui/washi_panel.png"  # 大きい枠用（角丸 16）
+const PAPER_PANEL_PAD := 12
+const PAPER_PANEL_MARGIN := 28  # 9-slice の余白（影の余白＋角丸）
+const PAPER_TAG_PATH := "res://assets/ui/washi_tag.png"      # 小さい札用（角丸 10）
+const PAPER_TAG_PAD := 6
+const PAPER_TAG_MARGIN := 16
+## 和紙テクスチャの角丸（大きい枠）。上に重ねる帯などはこの丸みに合わせる。
+const PAPER_CORNER := 16
+
+
+## 和紙テクスチャの下地。small=true で小さい札用。alpha で透け具合（和紙 0.92・帳面 0.97 など）。
+## 画像が無い環境では、同じ角丸・不透明度の washi()（単色）を返す。
+static func washi_paper(small: bool = false, alpha: float = WASHI_ALPHA) -> StyleBox:
+	var path := PAPER_TAG_PATH if small else PAPER_PANEL_PATH
+	if not ResourceLoader.exists(path):
+		return washi(10 if small else PAPER_CORNER, alpha)
+	var sb := StyleBoxTexture.new()
+	sb.texture = load(path)
+	sb.set_texture_margin_all(PAPER_TAG_MARGIN if small else PAPER_PANEL_MARGIN)
+	sb.set_expand_margin_all(PAPER_TAG_PAD if small else PAPER_PANEL_PAD)
+	# 中央と辺は伸ばさずにタイル張り（繊維が引き伸ばされないように。画像は継ぎ目なしで作ってある）。
+	sb.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+	sb.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_TILE_FIT
+	sb.modulate_color = Color(1, 1, 1, alpha)
+	return sb
+
+
 ## 和紙の下地スタイル（枠・タグ・ボタン共通）。角丸・半透明・薄い縁・やわらかい影。
 static func washi(corner: int = CORNER, alpha: float = WASHI_ALPHA) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
