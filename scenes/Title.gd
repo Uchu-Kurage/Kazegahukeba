@@ -36,6 +36,21 @@ func _unhandled_input(event: InputEvent) -> void:
 			_go(Screen.MAIN)
 
 
+## 項目を直接タップ／クリック：その項目を選んで実行する。
+func _on_item_input(event: InputEvent, i: int) -> void:
+	var tapped := false
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		tapped = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
+	elif event is InputEventScreenTouch:
+		tapped = (event as InputEventScreenTouch).pressed
+	if tapped and i < _items.size():
+		get_viewport().set_input_as_handled()
+		_index = i
+		# 実行すると項目のラベルを作り直す（free）ので、このラベルの入力処理を抜けてから行う。
+		_activate.call_deferred()
+
+
 func _move(d: int) -> void:
 	if _items.is_empty():
 		return
@@ -127,6 +142,11 @@ func _render() -> void:
 		var lbl := _make_label(String(it["label"]), 26 if selected else 24,
 			UITheme.WASHI if selected else Color(UITheme.WASHI, 0.62))
 		lbl.add_theme_stylebox_override("normal", _sel_sb if selected else _unsel_sb)
+		lbl.custom_minimum_size = Vector2(0, 60)  # 指で押せる高さ（スマホで約 36pt。行間と合わせて 40pt 超）
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		# 項目は直接タップ／クリックでも選べる（方向キー＋決定と同じ結果）。
+		lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+		lbl.gui_input.connect(_on_item_input.bind(i))
 		_vbox.add_child(lbl)
 
 	_footer.text = _footer_text()

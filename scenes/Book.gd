@@ -46,6 +46,7 @@ var _alm_cells := []         ## index -> { panel, label }
 var _alm_ids: Array = []     ## 並び順の id（ジャンル順）
 var _detail: Panel
 var _detail_text: Label
+var _tab_btns: Array = []   ## [予定表, 風物詩] のタブ（タップ／クリックで切替）
 
 
 func _ready() -> void:
@@ -190,6 +191,11 @@ func _close_detail() -> void:
 func _refresh() -> void:
 	if not _open:
 		return
+	for i in _tab_btns.size():
+		var on := i == _tab
+		var b: Button = _tab_btns[i]
+		b.add_theme_stylebox_override("normal", UITheme.ruled_cursor() if on else _tab_sb())
+		b.add_theme_color_override("font_color", UITheme.TEXT if on else UITheme.TEXT_SOFT)
 	if _tab == TAB_CALENDAR:
 		_title.text = "予定表（%sまで）" % GameState.date_text(GameState.TOTAL_DAYS - 1)
 		for idx in _cells.size():
@@ -403,12 +409,13 @@ func _build_ui() -> void:
 	var help := Label.new()
 	help.position = Vector2(60, 76)
 	help.size = Vector2(1000, 26)
-	help.text = "矢印／WASD で選ぶ　　［E］で開く　　［Q］で閉じる　　［TAB］予定表　［C］風物詩"
+	help.text = "矢印／WASD で選ぶ　　［E］で開く"
 	UITheme.style_label(help, UITheme.SIZE_SMALL)
 	help.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(help)
 
+	_build_tabs()
 	_build_calendar()
 	_build_almanac()
 
@@ -417,7 +424,8 @@ func _build_ui() -> void:
 	_detail.size = Vector2(560, 300)
 	_detail.position = Vector2((1152 - 560) / 2, (648 - 300) / 2)
 	_detail.add_theme_stylebox_override("panel", UITheme.page(18))
-	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_detail.mouse_filter = Control.MOUSE_FILTER_STOP
+	_detail.gui_input.connect(_on_detail_input)  # めくった一枚はタップで閉じる
 	_detail.visible = false
 	add_child(_detail)
 
@@ -428,6 +436,88 @@ func _build_ui() -> void:
 	UITheme.style_label(_detail_text, UITheme.SIZE_BODY)
 	_detail_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail.add_child(_detail_text)
+
+
+## 右上：タブ（予定表／風物詩）と「閉じる」。キーが無いスマホでもタブを切り替え、閉じられるように。
+## キーの対応（TAB・C・Q）もラベルに添えて、PC でも何で切り替わるか分かるようにする。
+func _build_tabs() -> void:
+	var row := HBoxContainer.new()
+	row.position = Vector2(620, 28)
+	row.size = Vector2(484, 72)
+	row.alignment = BoxContainer.ALIGNMENT_END
+	row.add_theme_constant_override("separation", 8)
+	add_child(row)
+	var defs := [["予定表 TAB", TAB_CALENDAR], ["風物詩 C", TAB_ALMANAC]]
+	for d in defs:
+		var b := _tab_button(String(d[0]))
+		var tab: int = d[1]
+		b.pressed.connect(func() -> void:
+			if _tab != tab:
+				_switch_tab(tab))
+		row.add_child(b)
+		_tab_btns.append(b)
+	var close_btn := _tab_button("閉じる Q")
+	close_btn.pressed.connect(close)
+	row.add_child(close_btn)
+
+
+func _tab_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(148, 72)  # スマホで約 44pt
+	var f := UITheme.font()
+	if f != null:
+		b.add_theme_font_override("font", f)
+	b.add_theme_font_size_override("font_size", UITheme.SIZE_SMALL + 2)
+	b.add_theme_color_override("font_color", UITheme.TEXT)
+	b.add_theme_color_override("font_hover_color", UITheme.TEXT)
+	b.add_theme_color_override("font_pressed_color", UITheme.TEXT)
+	b.add_theme_stylebox_override("normal", _tab_sb())
+	var hover := _tab_sb()
+	hover.bg_color = UITheme.WASHI.darkened(0.05)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", UITheme.ruled_cursor())
+	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	return b
+
+
+func _tab_sb() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0)
+	sb.border_color = UITheme.RULE
+	sb.set_border_width_all(1)
+	sb.set_corner_radius_all(6)
+	return sb
+
+
+## 日付（風物詩）をタップ／クリック：そのマスを選んで開く。詳細が開いていれば閉じるだけ。
+func _on_cell_input(event: InputEvent, idx: int) -> void:
+	if not _open or not _tapped(event):
+		return
+	get_viewport().set_input_as_handled()
+	if _detail_open:
+		_close_detail()
+		return
+	_cursor = idx
+	AudioManager.play_sfx("move")
+	_refresh()
+	_open_detail()
+
+
+func _on_detail_input(event: InputEvent) -> void:
+	if _detail_open and _tapped(event):
+		get_viewport().set_input_as_handled()
+		_close_detail()
+
+
+func _tapped(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		return mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
+	if event is InputEventScreenTouch:
+		return (event as InputEventScreenTouch).pressed
+	return false
 
 
 func _build_calendar() -> void:
@@ -462,7 +552,8 @@ func _build_calendar() -> void:
 		var cp := Panel.new()
 		cp.position = Vector2(x, y)
 		cp.size = Vector2(CELL_W, CELL_H)
-		cp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cp.mouse_filter = Control.MOUSE_FILTER_STOP
+		cp.gui_input.connect(_on_cell_input.bind(idx))  # 日付をタップ＝その日を開く
 		add_child(cp)
 		_cal_nodes.append(cp)
 
@@ -500,7 +591,8 @@ func _build_almanac() -> void:
 		var cp := Panel.new()
 		cp.position = Vector2(x, y)
 		cp.size = Vector2(ALM_CELL_W, ALM_CELL_H)
-		cp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cp.mouse_filter = Control.MOUSE_FILTER_STOP
+		cp.gui_input.connect(_on_cell_input.bind(idx))  # 風物詩をタップ＝その一枚を開く
 		cp.visible = false
 		add_child(cp)
 		_alm_nodes.append(cp)

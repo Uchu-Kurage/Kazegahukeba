@@ -65,6 +65,7 @@ func start(nodes: Array) -> void:
 	_nodes = nodes.duplicate()  # then の差し込みで書き換えるので複製しておく
 	_index = -1
 	_active = true
+	_fit_to_touch_ui()
 	_root.visible = true
 	_next_node()
 
@@ -101,8 +102,8 @@ func _process(delta: float) -> void:
 		else:
 			_text.visible_characters = shown
 	elif not _choosing:
-		# 送り待ちのあいだ、続行マークを点滅させる。
-		_hint.modulate.a = 0.35 + 0.35 * absf(sin(Time.get_ticks_msec() * 0.006))
+		# 送り待ちのあいだ、続行マークをゆっくり明滅させる（薄くなりすぎて見失わないよう 0.6〜1.0）。
+		_hint.modulate.a = 0.6 + 0.4 * absf(sin(Time.get_ticks_msec() * 0.006))
 
 
 # --- ノード送り ------------------------------------------------------
@@ -137,7 +138,7 @@ func _show_line(node: Dictionary) -> void:
 	_choice_box.visible = false
 	_hint.text = "▼"
 	_hint.visible = true
-	_hint.modulate.a = 0.7
+	_hint.modulate.a = 1.0
 	_set_speaker(String(node.get("speaker", "")))
 	_text.text = String(node.get("text", ""))
 	_text.visible_characters = 0
@@ -175,7 +176,12 @@ func _build_choice_labels() -> void:
 	for i in _choices.size():
 		var lbl := Label.new()
 		UITheme.style_label(lbl, UITheme.SIZE_CHOICE)  # 丸ゴシック・ダークグレー・薄い縁取り
-		lbl.custom_minimum_size = Vector2(236, 0)  # 右側に縦積みする和紙ピルの幅をそろえる
+		lbl.custom_minimum_size = Vector2(236, 64)  # 幅をそろえ、高さは指で押せる大きさに（スマホで約 40pt）
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		# 選択肢は直接タップ／クリックでも選べる（方向キー＋決定と同じ結果）。
+		lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+		lbl.gui_input.connect(_on_choice_input.bind(i))
+		lbl.mouse_entered.connect(_on_choice_hover.bind(i))
 		_choice_box.add_child(lbl)
 		_choice_labels.append(lbl)
 	_update_choice_highlight()
@@ -191,6 +197,33 @@ func _update_choice_highlight() -> void:
 		# 文字は常に暖かいダークグレー（白抜きにしない）。選択中だけ青の縁が乗る差で見せる。
 		lbl.add_theme_color_override("font_color", UITheme.TEXT)
 		lbl.add_theme_stylebox_override("normal", _choice_sel_sb if selected else _choice_unsel_sb)
+
+
+## 選択肢を直接タップ／クリック：その項目を選んで決定する。
+func _on_choice_input(event: InputEvent, i: int) -> void:
+	if not _choosing:
+		return
+	var tapped := false
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		tapped = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
+	elif event is InputEventScreenTouch:
+		tapped = (event as InputEventScreenTouch).pressed
+	if tapped:
+		get_viewport().set_input_as_handled()
+		_choice_index = i
+		_update_choice_highlight()
+		_choosing = false  # 決定までの間に重ねてタップされても二重に決定しない
+		# 続く選択肢でラベルを作り直す（free）ことがあるので、このラベルの入力処理を抜けてから決定する。
+		_confirm_choice.call_deferred()
+
+
+## マウスを重ねた選択肢を選択状態にする（PC。決定はクリックか E）。
+func _on_choice_hover(i: int) -> void:
+	if _choosing and i != _choice_index:
+		_choice_index = i
+		AudioManager.play_sfx("blip")
+		_update_choice_highlight()
 
 
 func _move_choice(delta: int) -> void:
@@ -222,6 +255,29 @@ func _end() -> void:
 	finished.emit()
 
 
+## スマホ（タッチUI表示中）は右下の決定／戻るに本文が隠れないよう、会話枠の幅を詰める。
+func _fit_to_touch_ui() -> void:
+	var w := 744.0 if TouchControls.is_shown() else 886.0
+	_box.size.x = w
+	_text.size.x = w - 86.0
+	_hint.position.x = w - 42.0
+
+
+## 会話枠そのものをタップ／クリックしても送れる（スマホでは決定ボタンへ指を動かさずに済む）。
+func _on_box_input(event: InputEvent) -> void:
+	if not _active or _choosing:
+		return
+	var tapped := false
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		tapped = mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
+	elif event is InputEventScreenTouch:
+		tapped = (event as InputEventScreenTouch).pressed
+	if tapped:
+		get_viewport().set_input_as_handled()
+		_advance_line()
+
+
 func _current_len() -> int:
 	return String(_nodes[_index].get("text", "")).length()
 
@@ -241,6 +297,7 @@ func _build_ui() -> void:
 	_box.position = Vector2(24, 446)
 	_box.size = Vector2(886, 178)
 	_box.add_theme_stylebox_override("panel", UITheme.washi(22))
+	_box.gui_input.connect(_on_box_input)
 	_root.add_child(_box)
 
 	# 話者名タグ：枠と同じ和紙質感の独立したピルで、枠の左上に少し上へ浮かせて重ねる。
@@ -269,13 +326,12 @@ func _build_ui() -> void:
 	_hint.text = "▼"
 	_hint.position = Vector2(844, 138)
 	UITheme.style_label(_hint, UITheme.SIZE_SMALL)
-	_hint.add_theme_color_override("font_color", UITheme.ACCENT)
-	_hint.modulate = Color(1, 1, 1, 0.8)
+	_hint.add_theme_color_override("font_color", UITheme.ACCENT_LINE)
 	_box.add_child(_hint)
 
 	# 選択肢：画面右側に縦積みの和紙ピル。選択中だけ夏空の青が乗る。
 	_choice_box = VBoxContainer.new()
-	_choice_box.position = Vector2(884, 230)
+	_choice_box.position = Vector2(884, 196)
 	_choice_box.add_theme_constant_override("separation", 12)
 	_choice_box.visible = false
 	_root.add_child(_choice_box)
