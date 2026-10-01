@@ -190,6 +190,9 @@ assets/ui/
   washi_tag_selected.png    選択中の選択肢（小さい札の縁に夏空の青の線）
 tools/
   gen_washi.py              上の和紙画像を生成する Python スクリプト（numpy・Pillow。色を変えたら作り直す）
+  gen_road_tiles.py         途中の道（assets/field/road_a〜d.png）を LPC タイルから組み立てる（Pillow。道の帯を変えたら作り直す）
+  lpc_terrain/              上で使う LPC Revised の夏の地形タイル（OGA-BY 3.0。出典は assets/field/CREDITS.md）
+  .gdignore                 tools/ を Godot に取り込ませない（素材の元画像をゲームに含めない）
 ```
 
 ## 設計の考え方（初心者向けメモ）
