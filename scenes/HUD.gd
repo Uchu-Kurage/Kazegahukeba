@@ -122,7 +122,7 @@ func _build_ui() -> void:
 	_day_card = Panel.new()
 	_day_card.size = Vector2(264, 96)
 	_day_card.position = Vector2(1152 - _day_card.size.x - 16, 16)
-	_day_card.add_theme_stylebox_override("panel", UITheme.washi(12))
+	_day_card.add_theme_stylebox_override("panel", UITheme.washi_paper())
 	_day_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_day_card)
 
@@ -131,8 +131,8 @@ func _build_ui() -> void:
 	binding.size = Vector2(_day_card.size.x, 8)
 	var bsb := StyleBoxFlat.new()
 	bsb.bg_color = UITheme.ACCENT
-	bsb.corner_radius_top_left = 12
-	bsb.corner_radius_top_right = 12
+	bsb.corner_radius_top_left = UITheme.PAPER_CORNER  # 和紙の角丸に合わせる
+	bsb.corner_radius_top_right = UITheme.PAPER_CORNER
 	binding.add_theme_stylebox_override("panel", bsb)
 	binding.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_day_card.add_child(binding)
@@ -159,7 +159,7 @@ func _build_ui() -> void:
 	_prompt = Label.new()
 	_prompt.position = Vector2(24, 600)
 	UITheme.style_label(_prompt, UITheme.SIZE_SMALL)
-	var psb := UITheme.washi(10, 0.85)
+	var psb := UITheme.washi_paper(true, 0.85)
 	psb.content_margin_left = 14
 	psb.content_margin_right = 14
 	psb.content_margin_top = 4

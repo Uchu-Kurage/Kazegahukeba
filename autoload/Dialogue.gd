@@ -33,7 +33,7 @@ var _name: Label
 var _text: Label
 var _hint: Label
 var _choice_box: VBoxContainer
-var _name_sb: StyleBoxFlat
+var _name_sb: StyleBox
 var _choice_sel_sb: StyleBoxFlat
 var _choice_unsel_sb: StyleBoxFlat
 
@@ -334,12 +334,12 @@ func _build_ui() -> void:
 	_root.visible = false
 	add_child(_root)
 
-	# メッセージ枠：和紙・すりガラス（半透明・角丸・薄い縁・やわらかい影）。硬い黒箱にしない。
+	# メッセージ枠：繊維の入った和紙（半透明・角丸・ちぎった縁・やわらかい影）。硬い黒箱にしない。
 	# イメージボードに合わせ、画面下の左〜中央（右側は選択肢の場所を空ける）。本文は三行まで。
 	_box = Panel.new()
 	_box.position = Vector2(24, 446)
 	_box.size = Vector2(886, 178)
-	_box.add_theme_stylebox_override("panel", UITheme.washi(22))
+	_box.add_theme_stylebox_override("panel", UITheme.washi_paper())
 	_box.gui_input.connect(_on_box_input)
 	_root.add_child(_box)
 
@@ -347,7 +347,7 @@ func _build_ui() -> void:
 	_name = Label.new()
 	_name.position = Vector2(40, -22)
 	UITheme.style_label(_name, UITheme.SIZE_NAME)
-	_name_sb = UITheme.washi(14, 0.97)
+	_name_sb = UITheme.washi_paper(true, 0.97)
 	_name_sb.content_margin_left = 18
 	_name_sb.content_margin_right = 18
 	_name_sb.content_margin_top = 3
