@@ -1,6 +1,7 @@
 extends CanvasLayer
 ## 画面手前の常時UI（第7弾で和紙UIに刷新）。
-##   右上：日めくり表示（DAY N / 漢数字の月日 曜日 ・ 時間帯）を和紙ピルで。
+##   右上：日めくり（一枚の和紙カード。左に大きな日付の数字、右に月・曜日／時間帯・天気／何日目）。
+##         上端の青い帯は日めくりの綴じ。日曜は数字を朱にする（暦の習わし）。
 ##   下：操作プロンプト（和紙の小ピル）。
 ## 見た目は UITheme に集約。日付・時間帯は GameState のシグナルで自動更新。
 
@@ -8,10 +9,11 @@ const WEEKDAYS := ["日", "月", "火", "水", "木", "金", "土"]
 ## 曜日の基準：起点（7/23＝1日目）を月曜と仮定。表記は仮（暦の厳密さより雰囲気優先）。
 const START_WEEKDAY := 1
 
-var _day_pill: Panel
-var _day_label: Label
-var _weather_pill: Panel
-var _weather_label: Label
+var _day_card: Panel
+var _date_num: Label    ## 大きな日付の数字（23）
+var _date_head: Label   ## 七月　月曜日
+var _date_now: Label    ## 午前　晴れ
+var _date_count: Label  ## 1日目
 var _prompt: Label
 
 # --- 動作確認用（デバッグ）オーバーレイ ---
@@ -89,23 +91,19 @@ func _on_changed() -> void:
 
 ## 今日の天気だけを出す。明日の予報は「世界に溶けた形」（朝の予報＝ラジオ/朝刊/祖母）で伝える。
 func _refresh_weather() -> void:
-	_weather_label.text = Weather.name_of(GameState.weather_today())
+	_date_now.text = "%s　%s" % [
+		GameState.phase_text(GameState.phase), Weather.name_of(GameState.weather_today()),
+	]
 
 
 func _refresh_day() -> void:
 	var idx := GameState.day_index
 	var d := GameState.date_of(idx)
-	_day_label.text = "DAY %d / %s %s ・ %s" % [
-		idx + 1,
-		_kanji_date(int(d["month"]), int(d["day"])),
-		WEEKDAYS[(idx + START_WEEKDAY) % 7],
-		GameState.phase_text(GameState.phase),
-	]
-
-
-# --- 漢数字の日付（例：八月二十二日）--------------------------------
-func _kanji_date(month: int, day: int) -> String:
-	return "%s月%s日" % [_kanji_num(month), _kanji_num(day)]
+	var wd := (idx + START_WEEKDAY) % 7
+	_date_num.text = str(int(d["day"]))
+	_date_num.add_theme_color_override("font_color", UITheme.SUNDAY if wd == 0 else UITheme.TEXT)
+	_date_head.text = "%s月　%s曜日" % [_kanji_num(int(d["month"])), WEEKDAYS[wd]]
+	_date_count.text = "%d日目" % (idx + 1)
 
 
 func _kanji_num(n: int) -> String:
@@ -120,45 +118,48 @@ func _kanji_num(n: int) -> String:
 # --- UI 構築 ---------------------------------------------------------
 
 func _build_ui() -> void:
-	# 右上：日めくり表示（和紙ピル）。
-	_day_pill = Panel.new()
-	_day_pill.size = Vector2(392, 50)
-	_day_pill.position = Vector2(1152 - _day_pill.size.x - 16, 16)
-	_day_pill.add_theme_stylebox_override("panel", UITheme.washi(14))
-	_day_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_day_pill)
+	# 右上：日めくり（和紙カード一枚）。左に大きな日付、右に三段の小さな情報。
+	_day_card = Panel.new()
+	_day_card.size = Vector2(264, 96)
+	_day_card.position = Vector2(1152 - _day_card.size.x - 16, 16)
+	_day_card.add_theme_stylebox_override("panel", UITheme.washi(12))
+	_day_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_day_card)
 
-	_day_label = Label.new()
-	_day_label.position = Vector2(18, 8)
-	_day_label.size = Vector2(_day_pill.size.x - 36, 34)
-	_day_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_day_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	UITheme.style_label(_day_label, UITheme.SIZE_DAY)
-	_day_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_day_pill.add_child(_day_label)
+	# 綴じの帯（日めくりの上端）。夏空の青を細く一本だけ。
+	var binding := Panel.new()
+	binding.size = Vector2(_day_card.size.x, 8)
+	var bsb := StyleBoxFlat.new()
+	bsb.bg_color = UITheme.ACCENT
+	bsb.corner_radius_top_left = 12
+	bsb.corner_radius_top_right = 12
+	binding.add_theme_stylebox_override("panel", bsb)
+	binding.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_day_card.add_child(binding)
 
-	# 右上：天気ピル（今日の天気＋明日の予報）。日めくりの下に重ねる。
-	_weather_pill = Panel.new()
-	_weather_pill.size = Vector2(300, 40)
-	_weather_pill.position = Vector2(1152 - _weather_pill.size.x - 16, 74)
-	_weather_pill.add_theme_stylebox_override("panel", UITheme.washi(12))
-	_weather_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_weather_pill)
+	_date_num = _card_label(UITheme.SIZE_DATE, Vector2(10, 12), Vector2(84, 80))
+	_date_num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_date_num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
-	_weather_label = Label.new()
-	_weather_label.position = Vector2(16, 6)
-	_weather_label.size = Vector2(_weather_pill.size.x - 32, 28)
-	_weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_weather_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	UITheme.style_label(_weather_label, UITheme.SIZE_SMALL)
-	_weather_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_weather_pill.add_child(_weather_label)
+	# 数字と右の情報を分ける縦の罫。
+	var rule := ColorRect.new()
+	rule.color = UITheme.RULE
+	rule.position = Vector2(100, 22)
+	rule.size = Vector2(1, 62)
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_day_card.add_child(rule)
+
+	_date_head = _card_label(UITheme.SIZE_SMALL, Vector2(114, 16), Vector2(140, 24))
+	_date_now = _card_label(UITheme.SIZE_HINT, Vector2(114, 40), Vector2(140, 30))
+	_date_count = _card_label(UITheme.SIZE_SMALL - 2, Vector2(114, 68), Vector2(140, 22))
+	_date_head.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
+	_date_count.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
 
 	# 下：操作プロンプト（和紙の小ピル。左下）。
 	_prompt = Label.new()
 	_prompt.position = Vector2(24, 600)
 	UITheme.style_label(_prompt, UITheme.SIZE_SMALL)
-	var psb := UITheme.washi(10, 0.6)
+	var psb := UITheme.washi(10, 0.85)
 	psb.content_margin_left = 14
 	psb.content_margin_right = 14
 	psb.content_margin_top = 4
@@ -170,11 +171,21 @@ func _build_ui() -> void:
 	_build_debug_panel()
 
 
+func _card_label(size: int, pos: Vector2, box: Vector2) -> Label:
+	var l := Label.new()
+	l.position = pos
+	l.size = box
+	UITheme.style_label(l, size)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_day_card.add_child(l)
+	return l
+
+
 ## 到達状況オーバーレイ（右側）。既定は非表示、F3 で切替。
 func _build_debug_panel() -> void:
 	_debug_panel = Panel.new()
-	_debug_panel.position = Vector2(772, 78)
-	_debug_panel.size = Vector2(372, 468)
+	_debug_panel.position = Vector2(772, 124)
+	_debug_panel.size = Vector2(372, 440)
 	_debug_panel.add_theme_stylebox_override("panel", _flat(Color(0.03, 0.04, 0.07, 0.82), 8))
 	_debug_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_debug_panel.visible = false
@@ -182,7 +193,7 @@ func _build_debug_panel() -> void:
 
 	_debug_text = Label.new()
 	_debug_text.position = Vector2(14, 12)
-	_debug_text.size = Vector2(344, 444)
+	_debug_text.size = Vector2(344, 416)
 	_debug_text.add_theme_font_size_override("font_size", 16)
 	_debug_text.add_theme_color_override("font_color", Color(0.86, 0.95, 0.80))
 	_debug_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -10,8 +10,8 @@ var _screen := Screen.MAIN
 var _items: Array = []   ## いま選べる項目 [{id, label}]
 var _index := 0
 
-var _center: CenterContainer
 var _vbox: VBoxContainer
+var _footer: Label
 var _sel_sb: StyleBoxFlat
 var _unsel_sb: StyleBoxFlat
 
@@ -115,26 +115,21 @@ func _render() -> void:
 	for c in _vbox.get_children():
 		c.free()
 
-	_vbox.add_child(_make_label("風が吹けば", 56, Color(0.96, 0.92, 0.82)))
-	_vbox.add_child(_make_label("― 終わりゆく世界の、最後の夏 ―", 20, Color(0.80, 0.82, 0.88)))
-	_vbox.add_child(_spacer(24))
-
 	for line in _screen_lines():
-		_vbox.add_child(_make_label(line, 20, Color(0.88, 0.88, 0.90)))
+		_vbox.add_child(_make_label(line, 20, UITheme.WASHI))
 	if not _screen_lines().is_empty():
-		_vbox.add_child(_spacer(12))
+		_vbox.add_child(_spacer(16))
 
+	# 項目は左揃えの一列。選んでいる項目だけ、左に夏空の青の短い線が立ち、文字が濃くなる。
 	for i in _items.size():
 		var it: Dictionary = _items[i]
 		var selected := i == _index
-		var mark := "▶ " if selected else "　 "
-		var lbl := _make_label(mark + String(it["label"]), 26,
-			Color(1.0, 0.92, 0.6) if selected else Color(1, 1, 1, 0.85))
+		var lbl := _make_label(String(it["label"]), 26 if selected else 24,
+			UITheme.WASHI if selected else Color(UITheme.WASHI, 0.62))
 		lbl.add_theme_stylebox_override("normal", _sel_sb if selected else _unsel_sb)
 		_vbox.add_child(lbl)
 
-	_vbox.add_child(_spacer(24))
-	_vbox.add_child(_make_label(_footer_text(), 16, Color(1, 1, 1, 0.55)))
+	_footer.text = _footer_text()
 
 
 ## いまの画面に出す説明テキスト（選択項目の上に並ぶ）。
@@ -180,7 +175,7 @@ func _records_lines() -> Array:
 
 
 func _footer_text() -> String:
-	return "周回 %d 回　／　エンディング %d / %d" % [
+	return "周回 %d 回　　エンディング %d / %d" % [
 		SaveData.runs, SaveData.seen_count(Endings.NORMAL_IDS), Endings.NORMAL_IDS.size(),
 	]
 
@@ -191,37 +186,64 @@ func _build_ui() -> void:
 	add_child(TitleBackground.new())  # 夕暮れの空・山・田んぼ
 	add_child(Fireflies.new())        # 漂う蛍
 
-	# 選択中の項目に敷くハイライト帯（未選択は同サイズの透明で見た目のガタつきを防ぐ）。
+	# 表題は縦書き（夏休みの絵日記の表紙のように）。画面右に大きく一行、その左に副題を細く。
+	# 縦書きは「一字ずつ改行」で組む（題も副題も縦中横・小書き仮名を含まない文字列に限る）。
+	var title := _make_vertical("風が吹けば", 76, UITheme.WASHI, -22)
+	title.add_theme_font_override("font", _display_font())
+	title.position = Vector2(952, 56)
+	add_child(title)
+	var sub := _make_vertical("終わりゆく世界の最後の夏", 20, Color(UITheme.WASHI, 0.78), -4)
+	sub.position = Vector2(900, 70)
+	add_child(sub)
+
+	# 選択中の項目：左に夏空の青の短い縦線（ボーダーの左辺だけ）。未選択は同じ余白の透明。
 	_sel_sb = StyleBoxFlat.new()
-	_sel_sb.bg_color = Color(1.0, 0.85, 0.45, 0.22)
-	_sel_sb.set_corner_radius_all(6)
-	_sel_sb.set_content_margin_all(8)
-	_sel_sb.content_margin_left = 24
-	_sel_sb.content_margin_right = 24
+	_sel_sb.bg_color = Color(0, 0, 0, 0)
+	_sel_sb.border_color = UITheme.ACCENT
+	_sel_sb.border_width_left = 4
+	_sel_sb.set_content_margin_all(4)
+	_sel_sb.content_margin_left = 18
 	_unsel_sb = StyleBoxFlat.new()
 	_unsel_sb.bg_color = Color(0, 0, 0, 0)
-	_unsel_sb.set_content_margin_all(8)
-	_unsel_sb.content_margin_left = 24
-	_unsel_sb.content_margin_right = 24
+	_unsel_sb.set_content_margin_all(4)
+	_unsel_sb.content_margin_left = 22
 
-	_center = CenterContainer.new()
-	_center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(_center)
-
+	# 項目の列：画面左、地平線をまたいで縦に並べる。
 	_vbox = VBoxContainer.new()
+	_vbox.position = Vector2(96, 0)
+	_vbox.size = Vector2(640, 648)
 	_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	_vbox.add_theme_constant_override("separation", 8)
-	_center.add_child(_vbox)
+	_vbox.add_theme_constant_override("separation", 6)
+	add_child(_vbox)
+
+	_footer = _make_label("", 16, Color(UITheme.WASHI, 0.5))
+	_footer.position = Vector2(118, 600)
+	add_child(_footer)
+
+
+## 縦書きのラベル（一字ずつ改行）。line_spacing で字間を詰める。
+func _make_vertical(text: String, size: int, color: Color, spacing: int) -> Label:
+	var l := _make_label("\n".join(text.split("")), size, color)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_constant_override("line_spacing", spacing)
+	return l
+
+
+## 表題用：丸ゴシックを少し太らせる（同じ書体のまま、表題だけ重さで立たせる）。
+func _display_font() -> Font:
+	var fv := FontVariation.new()
+	fv.base_font = UITheme.font() if UITheme.font() != null else ThemeDB.fallback_font
+	fv.variation_embolden = 0.6
+	return fv
 
 
 func _make_label(text: String, size: int, color: Color) -> Label:
 	var l := Label.new()
 	l.text = text
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
-	# 明るい空でも読めるよう、濃い縁取りをつける。
-	l.add_theme_color_override("font_outline_color", Color(0.05, 0.05, 0.10, 0.9))
+	# 夕空と田んぼの上に直接置くので、空の色に沈まないよう夜の藍で縁取る。
+	l.add_theme_color_override("font_outline_color", Color(0.10, 0.10, 0.20, 0.85))
 	l.add_theme_constant_override("outline_size", 6)
 	return l
 

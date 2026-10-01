@@ -47,9 +47,9 @@ window/stretch/aspect="expand"
 
 [gui]
 
-; 日本語表示のためのフォント。assets/fonts に .ttf を置いて有効化する（README 参照）。
-; フォント未設置でも起動はするが、日本語が □（豆腐）になる。
-theme/custom_font="res://assets/fonts/NotoSansJP-Regular.ttf"
+; 日本語表示のためのフォント。丸ゴシック（M PLUS Rounded 1c）を主に、収録外の字は Noto Sans JP で補う。
+; 組み合わせは assets/fonts/ui_font.tres（FontVariation＋fallbacks）で定義（README 参照）。
+theme/custom_font="res://assets/fonts/ui_font.tres"
 
 [rendering]
 

@@ -18,7 +18,7 @@ const START_WEEKDAY := 1  ## 起点（7/23＝1日目）を月曜と仮定（HUD 
 const WEEKDAYS := ["日", "月", "火", "水", "木", "金", "土"]
 const CELL_W := 150
 const CELL_H := 72
-const GRID_TOP := 150
+const GRID_TOP := 164
 
 # --- 風物詩（アルマナック）---
 const ALM_COLS := 8
@@ -28,8 +28,8 @@ const ALM_TOP := 150
 
 ## 状態ごとの差し色。
 const COL_FULFILLED := Color("6fae7a")  ## 果たした（葉の緑・清書）
-const COL_MISSED_ALPHA := 0.32          ## 未達（かすれ）
-const COL_UNCOLLECTED_ALPHA := 0.26     ## 未収集の風物詩（かすれ）
+const COL_MISSED_ALPHA := 0.45          ## 未達（かすれ）
+const COL_UNCOLLECTED_ALPHA := 0.45     ## 未収集の風物詩（かすれ）
 
 var _open := false
 var _tab := TAB_CALENDAR
@@ -191,7 +191,7 @@ func _refresh() -> void:
 	if not _open:
 		return
 	if _tab == TAB_CALENDAR:
-		_title.text = "予定表　―　%s まで" % GameState.date_text(GameState.TOTAL_DAYS - 1)
+		_title.text = "予定表（%sまで）" % GameState.date_text(GameState.TOTAL_DAYS - 1)
 		for idx in _cells.size():
 			_refresh_cell(idx)
 	else:
@@ -218,24 +218,33 @@ func _refresh_cell(idx: int) -> void:
 	var is_past := idx < GameState.day_index
 	var is_cursor := _tab == TAB_CALENDAR and idx == _cursor
 
+	# 罫線の帳面：マスは塗らず罫で区切る。今日だけごく薄く青を敷き、選んでいるマスは青で囲む。
 	var sb: StyleBoxFlat
 	if is_cursor:
-		sb = UITheme.washi(10, 0.95)
-		sb.border_color = UITheme.ACCENT
-		sb.set_border_width_all(3)
-	elif is_today:
-		sb = UITheme.washi(10, 0.9)
-		var bt := UITheme.ACCENT
-		bt.a = 0.7
-		sb.border_color = bt
-		sb.set_border_width_all(2)
+		sb = UITheme.ruled_cursor()
 	else:
-		sb = UITheme.washi(10, 0.45 if is_past else 0.72)
+		sb = UITheme.ruled()
+		if is_today:
+			var tint := UITheme.ACCENT
+			tint.a = 0.10
+			sb.bg_color = tint
 	panel.add_theme_stylebox_override("panel", sb)
 
+	# 日付は数字だけ（月の変わり目と最初の日だけ「月/日」）。日曜は朱・土曜は青（暦の習わし）。
 	var d := GameState.date_of(idx)
-	cell["day"].text = "%d/%d" % [d["month"], d["day"]]
-	cell["day"].modulate.a = 0.55 if is_past else 1.0
+	var day_label: Label = cell["day"]
+	if idx == 0 or int(d["day"]) == 1:
+		day_label.text = "%d/%d" % [d["month"], d["day"]]
+	else:
+		day_label.text = str(int(d["day"]))
+	var wd := (idx + START_WEEKDAY) % 7
+	var day_col := UITheme.TEXT
+	if wd == 0:
+		day_col = UITheme.SUNDAY
+	elif wd == 6:
+		day_col = UITheme.ACCENT_INK
+	day_label.add_theme_color_override("font_color", day_col)
+	day_label.modulate.a = 0.45 if is_past else 1.0
 
 	cell["weather"].text = _weather_short(idx)
 	cell["weather"].modulate.a = 0.6 if idx == GameState.day_index + 1 else 1.0
@@ -250,7 +259,7 @@ func _refresh_cell(idx: int) -> void:
 		match String(p.get("status", "")):
 			"planned":
 				mark.text = "・%s" % initial
-				mark.add_theme_color_override("font_color", UITheme.ACCENT)
+				mark.add_theme_color_override("font_color", UITheme.ACCENT_INK)
 				mark.modulate.a = 1.0
 			"fulfilled":
 				mark.text = "○%s" % initial
@@ -347,21 +356,16 @@ func _refresh_alm_cell(idx: int) -> void:
 	var got := GameState.is_collected(id)
 	var is_cursor := _tab == TAB_ALMANAC and idx == _cursor
 
-	var sb: StyleBoxFlat
-	if is_cursor:
-		sb = UITheme.washi(8, 0.95)
-		sb.border_color = UITheme.ACCENT
-		sb.set_border_width_all(3)
-	else:
-		sb = UITheme.washi(8, 0.7 if got else 0.4)
-	panel.add_theme_stylebox_override("panel", sb)
+	panel.add_theme_stylebox_override("panel", UITheme.ruled_cursor() if is_cursor else UITheme.ruled())
 
 	# 収集済＝くっきり名前／未収集＝かすれた「？」（名前は伏せる）。数字は出さない。
 	if got:
 		label.text = Fubutsushi.name_of(id)
+		label.add_theme_color_override("font_color", UITheme.TEXT)
 		label.modulate.a = 1.0
 	else:
 		label.text = "？"
+		label.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
 		label.modulate.a = COL_UNCOLLECTED_ALPHA
 
 
@@ -377,7 +381,7 @@ func _almanac_detail_lines(idx: int) -> Array:
 
 func _build_ui() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0.06, 0.07, 0.10, 0.45)
+	_dim.color = Color(0.06, 0.07, 0.10, 0.5)
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_dim)
@@ -385,7 +389,7 @@ func _build_ui() -> void:
 	_panel = Panel.new()
 	_panel.position = Vector2(24, 20)
 	_panel.size = Vector2(1104, 608)
-	_panel.add_theme_stylebox_override("panel", UITheme.washi(20))
+	_panel.add_theme_stylebox_override("panel", UITheme.page())
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
 
@@ -399,9 +403,9 @@ func _build_ui() -> void:
 	var help := Label.new()
 	help.position = Vector2(60, 76)
 	help.size = Vector2(1000, 26)
-	help.text = "矢印／WASD で選ぶ　・　［E］で開く　・　［Q］で閉じる　・　［TAB］予定表／［C］風物詩"
+	help.text = "矢印／WASD で選ぶ　　［E］で開く　　［Q］で閉じる　　［TAB］予定表　［C］風物詩"
 	UITheme.style_label(help, UITheme.SIZE_SMALL)
-	help.modulate.a = 0.7
+	help.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(help)
 
@@ -412,7 +416,7 @@ func _build_ui() -> void:
 	_detail = Panel.new()
 	_detail.size = Vector2(560, 300)
 	_detail.position = Vector2((1152 - 560) / 2, (648 - 300) / 2)
-	_detail.add_theme_stylebox_override("panel", UITheme.washi(18, 0.97))
+	_detail.add_theme_stylebox_override("panel", UITheme.page(18))
 	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail.visible = false
 	add_child(_detail)
@@ -435,38 +439,51 @@ func _build_calendar() -> void:
 		wl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		wl.text = WEEKDAYS[c % 7]
 		UITheme.style_label(wl, UITheme.SIZE_SMALL)
+		if c == 0:
+			wl.add_theme_color_override("font_color", UITheme.SUNDAY)
+		elif c == 6:
+			wl.add_theme_color_override("font_color", UITheme.ACCENT_INK)
 		wl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(wl)
 		_cal_nodes.append(wl)
+	# 曜日見出しの下に一本、帳面の罫。
+	var head_rule := ColorRect.new()
+	head_rule.color = UITheme.RULE
+	head_rule.position = Vector2(grid_left, GRID_TOP - 2)
+	head_rule.size = Vector2(COLS * CELL_W, 2)
+	head_rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(head_rule)
+	_cal_nodes.append(head_rule)
 
 	for idx in GameState.TOTAL_DAYS:
 		var slot := idx + START_WEEKDAY
 		var x := grid_left + (slot % COLS) * CELL_W
 		var y := GRID_TOP + (slot / COLS) * CELL_H
 		var cp := Panel.new()
-		cp.position = Vector2(x + 3, y + 3)
-		cp.size = Vector2(CELL_W - 6, CELL_H - 6)
+		cp.position = Vector2(x, y)
+		cp.size = Vector2(CELL_W, CELL_H)
 		cp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(cp)
 		_cal_nodes.append(cp)
 
 		var day_label := Label.new()
-		day_label.position = Vector2(8, 4)
-		day_label.size = Vector2(CELL_W - 40, 26)
-		UITheme.style_label(day_label, UITheme.SIZE_SMALL)
+		day_label.position = Vector2(10, 4)
+		day_label.size = Vector2(CELL_W - 44, 28)
+		UITheme.style_label(day_label, UITheme.SIZE_HINT)
 		day_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cp.add_child(day_label)
 
 		var weather_label := Label.new()
-		weather_label.position = Vector2(CELL_W - 38, 4)
-		weather_label.size = Vector2(28, 26)
+		weather_label.position = Vector2(CELL_W - 40, 6)
+		weather_label.size = Vector2(30, 26)
 		weather_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		UITheme.style_label(weather_label, UITheme.SIZE_SMALL)
+		weather_label.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
 		weather_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cp.add_child(weather_label)
 
 		var mark_label := Label.new()
-		mark_label.position = Vector2(8, 34)
+		mark_label.position = Vector2(10, 36)
 		mark_label.size = Vector2(CELL_W - 20, 28)
 		UITheme.style_label(mark_label, UITheme.SIZE_DAY)
 		mark_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -481,8 +498,8 @@ func _build_almanac() -> void:
 		var x := grid_left + (idx % ALM_COLS) * ALM_CELL_W
 		var y := ALM_TOP + (idx / ALM_COLS) * ALM_CELL_H
 		var cp := Panel.new()
-		cp.position = Vector2(x + 3, y + 3)
-		cp.size = Vector2(ALM_CELL_W - 6, ALM_CELL_H - 6)
+		cp.position = Vector2(x, y)
+		cp.size = Vector2(ALM_CELL_W, ALM_CELL_H)
 		cp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cp.visible = false
 		add_child(cp)
@@ -490,7 +507,7 @@ func _build_almanac() -> void:
 
 		var label := Label.new()
 		label.position = Vector2(6, 0)
-		label.size = Vector2(ALM_CELL_W - 18, ALM_CELL_H - 6)
+		label.size = Vector2(ALM_CELL_W - 12, ALM_CELL_H)
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

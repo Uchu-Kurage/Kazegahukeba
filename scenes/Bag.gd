@@ -127,10 +127,11 @@ func _refresh() -> void:
 		row.text = "%s %s" % [mark, name]
 		UITheme.style_label(row, UITheme.SIZE_BODY)
 		var selected := i == _cursor
-		var sb: StyleBoxFlat = UITheme.washi(8, 0.95) if selected else UITheme.washi(8, 0.5)
-		if selected:
-			sb.border_color = UITheme.ACCENT
-			sb.set_border_width_all(3)
+		# 帳面の一覧：行は罫で区切り、選んでいる行だけ夏空の青で囲む。
+		var sb: StyleBoxFlat = UITheme.ruled_cursor() if selected else UITheme.ruled()
+		sb.border_width_right = 2 if selected else 0
+		sb.content_margin_left = 12
+		row.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_theme_stylebox_override("normal", sb)
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_list_box.add_child(row)
@@ -158,7 +159,7 @@ func _refresh_detail() -> void:
 
 func _build_ui() -> void:
 	_dim = ColorRect.new()
-	_dim.color = Color(0.06, 0.07, 0.10, 0.45)
+	_dim.color = Color(0.06, 0.07, 0.10, 0.5)
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_dim)
@@ -166,14 +167,14 @@ func _build_ui() -> void:
 	_panel = Panel.new()
 	_panel.position = Vector2(24, 20)
 	_panel.size = Vector2(1104, 608)
-	_panel.add_theme_stylebox_override("panel", UITheme.washi(20))
+	_panel.add_theme_stylebox_override("panel", UITheme.page())
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
 
 	_title = Label.new()
 	_title.position = Vector2(60, 32)
 	_title.size = Vector2(984, 40)
-	_title.text = "かばん　―　夏の道具"
+	_title.text = "かばん（夏の道具）"
 	UITheme.style_label(_title, UITheme.SIZE_DAY)
 	_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(_title)
@@ -181,9 +182,9 @@ func _build_ui() -> void:
 	var help := Label.new()
 	help.position = Vector2(60, 76)
 	help.size = Vector2(1000, 26)
-	help.text = "矢印／WASD で選ぶ　・　［I］／［Q］で閉じる"
+	help.text = "矢印／WASD で選ぶ　　［I］／［Q］で閉じる"
 	UITheme.style_label(help, UITheme.SIZE_SMALL)
-	help.modulate.a = 0.7
+	help.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(help)
 
@@ -193,7 +194,7 @@ func _build_ui() -> void:
 	_empty.size = Vector2(984, 40)
 	_empty.text = "かばんは、まだ空っぽだ。"
 	UITheme.style_label(_empty, UITheme.SIZE_BODY)
-	_empty.modulate.a = 0.7
+	_empty.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
 	_empty.visible = false
 	_empty.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(_empty)
@@ -202,7 +203,7 @@ func _build_ui() -> void:
 	_list_box = VBoxContainer.new()
 	_list_box.position = Vector2(60, LIST_TOP)
 	_list_box.size = Vector2(440, 420)
-	_list_box.add_theme_constant_override("separation", 6)
+	_list_box.add_theme_constant_override("separation", 0)
 	_list_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(_list_box)
 
@@ -210,7 +211,11 @@ func _build_ui() -> void:
 	_detail = Panel.new()
 	_detail.position = Vector2(540, LIST_TOP)
 	_detail.size = Vector2(504, 420)
-	_detail.add_theme_stylebox_override("panel", UITheme.washi(16, 0.85))
+	# 詳細は帳面に貼った一枚の紙片：地を少しだけ濃くし、影は付けない（帳面の上の紙）。
+	var dsb := UITheme.washi(14, 1.0)
+	dsb.bg_color = UITheme.WASHI.darkened(0.04)
+	dsb.shadow_size = 0
+	_detail.add_theme_stylebox_override("panel", dsb)
 	_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail.visible = false
 	_panel.add_child(_detail)
@@ -218,7 +223,7 @@ func _build_ui() -> void:
 	_detail_name = Label.new()
 	_detail_name.position = Vector2(32, 28)
 	_detail_name.size = Vector2(504 - 64, 40)
-	UITheme.style_label(_detail_name, UITheme.SIZE_DAY)
+	UITheme.style_label(_detail_name, UITheme.SIZE_BODY)
 	_detail_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail.add_child(_detail_name)
 
@@ -226,6 +231,7 @@ func _build_ui() -> void:
 	_detail_body.position = Vector2(32, 84)
 	_detail_body.size = Vector2(504 - 64, 420 - 116)
 	_detail_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	UITheme.style_label(_detail_body, UITheme.SIZE_BODY)
+	UITheme.style_label(_detail_body, UITheme.SIZE_CHOICE)
+	_detail_body.add_theme_constant_override("line_spacing", 6)
 	_detail_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_detail.add_child(_detail_body)
