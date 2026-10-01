@@ -289,7 +289,7 @@ func _calendar_detail_lines(idx: int) -> Array:
 	if not p.is_empty():
 		var who := GameState.char_display(String(p.get("character", "")))
 		var place := GameState.place_name(String(p.get("place", "")))
-		var tod := _tod_text(String(p.get("time_of_day", "")))
+		var tod := GameState.promise_time_text(String(p.get("time_of_day", "")))
 		var flavor := String(p.get("flavor_text", ""))
 		match String(p.get("status", "")):
 			"planned":
@@ -341,14 +341,6 @@ func _weather_id(idx: int) -> String:
 		return Weather.of(idx)
 	if idx == GameState.day_index + 1:
 		return GameState.weather_forecast()
-	return ""
-
-
-func _tod_text(tod: String) -> String:
-	match tod:
-		"morning": return "午前に"
-		"afternoon": return "午後に"
-		"evening", "night": return "夕方に"
 	return ""
 
 

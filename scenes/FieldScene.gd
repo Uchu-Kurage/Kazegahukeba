@@ -587,7 +587,7 @@ func _go_home() -> void:
 func _record_promise(pr: Dictionary) -> void:
 	var day := GameState.day_index + int(pr.get("in_days", 0))
 	GameState.make_promise(day, String(pr.get("character", "")), String(pr.get("place", "")),
-		String(pr.get("time_of_day", "")), String(pr.get("flavor", "")))
+		String(pr.get("time_of_day", "")), String(pr.get("flavor", "")), String(pr.get("event", "")))
 
 
 ## 会話の選択肢／効果ノードの効果を GameState に反映する（Place/Town と同じ処理）。
@@ -609,6 +609,9 @@ func _on_option_selected(option: Dictionary) -> void:
 	# 約束の記帳（第9弾）：応じた選択肢が持つ promise を予定表に書き込む。
 	if option.has("promise"):
 		_record_promise(option["promise"])
+	# 予定どおりに会えた約束を「果たした」にする（約束イベントの末尾の効果ノード）。
+	if option.has("fulfill_promise"):
+		GameState.fulfill_promise(String(option["fulfill_promise"]))
 	# 8/31 の葵の約束（§5-3）：場所は傾きの着地から動的に決まる。
 	if option.get("promise_aoi_final", false):
 		GameState.make_aoi_final_promise()
