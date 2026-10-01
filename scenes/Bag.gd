@@ -9,7 +9,7 @@ extends CanvasLayer
 ## ★葵絡みアイテムは由来（origin）が空だが、それを特別扱いする表示はしない（§5-2）。
 ##   他の道具と同じ体裁で、由来欄だけが静かに何もない。気づく人だけが気づく。
 
-const ROW_H := 46
+const ROW_H := 72  # 指で押せる行の高さ（スマホでは画面が約 0.6 倍に縮むので約 43pt）
 const LIST_TOP := 150
 
 var _open := false
@@ -43,7 +43,8 @@ func _input(event: InputEvent) -> void:
 			return
 
 
-## かばんへの1操作（キーからも、将来のスマホ画面ボタンからも同じ入口）。
+## かばんへの1操作（キーからも、スマホの画面ボタン（TouchControls）からも同じ入口）。
+## かばんを開くとツリーを一時停止するため、スマホの合成入力は届きにくい。TouchControls はこれを直接呼ぶ。
 ## 戻り値：この操作をかばんが受け取ったら true（開いている間はゲーム側へ渡さない）。
 func act(action: String) -> bool:
 	if action == "bag":
@@ -83,6 +84,26 @@ func close() -> void:
 	visible = false
 	get_tree().paused = false
 	AudioManager.play_sfx("cancel")
+
+
+## 行をタップ／クリック：その道具を選ぶ（右に説明が出る）。
+func _on_row_input(event: InputEvent, i: int) -> void:
+	if not _open or not _tapped(event):
+		return
+	get_viewport().set_input_as_handled()
+	if i != _cursor and i < _ids.size():
+		_cursor = i
+		AudioManager.play_sfx("move")
+		_refresh.call_deferred()  # 行を作り直すので、この行の入力処理を抜けてから
+
+
+func _tapped(event: InputEvent) -> bool:
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		return mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed
+	if event is InputEventScreenTouch:
+		return (event as InputEventScreenTouch).pressed
+	return false
 
 
 func _move_cursor(delta: int) -> void:
@@ -133,7 +154,9 @@ func _refresh() -> void:
 		sb.content_margin_left = 12
 		row.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_theme_stylebox_override("normal", sb)
-		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# 行は直接タップ／クリックで選べる（方向キーと同じ結果。説明が右に出る）。
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.gui_input.connect(_on_row_input.bind(i))
 		_list_box.add_child(row)
 		_rows.append(row)
 
@@ -182,11 +205,37 @@ func _build_ui() -> void:
 	var help := Label.new()
 	help.position = Vector2(60, 76)
 	help.size = Vector2(1000, 26)
-	help.text = "矢印／WASD で選ぶ　　［I］／［Q］で閉じる"
+	help.text = "矢印／WASD で選ぶ"
 	UITheme.style_label(help, UITheme.SIZE_SMALL)
 	help.add_theme_color_override("font_color", UITheme.TEXT_SOFT)
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_panel.add_child(help)
+
+	# 右上：閉じる（キーが無いスマホでも閉じられるように。キーの対応も添える）。
+	var close_btn := Button.new()
+	close_btn.text = "閉じる Q"
+	close_btn.focus_mode = Control.FOCUS_NONE
+	close_btn.position = Vector2(1104 - 148 - 24, 8)
+	close_btn.size = Vector2(148, 72)  # スマホで約 44pt
+	var f := UITheme.font()
+	if f != null:
+		close_btn.add_theme_font_override("font", f)
+	close_btn.add_theme_font_size_override("font_size", UITheme.SIZE_SMALL + 2)
+	for c in ["font_color", "font_hover_color", "font_pressed_color"]:
+		close_btn.add_theme_color_override(c, UITheme.TEXT)
+	var csb := StyleBoxFlat.new()
+	csb.bg_color = Color(0, 0, 0, 0)
+	csb.border_color = UITheme.RULE
+	csb.set_border_width_all(1)
+	csb.set_corner_radius_all(6)
+	close_btn.add_theme_stylebox_override("normal", csb)
+	var chover := csb.duplicate() as StyleBoxFlat
+	chover.bg_color = UITheme.WASHI.darkened(0.05)
+	close_btn.add_theme_stylebox_override("hover", chover)
+	close_btn.add_theme_stylebox_override("pressed", UITheme.ruled_cursor())
+	close_btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	close_btn.pressed.connect(close)
+	_panel.add_child(close_btn)
 
 	# かばんが空のときの一言。
 	_empty = Label.new()

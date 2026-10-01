@@ -46,6 +46,7 @@ var move_vec := Vector2.ZERO
 var _dpad: Control          # メニュー用の方向キー（項目選択。フィールドでは隠す）
 var _actions: Control       # 右下の決定／戻る
 var _book_btn: Button       # 右下の予定表
+var _bag_btn: Button        # 右下のかばん（予定表の左隣）
 var _gear: Button           # 左上のデバッグ歯車
 var _stick_area: Control    # フィールド用スティックの反応エリア（画面左側）
 var _stick_base: Panel      # スティックの外円（触れた位置に出す）
@@ -74,16 +75,18 @@ func _process(_dt: float) -> void:
 	# 項目を直接タップできる画面では、方向キーなど重なる操作を隠して中身を見せる：
 	#   タイトル＝項目を直接タップ。決定／戻る／予定表も不要（「戻る」は項目にある）。
 	#   会話中＝選択肢を直接タップ。予定表は選択肢に重なるので隠す。
-	#   予定帳＝日付・タブ・閉じるを直接タップ。画面ボタンは帳面に重なるので全部隠す。
+	#   予定帳・かばん＝中身と「閉じる」を直接タップ。画面ボタンは帳面に重なるので全部隠す。
 	var title := _on_title()
 	var talking := Dialogue.is_active()
-	var book := Book.is_open()
+	var book := Book.is_open() or Bag.is_open()
 	if _dpad != null:
 		_dpad.visible = menu and not title and not talking and not book
 	if _actions != null:
 		_actions.visible = not title and not book
 	if _book_btn != null:
 		_book_btn.visible = not title and not talking and not book
+	if _bag_btn != null:
+		_bag_btn.visible = not title and not talking and not book
 	if _gear != null:
 		_gear.visible = not book
 	if _stick_area != null:
@@ -95,7 +98,7 @@ func _process(_dt: float) -> void:
 ## メニュー操作モードか（＝方向キーを出す）。予定帳を開いている間、会話中（選択肢を上下で選ぶ）、
 ## または主人公がいない画面（タイトル・見下ろしマップ等）。
 func _in_menu_mode() -> bool:
-	if Book.is_open():
+	if Book.is_open() or Bag.is_open():
 		return true
 	if Dialogue.is_active():  # 会話中は選択肢を方向キーで選ぶ（フィールドでもスティックにしない）
 		return true
@@ -158,6 +161,7 @@ func _build_ui() -> void:
 	_build_dpad()      # メニュー用の方向キー（フィールドでは隠す）
 	_build_action_buttons()
 	_build_book_button()
+	_build_bag_button()
 	_build_debug_gear()
 	_build_debug_menu()
 
@@ -309,6 +313,21 @@ func _build_book_button() -> void:
 	book.pressed.connect(func() -> void: Book.act("book"))
 	_root.add_child(book)
 	_book_btn = book
+
+
+## 右下：かばん（所持品）を開く。予定表の左隣に同じ大きさで置く。
+##   開いている間は、行のタップで道具を選び、右上の「閉じる」で閉じる（画面ボタンは隠れる）。
+func _build_bag_button() -> void:
+	var bag := _make_button("かばん", 28)
+	bag.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	bag.offset_right = -(140 + MARGIN + 12)
+	bag.offset_bottom = -(BOTTOM_MARGIN + ACT + 16)
+	bag.offset_left = -(140 * 2 + MARGIN + 12)
+	bag.offset_top = -(BOTTOM_MARGIN + ACT + 16 + 76)
+	# かばんはツリーを一時停止するので、合成入力ではなく Bag を直接操作する。
+	bag.pressed.connect(func() -> void: Bag.act("bag"))
+	_root.add_child(bag)
+	_bag_btn = bag
 
 
 ## 左上：デバッグメニューの開閉ボタン（歯車）。スマホから F3〜F10 相当を呼ぶ入口。
