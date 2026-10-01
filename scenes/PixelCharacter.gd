@@ -57,6 +57,13 @@ func set_moving(velocity: Vector2) -> void:
 	_play("walk_" + _dir)
 
 
+## 正面（画面手前）を向いて立ち止まる。入手演出で「見せる」ときに使う。
+func face_front() -> void:
+	_dir = "down"
+	flip_h = false
+	_play("idle_down")
+
+
 ## 同じアニメを毎フレーム play して先頭に戻さないようにする。
 func _play(anim: String) -> void:
 	if animation != anim or not is_playing():

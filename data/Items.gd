@@ -13,6 +13,8 @@ extends RefCounted
 ##   origin… 由来テキスト（例「球磨にもらった」）。★葵絡みは空文字（§5。UIで強調しない）
 ##   consumable    … 使うと消費されるか（花火＝消費／網・帽子＝残る）
 ##   fubutsushi_id … 風物詩と重なるモチーフのとき、対応する風物詩 id（入手で灯す。§4）。無ければ ""
+##   fanfare       … 入手演出（正面を向いて頭上に掲げる＋ファンファーレ）を出すか。
+##                   葵絡みは「いつのまにか手元にある」ので出さない（§5。入手を強調しない）
 ##
 ## ⚠️ 葵絡みアイテム（aoi_shell）の origin は空。喪失後も GameState.inventory から消さない
 ##    （start_new_run でのみリセット）。由来が空であることを UI で強調しない（§5-2）。
@@ -28,15 +30,15 @@ static func all() -> Array:
 			"畦道の小屋で見つけた（去年の残り）", true, ""),
 		# 葵絡み：手渡されない＝「いつのまにか手元にある」。由来は空（§5-1/§5-2）。
 		_item("aoi_shell", "貝殻", "耳にあてると、遠い波の音がする気がする。",
-			"", false, ""),
+			"", false, "", false),
 	]
 
 
 static func _item(id: String, name: String, desc: String, origin: String,
-		consumable: bool, fubutsushi_id: String) -> Dictionary:
+		consumable: bool, fubutsushi_id: String, fanfare: bool = true) -> Dictionary:
 	return {
 		"id": id, "name": name, "desc": desc, "origin": origin,
-		"consumable": consumable, "fubutsushi_id": fubutsushi_id,
+		"consumable": consumable, "fubutsushi_id": fubutsushi_id, "fanfare": fanfare,
 	}
 
 
@@ -51,7 +53,7 @@ static func by_id(id: String) -> Dictionary:
 # --- 探索入手（§2-B）＝フィールドを歩いて見つける道具の配置 -----------------
 ## 画面 id -> その画面に落ちている道具の配置（到達で add_item）。一度きり（flag で管理）。
 ##   item … 入手する道具 id / spot … スポット id / label … 表示名 / pos … 道の上の立ち位置
-##   get_text … 入手時に流す一言（静かに。達成音は鳴らさない＝トーン厳守）
+##   get_text … 入手時に流す一言（入手演出＝頭上に掲げてファンファーレ、のあとに流れる）
 static func pickups_of(field_id: String) -> Array:
 	match field_id:
 		"shops":

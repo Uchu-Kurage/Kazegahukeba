@@ -37,6 +37,11 @@ var _name_sb: StyleBoxFlat
 var _choice_sel_sb: StyleBoxFlat
 var _choice_unsel_sb: StyleBoxFlat
 
+## 一時停止（入手演出など）の数。0 より大きい間は枠を隠し、次のノードへ進まない。
+## 効果ノードで道具や風物詩を手に入れた瞬間に演出を割り込ませ、終わってから続きを流すため。
+var _hold := 0
+var _resume_pending := false  # 一時停止中に「次のノードへ進む」が来た（解除したら進める）
+
 
 func _ready() -> void:
 	layer = 5  # HUD より手前に出す
@@ -51,10 +56,38 @@ func is_active() -> bool:
 ## 進行中の会話を「なかったこと」にして別シーンへ抜けるときに使う（第13弾）。
 func dismiss() -> void:
 	_active = false
+	_hold = 0
+	_resume_pending = false
 	_revealing = false
 	_choosing = false
 	if _root != null:
 		_root.visible = false
+
+
+## 会話を一時停止する（枠を隠す）。入手演出（AcquireFanfare）が効果ノードの直後に呼ぶ。
+## 停止中は送りを受け付けず、効果ノードの次へも進まない。release() と対で使う。
+func hold() -> void:
+	_hold += 1
+	if _root != null:
+		_root.visible = false
+
+
+## 一時停止を解く。全部解けたら枠を戻し、止めていた「次のノードへ」を再開する
+## （効果ノードが会話の最後なら、ここで finished が出る＝後片付けは演出のあとになる）。
+func release() -> void:
+	if _hold <= 0:
+		return
+	_hold -= 1
+	if _hold > 0 or not _active:
+		return
+	_root.visible = true
+	if _resume_pending:
+		_resume_pending = false
+		_next_node()
+
+
+func is_held() -> bool:
+	return _hold > 0
 
 
 ## 会話を開始する。nodes はセリフ／選択肢ノードの配列。
@@ -65,14 +98,15 @@ func start(nodes: Array) -> void:
 	_nodes = nodes.duplicate()  # then の差し込みで書き換えるので複製しておく
 	_index = -1
 	_active = true
+	_resume_pending = false
 	_fit_to_touch_ui()
 	_root.visible = true
 	_next_node()
 
 
 func _input(event: InputEvent) -> void:
-	if not _active:
-		return
+	if not _active or _hold > 0:
+		return  # 一時停止中の入力は演出側（スキップ）に渡す
 	if _choosing:
 		if event.is_action_pressed("walk_up"):
 			get_viewport().set_input_as_handled()
@@ -90,7 +124,7 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(delta: float) -> void:
-	if not _active:
+	if not _active or _hold > 0:
 		return
 	if _revealing:
 		_accum += delta
@@ -117,7 +151,7 @@ func _next_node() -> void:
 	if node.has("effect"):
 		# 表示しない効果ノード：フラグ/好感度などを反映して、そのまま次へ。
 		option_selected.emit(node["effect"])
-		_next_node()
+		_continue()
 	elif node.has("choices"):
 		_show_choices(node)
 	else:
@@ -244,6 +278,15 @@ func _confirm_choice() -> void:
 	var branch: Array = opt.get("then", [])
 	for i in branch.size():
 		_nodes.insert(_index + 1 + i, branch[i])
+	_continue()
+
+
+## 効果の反映（option_selected）のあとに次へ進む。反映中に入手演出が一時停止を掛けたら、
+## 解除（release）まで進めずに待つ。
+func _continue() -> void:
+	if _hold > 0:
+		_resume_pending = true
+		return
 	_next_node()
 
 

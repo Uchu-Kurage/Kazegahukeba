@@ -143,6 +143,24 @@ func _in_walkable(p: Vector2) -> bool:
 	return false
 
 
+## 正面を向いて立ち止まる（入手演出。勢いも消して、その場で見せる）。
+func face_front() -> void:
+	velocity = Vector2.ZERO
+	if _sprite:
+		_sprite.face_front()
+
+
+## 足元（原点）から頭のてっぺんまでの高さ（px）。入手演出でアイコンを頭上に浮かべる位置に使う。
+## 奥行きスケールで背丈が変わるので、いまのコマの高さ×いまの倍率から求める。
+func head_height() -> float:
+	if _sprite == null or _sprite.sprite_frames == null:
+		return 40.0
+	var tex := _sprite.sprite_frames.get_frame_texture(_sprite.animation, _sprite.frame)
+	if tex == null:
+		return 40.0
+	return float(tex.get_height()) * 0.5 * _sprite.scale.y
+
+
 ## 足元の影（スプライトの後ろに描かれる）。
 func _draw() -> void:
 	draw_circle(Vector2(0, 26), 13.0, Color(0, 0, 0, 0.22))

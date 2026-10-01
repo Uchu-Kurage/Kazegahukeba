@@ -5,11 +5,14 @@ extends Node
 ## 本物の音源は assets/audio/ に置けば優先:
 ##   BGM : bgm.ogg（あれば title/day 共通で使う）
 ##   SE  : blip / confirm / cancel / talk / page .wav
+##   入手ジングル : fanfare_item / fanfare_fubutsushi .wav（道具／風物詩を手に入れたとき）
 ## どこからでも AudioManager.play_bgm("day") / play_ambient("water") / play_sfx("confirm")。
 
 const MIX_RATE := 22050
 const BGM_DB := -14.0
 const AMB_DB := -20.0
+## ジングル（入手ファンファーレ）のあいだ BGM・環境音を下げる量（dB）。主役をジングルに譲る。
+const DUCK_DB := 12.0
 
 var _bgm: AudioStreamPlayer
 var _amb: AudioStreamPlayer
@@ -20,6 +23,7 @@ var _ambients := {}
 var _cur_bgm := ""
 var _cur_amb := ""
 var _next := 0
+var _duck: Tween
 
 
 func _ready() -> void:
@@ -50,6 +54,21 @@ func play_sfx(sfx_name: String, pitch: float = 1.0) -> void:
 	p.stream = _sfx[sfx_name]
 	p.pitch_scale = pitch
 	p.play()
+
+
+## ジングル（入手ファンファーレ等）を鳴らす。鳴っているあいだだけ BGM・環境音を下げ、終わったら戻す。
+func play_jingle(sfx_name: String) -> void:
+	if not _sfx.has(sfx_name):
+		return
+	play_sfx(sfx_name)
+	var hold := maxf((_sfx[sfx_name] as AudioStream).get_length() - 0.3, 0.2)
+	if _duck != null and _duck.is_valid():
+		_duck.kill()
+	_duck = create_tween().set_parallel(true)
+	_duck.tween_property(_bgm, "volume_db", BGM_DB - DUCK_DB, 0.12)
+	_duck.tween_property(_amb, "volume_db", AMB_DB - DUCK_DB, 0.12)
+	_duck.chain().tween_property(_bgm, "volume_db", BGM_DB, 0.6).set_delay(hold)
+	_duck.tween_property(_amb, "volume_db", AMB_DB, 0.6).set_delay(hold)
 
 
 func play_bgm(bgm_name: String) -> void:
@@ -132,6 +151,16 @@ func _build_sfx() -> void:
 	_sfx["step_stone"]  = _load_or("res://assets/audio/step_stone.wav",  _step(0.85,   0.0, 0.07, 0.22))
 	_sfx["step_wood"]   = _load_or("res://assets/audio/step_wood.wav",   _step(0.5,  180.0, 0.10, 0.24))
 	_sfx["step_gravel"] = _load_or("res://assets/audio/step_gravel.wav", _step(0.6,    0.0, 0.11, 0.24))
+	# 入手ファンファーレ。道具＝明るく駆け上がって和音で着地（ハ長調）。
+	_sfx["fanfare_item"] = _load_or("res://assets/audio/fanfare_item.wav", _jingle([
+		[392.00, 0.00, 0.30], [523.25, 0.11, 0.30], [659.25, 0.22, 0.30],
+		[523.25, 0.36, 1.20], [659.25, 0.36, 1.20], [783.99, 0.36, 1.20], [1046.50, 0.36, 1.20],
+	], 2.4, 0.16))
+	# 風物詩＝風鈴のように高く澄んで、ゆっくり余韻（ト長調の五音）。道具より控えめに。
+	_sfx["fanfare_fubutsushi"] = _load_or("res://assets/audio/fanfare_fubutsushi.wav", _jingle([
+		[1174.66, 0.00, 0.50], [987.77, 0.12, 0.50], [783.99, 0.24, 0.50],
+		[587.33, 0.42, 1.40], [783.99, 0.42, 1.40], [987.77, 0.42, 1.40], [1567.98, 0.42, 1.40],
+	], 1.6, 0.13))
 
 
 func _build_bgms() -> void:
@@ -195,6 +224,30 @@ func _noise(dur: float, amp: float) -> AudioStreamWAV:
 		var t := float(i) / MIX_RATE
 		var env := 1.0 - t / dur
 		s[i] = randf_range(-1.0, 1.0) * amp * env * env
+	return _wav(s, false)
+
+
+## 短いジングル（入手ファンファーレ）。notes は [周波数, 開始秒, 長さ秒] の並び。
+## 1音＝基音に少し倍音を混ぜた丸い音色。decay が大きいほど早く減衰して鐘・ガラスっぽくなる。
+func _jingle(notes: Array, decay: float, amp: float) -> AudioStreamWAV:
+	var total := 0.0
+	for nt in notes:
+		total = maxf(total, float(nt[1]) + float(nt[2]))
+	var n := int(total * MIX_RATE)
+	var s := PackedFloat32Array()
+	s.resize(n)
+	for nt in notes:
+		var f := float(nt[0])
+		var i0 := int(float(nt[1]) * MIX_RATE)
+		var dur := float(nt[2])
+		var len_i := mini(int(dur * MIX_RATE), n - i0)
+		for k in len_i:
+			var t := float(k) / MIX_RATE
+			var env := clampf(t / 0.008, 0.0, 1.0) * exp(-t * decay) * clampf((dur - t) / 0.08, 0.0, 1.0)
+			var v := sin(TAU * f * t) + 0.3 * sin(TAU * f * 2.0 * t) + 0.1 * sin(TAU * f * 3.0 * t)
+			s[i0 + k] += v * amp * env
+	for i in n:
+		s[i] = clampf(s[i], -1.0, 1.0)
 	return _wav(s, false)
 
 
