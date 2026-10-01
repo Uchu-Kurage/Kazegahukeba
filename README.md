@@ -127,8 +127,10 @@ GitHub Actions が HTML5 へ書き出し、**GitHub Pages に自動デプロイ*
 > （アートが無くても動かせるように）。ドット絵は後から `Sprite2D` /
 > `AnimatedSprite2D` / `TileMapLayer` に差し替えていきます。
 
-> **日本語フォント**は `assets/fonts/NotoSansJP-Regular.ttf`（Noto Sans JP / OFL 1.1）を
-> 同梱し、`project.godot` の `gui/theme/custom_font` で全体に適用しています。
+> **日本語フォント**は丸ゴシックの `assets/fonts/rounded.ttf`（M PLUS Rounded 1c Medium / OFL 1.1）を主に、
+> 収録外の字を `assets/fonts/NotoSansJP-Regular.ttf`（Noto Sans JP / OFL 1.1）で補います。
+> 組み合わせは `assets/fonts/ui_font.tres`（FontVariation＋fallbacks）で、`project.godot` の
+> `gui/theme/custom_font` から全体に適用しています。
 
 ## ファイル構成
 
@@ -169,9 +171,11 @@ scenes/
   CharacterArt.gd          ドット絵スプライトをコード生成（配色から SpriteFrames を作る）
   PixelCharacter.gd        AnimatedSprite2D。待機／歩き × 下上横。Player と NPC が共用
   PlaceBackground.gd       各場所の内装を _draw()（河川敷・境内・通り・座敷）
-  HUD.tscn / HUD.gd         常時UI（右上の日めくり和紙ピル＝DAY N/漢数字の月日 曜日 ・ 時間帯／操作プロンプト）。Autoload で全シーンに表示
+  HUD.tscn / HUD.gd         常時UI（右上の日めくり＝大きな日付の数字／月・曜日／時間帯・天気／何日目、左下の操作プロンプト）。Autoload で全シーンに表示
 assets/fonts/
-  NotoSansJP-Regular.ttf    日本語フォント（OFL 1.1）
+  rounded.ttf               丸ゴシック（M PLUS Rounded 1c Medium / OFL 1.1。UIの主フォント）
+  NotoSansJP-Regular.ttf    日本語フォント（OFL 1.1。丸ゴシックに無い字の補い）
+  ui_font.tres              上の二つを束ねた既定フォント（FontVariation＋fallbacks）
 ```
 
 ## 設計の考え方（初心者向けメモ）
