@@ -23,6 +23,8 @@ var _road_hotspots := {}  # 道マップの基本セット風物詩スポット�
 var _walk_overlay: WalkOverlay  # 歩行領域の可視化（F10で切替。調整用）
 var _weather_overlay: ColorRect  # 天気の空色オーバーレイ（第9弾）
 var _weather_fx: WeatherFX       # 天気の専用ビジュアル（虹・星空・霧・雨）
+var _ambient_ground: AmbientFX   # 背景の上の動き：地面の層（水面のきらめき・雲の影。キャラの後ろ）
+var _ambient_air: AmbientFX      # 背景の上の動き：空の層（トンボ・チョウ・葉・木漏れ日・蛍。キャラの手前）
 var _intro_nodes: Array = []          # 入場ナレーション：話しかけたら流すノード列（空なら調べどころを置かない）
 var _intro_commit_forecast := false   # 閲覧し切ったら「今日の予報は開示済み」を確定するか（朝・一日一回）
 var _item_spots := {}                 # 所持品：探索入手／使用ゲートの調べどころ（spot_id → 配置データ）
@@ -42,6 +44,11 @@ func _build_map() -> void:
 	bg.roads = _field.get("roads", [])
 	bg.field_id = String(_field["id"])
 	add_child(bg)
+	# 背景の上の動き（環境演出）。中身は天気が決まってから（_apply_weather / _apply_night_fx）組む。
+	_ambient_ground = AmbientFX.new()
+	add_child(_ambient_ground)
+	_ambient_air = AmbientFX.new()
+	add_child(_ambient_air)
 
 	# 出口（画面端の道の切れ目）。第10弾：エリア内の画面へ続く出口だけを残す（エリア間は歩かせない）。
 	for ex in _field.get("exits", []):
@@ -370,6 +377,7 @@ func _apply_weather(weather_id: String) -> void:
 	# 天気の専用ビジュアル（霧の帯・雨脚・雨上がりの虹）を色の上に重ねる。
 	_ensure_weather_fx()
 	_weather_fx.setup(_fx_mode_for(weather_id))
+	_apply_ambient(weather_id, GameState.phase == GameState.Phase.NIGHT)
 	# 環境音："silence"=無音に近づける／""=屋外の既定（蝉）／それ以外はそのキー。
 	var amb := String(info["ambient"])
 	if amb == "silence":
@@ -378,6 +386,15 @@ func _apply_weather(weather_id: String) -> void:
 		AudioManager.play_ambient(amb)
 	else:
 		AudioManager.play_ambient("cicada")
+
+
+## 背景の上の動き（FieldAmbience のデータ）を、今日の天気と昼夜に合わせて組み直す。
+func _apply_ambient(weather_id: String, night: bool) -> void:
+	var specs := FieldAmbience.of(String(_field.get("id", "")))
+	if _ambient_ground != null:
+		_ambient_ground.setup(specs, weather_id, night, true)
+	if _ambient_air != null:
+		_ambient_air.setup(specs, weather_id, night, false)
 
 
 func _ensure_weather_fx() -> void:
@@ -403,6 +420,7 @@ func _apply_night_fx() -> void:
 	if _weather_overlay != null:
 		_weather_overlay.color = Color(0.05, 0.07, 0.16, 0.35)  # 夜の暗幕
 	var w := GameState.weather_today()
+	_apply_ambient(w, true)
 	if w == Weather.CLEAR_MAX or w == Weather.CLEAR:
 		_weather_fx.setup("stars")
 	elif w == Weather.RAIN or w == Weather.SHOWER or w == Weather.TYPHOON:
